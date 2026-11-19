@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><title>Overlay data moved</title>
+<style>body{margin:0;display:grid;place-items:center;min-height:100vh;background:#05040a;color:#f5f2ff;font:600 28px/1.5 "Segoe UI",system-ui,sans-serif;text-align:center;padding:40px}
+b{color:#a3e635}</style>
+</head><body><div id="msg">Waiting for data…</div>
+<script>
+/* Receives the data from transfer.html and saves it for the live overlays (same OBS, new web address). */
+const say = h => document.getElementById("msg").innerHTML = h;
+(async () => {
+  const m = location.hash.match(/#d=([A-Za-z0-9_-]+)/);
+  if (!m) return say("Nothing to import. Open <b>transfer.html</b> from your old overlay folder in OBS to move your data here.");
+  history.replaceState(null, "", location.pathname);           // so a refresh can't import twice
+  let d; try { const s = m[1].replace(/-/g, "+").replace(/_/g, "/"); d = JSON.parse(decodeURIComponent(escape(atob(s + "===".slice((s.length + 3) % 4))))); }
+  catch (e) { return say("That data couldn't be read. Try transfer.html again."); }
+  let n = 0;
+  for (const [k, v] of Object.entries(d.ls || {})) { try { localStorage.setItem(k, v); n++; } catch (e) {} }
+  let s = 0;
+  if ((d.sounds || []).length && window.indexedDB) {
+    const db = await new Promise((ok, no) => { const r = indexedDB.open("alertSounds", 1); r.onupgradeneeded = () => r.result.createObjectStore("s"); r.onsuccess = () => ok(r.result); r.onerror = () => no(r.error); }).catch(() => null);
+    if (db) for (const x of d.sounds) {
+      try {
+        const bin = atob(x.b64), a = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) a[i] = bin.charCodeAt(i);
+        await new Promise((ok, no) => { const t = db.transaction("s", "readwrite"); t.objectStore("s").put({ blob: new Blob([a], { type: x.mime || "audio/mpeg" }), name: x.name }, x.type); t.oncomplete = ok; t.onerror = () => no(t.error); });
+        s++;
+      } catch (e) {}
+    }
+  }
+  say("✓ Moved <b>" + n + "</b> saved items" + (s ? " and <b>" + s + "</b> alert sounds" : "") + " to your live overlays." +
+    (d.soundsSkipped ? "<br>Your " + d.soundsSkipped + " custom sounds were too big to carry; add them again with the + buttons." : "") +
+    "<br><br>Now tap <b>Update overlays in OBS</b> in the app, then you can delete this browser source.");
+})();
+</script></body></html>

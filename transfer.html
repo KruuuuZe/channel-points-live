@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><title>Move my overlay data</title>
+<style>body{margin:0;display:grid;place-items:center;min-height:100vh;background:#05040a;color:#f5f2ff;font:600 28px/1.4 "Segoe UI",system-ui,sans-serif;text-align:center;padding:40px}</style>
+</head><body><div id="msg">Gathering your saved overlay data…</div>
+<script>
+/* One-time move: run this as an OBS browser source from the SAME folder style (file:///...) as your old overlays.
+   It reads everything the old local overlays saved in OBS (event wall, streak mountain, scroop boards and teams,
+   lurkers, wanted stars, prediction settings, custom alert sounds) and carries it to the live overlays' import page. */
+const LIVE = "https://kruuuuze.github.io/channel-points-live/import.html";
+const say = t => document.getElementById("msg").textContent = t;
+const b64 = buf => { let s = ""; const a = new Uint8Array(buf); for (let i = 0; i < a.length; i += 32768) s += String.fromCharCode.apply(null, a.subarray(i, i + 32768)); return btoa(s); };
+function sounds() {
+  return new Promise(ok => {
+    if (!window.indexedDB) return ok([]);
+    const r = indexedDB.open("alertSounds", 1);
+    r.onupgradeneeded = () => r.result.createObjectStore("s");
+    r.onerror = () => ok([]);
+    r.onsuccess = () => {
+      const out = [], st = r.result.transaction("s").objectStore("s"), c = st.openCursor();
+      c.onerror = () => ok(out);
+      c.onsuccess = () => { const cur = c.result; if (!cur) return ok(out); out.push({ type: cur.key, v: cur.value }); cur.continue(); };
+    };
+  }).then(list => Promise.all(list.map(x => x.v.blob.arrayBuffer().then(buf => ({ type: x.type, name: x.v.name, mime: x.v.blob.type, b64: b64(buf) })))));
+}
+(async () => {
+  const ls = {};
+  for (let i = 0; i < localStorage.length; i++) { const k = localStorage.key(i); ls[k] = localStorage.getItem(k); }
+  let snd = []; try { snd = await sounds(); } catch (e) {}
+  let data = JSON.stringify({ ls, sounds: snd });
+  if (data.length > 1500000) { data = JSON.stringify({ ls, sounds: [], soundsSkipped: snd.length }); }   // too big to carry: leave the sounds
+  if (!Object.keys(ls).length && !snd.length) return say("No saved overlay data found here. Make sure this browser source uses a file:/// link like your old overlays did.");
+  const enc = btoa(unescape(encodeURIComponent(data))).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+  say("Found " + Object.keys(ls).length + " saved items" + (snd.length ? " and " + snd.length + " sounds" : "") + ". Moving them…");
+  setTimeout(() => location.href = LIVE + "#d=" + enc, 800);
+})();
+</script></body></html>

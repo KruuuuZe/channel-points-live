@@ -1872,12 +1872,14 @@ const Scrap = {
   listenSA() {
     if (!window.EventSource) return;
     const topic = qs.get("satopic") || "kz-scroop-ac2af90ff5d0";
-    let es, back = 5000;
+    // linked to the app: share the app's connection to ntfy.sh (see remote.js) instead of opening a second one
+    if (qs.get("ctl")) { (window.REMOTE_TOPICS = window.REMOTE_TOPICS || {})[topic] = msg => this.saMessage(msg); return; }
+    let es, back = 15000;
     const open = () => {
       try { es = new EventSource("https://ntfy.sh/" + encodeURIComponent(topic) + "/sse"); } catch (e) { return; }
-      es.onopen = () => { back = 5000; };
+      es.onopen = () => { back = 15000; };
       es.onmessage = e => { let m; try { m = JSON.parse(e.data); } catch (x) { return; } if (m.event === "message") this.saMessage(m.message); };
-      es.onerror = () => { if (es.readyState === 2) { setTimeout(open, back); back = Math.min(120000, back * 2); } };
+      es.onerror = () => { es.close(); setTimeout(open, back); back = Math.min(600000, back * 2); };   // retry slowly, never in a tight loop
     };
     open();
   },
@@ -2360,27 +2362,36 @@ if (LIVE) Live.init();
 <script>
 /* ================= remote control from the Channel Points app =================
    Only runs when the OBS link has &ctl=KEY (the pairing key shown in the app's Control screen).
-   The app and this page talk through a private ntfy.sh channel named after that key:
-   the app sends commands; this page answers "hello" with its name and version, and runs the commands. */
+   The app and this page talk through a private ntfy.sh channel named after that key: the app sends
+   commands; this page says "hello" (its name and version) once when it loads and whenever the app asks.
+   Pages can add more channels to the same connection (window.REMOTE_TOPICS), so each page keeps just
+   one connection to ntfy.sh, and it backs off politely if ntfy.sh is busy. */
 (() => {
   const qs = new URLSearchParams(location.search), key = qs.get("ctl");
   if (!key || !window.EventSource) return;
-  const PAGE = "html3", VERSION = "dc22efe", url = "https://ntfy.sh/kzc-" + encodeURIComponent(key);
-  const send = o => fetch(url, { method: "POST", body: JSON.stringify(Object.assign({ from: "overlay", page: PAGE, version: VERSION }, o)) }).catch(() => {});
+  const PAGE = "html3", VERSION = "724fd85", ctl = "kzc-" + key, base = "https://ntfy.sh/";
+  const extra = window.REMOTE_TOPICS || {};
+  const send = o => fetch(base + encodeURIComponent(ctl), { method: "POST", body: JSON.stringify(Object.assign({ from: "overlay", page: PAGE, version: VERSION }, o)) }).catch(() => {});
   const seen = new Set(), born = Date.now() / 1000;
-  const es = new EventSource(url + "/sse");
-  es.onopen = () => send({ cmd: "hello" });
-  es.onmessage = e => {
-    let m, c; try { m = JSON.parse(e.data); } catch (x) { return; }
-    if (m.event !== "message" || seen.has(m.id) || m.time < born - 5) return;   // never re-run old commands
-    seen.add(m.id);
-    try { c = JSON.parse(m.message); } catch (x) { return; }
-    if (!c || c.from === "overlay" || (c.to && c.to !== "all" && c.to !== PAGE)) return;
-    if (c.cmd === "ping") send({ cmd: "hello" });
-    else if (c.cmd === "reload") {                 // load the newest version (a fresh address skips any cached copy)
-      const u = new URL(location.href); u.searchParams.set("_v", Date.now()); location.replace(u.toString());
-    } else if (typeof window.onRemote === "function") { try { window.onRemote(c); } catch (x) { console.error(x); } }
+  let es, back = 15000, said = false;
+  const open = () => {
+    es = new EventSource(base + [ctl, ...Object.keys(extra)].map(encodeURIComponent).join(",") + "/sse");
+    es.onopen = () => { back = 15000; if (!said) { said = true; send({ cmd: "hello" }); } };
+    es.onerror = () => { es.close(); setTimeout(open, back); back = Math.min(600000, back * 2); };   // retry slowly, never in a tight loop
+    es.onmessage = e => {
+      let m, c; try { m = JSON.parse(e.data); } catch (x) { return; }
+      if (m.event !== "message" || seen.has(m.id) || m.time < born - 5) return;   // never re-run old commands
+      seen.add(m.id);
+      if (m.topic !== ctl) { if (extra[m.topic]) try { extra[m.topic](m.message); } catch (x) {} return; }
+      try { c = JSON.parse(m.message); } catch (x) { return; }
+      if (!c || c.from === "overlay" || (c.to && c.to !== "all" && c.to !== PAGE)) return;
+      if (c.cmd === "ping") setTimeout(() => send({ cmd: "hello" }), Math.random() * 1500);
+      else if (c.cmd === "reload") {               // load the newest version (a fresh address skips any cached copy)
+        const u = new URL(location.href); u.searchParams.set("_v", Date.now()); location.replace(u.toString());
+      } else if (typeof window.onRemote === "function") { try { window.onRemote(c); } catch (x) { console.error(x); } }
+    };
   };
+  open();
 })();
 </script>
 </body>
