@@ -1192,7 +1192,12 @@ const Sound = {
   /* the giant fish's chomp */
   chomp() { const c = this.init(); if (!c) return; const t = c.currentTime; this.tone(t, .22, .12, 140, 50); this.burst(t, .12, .1, "lowpass", 900, 150); this.tone(t + .09, .16, .07, 110, 45); },
   /* a splash as it breaks the surface */
-  splash() { const c = this.init(); if (!c) return; const t = c.currentTime; this.burst(t, .7, .09, "lowpass", 3000, 300); this.burst(t + .05, .4, .05, "highpass", 2500); },
+  splash() {   // soft and watery: a low, muffled whoosh with a gentle bloop, no hiss
+    const c = this.init(); if (!c) return; const t = c.currentTime;
+    this.burst(t, .9, .035, "lowpass", 900, 180);
+    this.burst(t + .04, .5, .015, "bandpass", 700, 400);
+    this.tone(t + .02, .3, .025, 260, 120);
+  },
   /* the pile coming apart: a gentle patter of little taps */
   crumble() {
     const c = this.init(); if (!c) return; const t = c.currentTime;
@@ -3109,7 +3114,7 @@ window.KZRelay = function (topic, onMessage, servers) {
 (() => {
   const qs = new URLSearchParams(location.search), key = qs.get("ctl");
   if (!key || !window.WebSocket) return;
-  const PAGE = "html3", VERSION = "30e4efb";
+  const PAGE = "html3", VERSION = "1e22fe5";
   let said = false;
   const relay = KZRelay("kzctl/" + key, c => {
     if (!c || c.from === "overlay" || (c.to && c.to !== "all" && c.to !== PAGE)) return;
