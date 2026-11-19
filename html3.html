@@ -156,7 +156,7 @@ body.fit #stage{background:radial-gradient(1200px 700px at 30% 20%,#1a103322,tra
 .mt-head .n b{color:#ffb347}
 
 /* ---------- raid ---------- */
-.aur{position:absolute;left:330px;top:330px;width:1900px;height:560px;filter:blur(38px);animation:fadein 1.4s both,hue 8s ease-in-out infinite alternate;
+.aur{position:absolute;left:330px;top:68px;width:1900px;height:560px;filter:blur(38px);animation:fadein 1.4s both,hue 8s ease-in-out infinite alternate;
   -webkit-mask-image:radial-gradient(closest-side,#000 45%,transparent 100%);mask-image:radial-gradient(closest-side,#000 45%,transparent 100%)}
 .aur i{position:absolute;left:-10%;width:120%;height:200px;border-radius:50%;opacity:.85;
   background:linear-gradient(90deg,transparent,#22d36b 18%,#5ee7ff 40%,#a855f7 62%,#ff6fd8 80%,transparent);animation:wave 7s ease-in-out infinite alternate}
@@ -170,13 +170,13 @@ body.fit #stage{background:radial-gradient(1200px 700px at 30% 20%,#1a103322,tra
 @keyframes hue{from{filter:blur(38px) hue-rotate(-25deg)}to{filter:blur(38px) hue-rotate(35deg)}}
 @keyframes drape{from{background-position:0 0;opacity:.35}to{background-position:260px 0;opacity:.65}}
 @keyframes fadein{from{opacity:0}}
-.raid-words{position:absolute;left:0;top:300px;width:2560px;text-align:center;font-size:132px;font-weight:900;letter-spacing:.04em;font-style:italic;white-space:nowrap}
+.raid-words{position:absolute;left:0;top:38px;width:2560px;text-align:center;font-size:132px;font-weight:900;letter-spacing:.04em;font-style:italic;white-space:nowrap}
 .raid-words span{display:inline-block;color:transparent;background:linear-gradient(180deg,#ffffff 0%,#eae4ff 40%,#8d7bbd 52%,#ffffff 70%,#d6ff8a 100%);
   -webkit-background-clip:text;background-clip:text;filter:drop-shadow(0 6px 0 #000) drop-shadow(0 0 22px #a855f7);
   animation:flyin .9s cubic-bezier(.2,1.3,.3,1) both}
 .raid-words span.sp{width:.32em}
 @keyframes flyin{from{opacity:0;transform:translate(var(--dx),var(--dy)) rotate(var(--r)) scale(2.4)}to{opacity:1;transform:none}}
-.raid-name{position:absolute;left:0;top:500px;width:2560px;text-align:center;font-size:170px;font-weight:900;line-height:1.05;
+.raid-name{position:absolute;left:0;top:238px;width:2560px;text-align:center;font-size:170px;font-weight:900;line-height:1.05;
   color:transparent;background:linear-gradient(100deg,#c8f56a,#ffffff 40%,#c48bff 60%,#a3e635);background-size:200% 100%;
   -webkit-background-clip:text;background-clip:text;filter:drop-shadow(0 8px 0 #000) drop-shadow(0 0 40px #a855f7);
   animation:pop .9s .9s cubic-bezier(.2,1.5,.3,1) both,shimmer 2.4s 1.6s linear infinite;overflow-wrap:anywhere;padding:0 200px}
@@ -2452,7 +2452,7 @@ window.KZRelay = function (topic, onMessage, servers) {
 (() => {
   const qs = new URLSearchParams(location.search), key = qs.get("ctl");
   if (!key || !window.WebSocket) return;
-  const PAGE = "html3", VERSION = "55b16f9";
+  const PAGE = "html3", VERSION = "d2f090b";
   let said = false;
   const relay = KZRelay("kzctl/" + key, c => {
     if (!c || c.from === "overlay" || (c.to && c.to !== "all" && c.to !== PAGE)) return;
