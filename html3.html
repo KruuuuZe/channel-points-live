@@ -3034,7 +3034,7 @@ const Tank = {
    - The lightning lap plays once an hour, at the top of the hour. */
 const AutoFx = {
   KEY: "autoFxDay",
-  FIRST_OF_DAY: { thenapalmer: () => Mango.run(), kapelan012: () => Banana.run(), att3nchun: () => Fishy.run(), anime_chef: () => Chef.run() },
+  FIRST_OF_DAY: { thenapalmer: () => Mango.run(), kapelan012: () => Banana.run(), att3nchun: () => Fishy.run(), anime_chef: () => Chef.run(), tassiethedevil: () => Tank.run() },
   chat(login) {
     const k = (login || "").toLowerCase(), fx = this.FIRST_OF_DAY[k]; if (!fx) return;
     const d = new Date(), today = d.getFullYear() + "-" + (d.getMonth() + 1) + "-" + d.getDate();
@@ -3638,7 +3638,7 @@ window.KZRelay = function (topic, onMessage, servers) {
 (() => {
   const qs = new URLSearchParams(location.search), key = qs.get("ctl");
   if (!key || !window.WebSocket) return;
-  const PAGE = "html3", VERSION = "771001e";
+  const PAGE = "html3", VERSION = "0b8ea17";
   let said = false;
   const relay = KZRelay("kzctl/" + key, c => {
     if (!c || c.from === "overlay" || (c.to && c.to !== "all" && c.to !== PAGE)) return;
