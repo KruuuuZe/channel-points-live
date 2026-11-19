@@ -305,6 +305,7 @@ body.fit #stage{background:radial-gradient(1200px 700px at 30% 20%,#1a103322,tra
 .eagle .dir{position:absolute;inset:0}
 .eagle.rtl .dir{transform:scaleX(-1)}
 .eagle .roll{position:absolute;inset:0;transform-origin:52% 56%}
+.eagle .eagleArt{position:absolute;left:0;top:-163px;width:560px;height:700px;filter:drop-shadow(0 16px 14px #0005)}
 .eagle svg{width:100%;height:100%;overflow:visible;filter:drop-shadow(0 16px 14px #0005)}
 
 /* ---------- lurk tower (bottom-left) ---------- */
@@ -2595,8 +2596,15 @@ const Eagle = {
   run() {
     Sound.init(); MySounds.play("eagle");
     const rtl = Math.random() < .5, w = el("div", "eagle" + (rtl ? " rtl" : "")), dir = el("div", "dir"), roll = el("div", "roll");
-    roll.innerHTML = EAGLE_SVG; dir.append(roll); w.append(dir); $("#stage").append(w);
-    const near = roll.querySelector(".nearWing .flap"), far = roll.querySelector(".farWing .flap");
+    // the GPT Image eagle from the app's Art screen, if it has been sent; otherwise the drawn one
+    const AG = ChefArt.sprites.eagle_glide, AF = ChefArt.sprites.eagle_flap, art = AG && AF;
+    let cv = null, cg = null;
+    if (art) { cv = document.createElement("canvas"); cv.width = 1120; cv.height = 1400; cv.className = "eagleArt"; cg = cv.getContext("2d"); cg.imageSmoothingQuality = "high"; roll.append(cv); }
+    else roll.innerHTML = EAGLE_SVG;
+    dir.append(roll); w.append(dir); $("#stage").append(w);
+    const near = art ? null : roll.querySelector(".nearWing .flap"), far = art ? null : roll.querySelector(".farWing .flap");
+    // draw one art frame, scaled by length so the bird is the same size gliding and flapping
+    const drawArt = (spr, f) => { cg.clearRect(0, 0, 1120, 1400); const w2 = 1040, h2 = Math.min(1380, w2 * spr.h / spr.w), w3 = h2 * spr.w / spr.h; cg.drawImage(spr.img, f * spr.w, 0, spr.w, spr.h, 560 - w3 / 2, 700 - h2 / 2, w3, h2); };
     const dur = 8500, Wd = 560, y0 = rand(0, 60), x0 = rtl ? 2560 + 60 : -Wd - 60, x1 = rtl ? -Wd - 60 : 2560 + 60;
     const rollAt = dur / 2 - 650, rollDur = 1300, t0 = performance.now();
     // wing pose for a beat phase: up and back at the top of the stroke, swept down in front of the body at the bottom
@@ -2615,9 +2623,14 @@ const Eagle = {
       let ph = GLIDE, bank = 0;
       for (const [s, n] of flaps) if (t >= s && t < s + n * BEAT) { ph = GLIDE + (t - s) / BEAT * Math.PI * 2; break; }
       const gl = Math.sin(t / 900) * 3;                       // the slight flex of a gliding wing
+      if (art) {
+        let burst = null; for (const [s, n] of flaps) if (t >= s && t < s + n * BEAT) { burst = s; break; }
+        if (burst != null) drawArt(AF, Math.floor((t - burst) / (AF.ms || 65)) % AF.frames); else drawArt(AG, 0);
+      } else {
       const p = pose(ph), pf = pose(ph + .35);
       near.setAttribute("transform", `rotate(${p.a + gl}) scale(${p.s} ${p.sy})`);
       far.setAttribute("transform", `rotate(${pf.a - 10 + gl}) scale(.86 ${pf.sy * .92})`);
+      }
       const body = Math.sin(ph - GLIDE) * 5;                  // the body lifts a little on each downstroke
       // the barrel roll: a full turn around the flight line (squash through, show the other side, come back)
       const rr = (t - rollAt) / rollDur;
@@ -2648,7 +2661,7 @@ const ChefArt = {
   use(name, a) { const img = new Image(); img.onload = () => { this.sprites[name] = Object.assign({ img }, a); }; img.src = a.url; },
   async load() {
     try { const db = await this.open();
-      ["plane", "title", "chef_parachute", "chef_chop", "chef_jump", "chef_slide"].forEach(n => { const r = db.transaction("a").objectStore("a").get(n); r.onsuccess = () => { if (r.result) this.use(n, r.result); }; });
+      ["eagle_glide", "eagle_flap", "plane", "title", "chef_parachute", "chef_chop", "chef_jump", "chef_slide"].forEach(n => { const r = db.transaction("a").objectStore("a").get(n); r.onsuccess = () => { if (r.result) this.use(n, r.result); }; });
     } catch (e) {}
   },
   // a piece of art arriving from the app (sent in parts)
@@ -3456,7 +3469,7 @@ window.KZRelay = function (topic, onMessage, servers) {
 (() => {
   const qs = new URLSearchParams(location.search), key = qs.get("ctl");
   if (!key || !window.WebSocket) return;
-  const PAGE = "html3", VERSION = "d7b9bd8";
+  const PAGE = "html3", VERSION = "6439897";
   let said = false;
   const relay = KZRelay("kzctl/" + key, c => {
     if (!c || c.from === "overlay" || (c.to && c.to !== "all" && c.to !== PAGE)) return;
