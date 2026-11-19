@@ -239,7 +239,7 @@ body.fit #stage{background:radial-gradient(1200px 700px at 30% 20%,#1a103322,tra
 .loot svg{width:54px;height:54px;filter:drop-shadow(0 0 10px var(--lc))}
 .loot.rare{font-size:40px}
 .loot.rare svg{width:76px;height:76px}
-#scrapboard{position:absolute;right:40px;bottom:250px;padding:10px 16px 12px;border-radius:14px;background:#0d0b17cc;border:2px solid #8b6b3d;
+#scrapboard{position:absolute;right:40px;bottom:350px;padding:10px 16px 12px;border-radius:14px;background:#0d0b17cc;border:2px solid #8b6b3d;
   font-size:22px;font-weight:800;color:#f5f2ff;min-width:250px;opacity:0;transition:opacity .6s}
 #scrapboard.on{opacity:1}
 #scrapboard h4{margin:0 0 6px;font-size:18px;letter-spacing:.14em;color:#e2b26b}
@@ -2452,7 +2452,7 @@ window.KZRelay = function (topic, onMessage, servers) {
 (() => {
   const qs = new URLSearchParams(location.search), key = qs.get("ctl");
   if (!key || !window.WebSocket) return;
-  const PAGE = "html3", VERSION = "92297e1";
+  const PAGE = "html3", VERSION = "a2c6df2";
   let said = false;
   const relay = KZRelay("kzctl/" + key, c => {
     if (!c || c.from === "overlay" || (c.to && c.to !== "all" && c.to !== PAGE)) return;
