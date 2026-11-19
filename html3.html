@@ -2000,11 +2000,11 @@ const Bolt = {
   },
   build() {
     const { W, H, M } = this, segs = [], add = (a, b, kind) => segs.push({ a, b, kind });
-    const word = "KruuuuZe", size = 230, gap = 40, top = 62;
+    const word = "KruuuuZe", size = 52, gap = 11, top = 30;     // small: about the bolt's own thickness, just under the top edge
     const widths = [...word].map(ch => this.FONT[ch].w * size);
     const total = widths.reduce((t, w) => t + w, 0) + gap * (word.length - 1);
     let x = (W - total) / 2;
-    const x0 = x - 40, x1 = x + total + 40;
+    const x0 = x - 16, x1 = x + total + 16;
     let at = [W / 2, H - M];
     const go = (pt, kind) => { add(at, pt, kind); at = pt; };
     go([M, H - M], "edge"); go([M, M], "edge"); go([x0, M], "edge");
@@ -2052,7 +2052,7 @@ const Bolt = {
       if (finished && fade <= 0) return false;
       const head = Math.min(d, end);
       // the letters it has written stay lit (flickering) until the bolt is home
-      this.stroke(g, () => this.segs.forEach(s => { if (s.kind === "letter" && s.start < head) this.zig(g, s.a, this.at(s, head), 3.6); }), fade, 1.25);
+      this.stroke(g, () => this.segs.forEach(s => { if (s.kind === "letter" && s.start < head) this.zig(g, s.a, this.at(s, head), 1.2); }), fade, .5);
       // the running bolt: a tail along the edge behind the head
       if (!finished) {
         this.stroke(g, () => this.segs.forEach(s => {
@@ -2558,7 +2558,7 @@ window.KZRelay = function (topic, onMessage, servers) {
 (() => {
   const qs = new URLSearchParams(location.search), key = qs.get("ctl");
   if (!key || !window.WebSocket) return;
-  const PAGE = "html3", VERSION = "00373c5";
+  const PAGE = "html3", VERSION = "9388794";
   let said = false;
   const relay = KZRelay("kzctl/" + key, c => {
     if (!c || c.from === "overlay" || (c.to && c.to !== "all" && c.to !== PAGE)) return;
