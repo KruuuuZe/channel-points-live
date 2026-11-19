@@ -123,10 +123,10 @@ body.fit #stage{background:radial-gradient(1200px 700px at 30% 20%,#1a103322,tra
 #cannon svg *{transform-box:view-box}
 #barrel{transform-origin:130px 180px;transition:transform .12s ease-out}
 
-/* ---------- watch streak mountain (bottom-right) ---------- */
-#mountain{position:absolute;left:1560px;top:0;width:1000px;height:1440px;transform:translateY(1520px);transition:transform 1.1s cubic-bezier(.5,0,.75,0)}
+/* ---------- watch streak mountain (left side; the art is the right-side mountain mirrored) ---------- */
+#mountain{position:absolute;left:0;top:0;width:1000px;height:1440px;transform:translateY(1520px);transition:transform 1.1s cubic-bezier(.5,0,.75,0)}
 #mountain.up{transform:none;transition:transform 1.2s cubic-bezier(.25,1.35,.5,1)}
-#mountain svg.m-art{position:absolute;left:0;top:0;width:1000px;height:1440px;overflow:visible}
+#mountain svg.m-art{position:absolute;left:0;top:0;width:1000px;height:1440px;overflow:visible;transform:scaleX(-1)}
 #mountain .mk{position:absolute;transform:translate(14px,-50%);font-size:24px;font-weight:900;color:#ffd9b0;white-space:nowrap;
   text-shadow:0 2px 0 #000,0 0 10px #000;padding:2px 10px;border-radius:9px;background:#1b1336cc;border:1px solid #ff8a3d88}
 .mfig{position:absolute;width:50px;height:100px;--fc:#fff}
@@ -149,7 +149,7 @@ body.fit #stage{background:radial-gradient(1200px 700px at 30% 20%,#1a103322,tra
 .mfig .lbl b{color:#ffb347;margin-left:6px}
 .mfig.hi .lbl{margin-bottom:34px}
 .mfig.me{z-index:3}
-.mt-head{position:absolute;left:-1000px;width:1300px;top:150px;text-align:center;line-height:1.1;font-weight:900;
+.mt-head{position:absolute;left:700px;width:1300px;top:150px;text-align:center;line-height:1.1;font-weight:900;
   color:#fff;text-shadow:0 5px 0 #000,0 0 30px #ff8a3d}
 .mt-head .k{font-size:44px;letter-spacing:.08em;text-transform:uppercase;color:#ffd9b0}
 .mt-head .n{font-size:64px;overflow-wrap:anywhere}
@@ -218,7 +218,7 @@ body.fit #stage{background:radial-gradient(1200px 700px at 30% 20%,#1a103322,tra
 @keyframes edge{0%{opacity:0}12%{opacity:1}35%{opacity:1}100%{opacity:0}}
 
 /* ---------- !scroop: a Foxhole scrap pile appears bottom-left; the first to type !scroop claims it ---------- */
-#scrap{position:absolute;left:0;bottom:0;width:1200px;height:340px;pointer-events:none}
+#scrap{position:absolute;left:0;bottom:0;width:2560px;height:340px;pointer-events:none}
 #scrap .heap{position:absolute;bottom:0;width:190px;height:118px;transform-origin:50% 100%;transform:translateY(160px) scaleY(.4);opacity:0;
   transition:transform .9s cubic-bezier(.3,1.4,.4,1),opacity .5s}
 #scrap .heap.up{transform:none;opacity:1}
@@ -239,7 +239,7 @@ body.fit #stage{background:radial-gradient(1200px 700px at 30% 20%,#1a103322,tra
 .loot svg{width:54px;height:54px;filter:drop-shadow(0 0 10px var(--lc))}
 .loot.rare{font-size:40px}
 .loot.rare svg{width:76px;height:76px}
-#scrapboard{position:absolute;left:40px;bottom:250px;padding:10px 16px 12px;border-radius:14px;background:#0d0b17cc;border:2px solid #8b6b3d;
+#scrapboard{position:absolute;right:40px;bottom:250px;padding:10px 16px 12px;border-radius:14px;background:#0d0b17cc;border:2px solid #8b6b3d;
   font-size:22px;font-weight:800;color:#f5f2ff;min-width:250px;opacity:0;transition:opacity .6s}
 #scrapboard.on{opacity:1}
 #scrapboard h4{margin:0 0 6px;font-size:18px;letter-spacing:.14em;color:#e2b26b}
@@ -376,7 +376,7 @@ body.fit #stage{background:radial-gradient(1200px 700px at 30% 20%,#1a103322,tra
       <g><path d="M320 1327 L335 1403 L306 1403 Z" fill="#13261c"/><path d="M320 1327 L335 1403 L320 1403 Z" fill="#0b1711" opacity=".55"/><path d="M363 1330 L376 1398 L350 1398 Z" fill="#10201a"/><path d="M363 1330 L376 1398 L363 1398 Z" fill="#0b1711" opacity=".55"/><path d="M417 1337 L430 1407 L403 1407 Z" fill="#13261c"/><path d="M417 1337 L430 1407 L417 1407 Z" fill="#0b1711" opacity=".55"/><path d="M956 1354 L970 1427 L942 1427 Z" fill="#10201a"/><path d="M956 1354 L970 1427 L956 1427 Z" fill="#0b1711" opacity=".55"/><path d="M41 1335 L55 1406 L27 1406 Z" fill="#10201a"/><path d="M41 1335 L55 1406 L41 1406 Z" fill="#0b1711" opacity=".55"/><path d="M137 1344 L151 1401 L124 1401 Z" fill="#173022"/><path d="M137 1344 L151 1401 L137 1401 Z" fill="#0b1711" opacity=".55"/><path d="M95 1373 L105 1424 L85 1424 Z" fill="#13261c"/><path d="M95 1373 L105 1424 L95 1424 Z" fill="#0b1711" opacity=".55"/><path d="M566 1359 L581 1426 L551 1426 Z" fill="#1b3727"/><path d="M566 1359 L581 1426 L566 1426 Z" fill="#0b1711" opacity=".55"/><path d="M465 1381 L477 1441 L453 1441 Z" fill="#173022"/><path d="M465 1381 L477 1441 L465 1441 Z" fill="#0b1711" opacity=".55"/><path d="M703 1336 L719 1407 L687 1407 Z" fill="#1b3727"/><path d="M703 1336 L719 1407 L703 1407 Z" fill="#0b1711" opacity=".55"/><path d="M734 1315 L753 1409 L716 1409 Z" fill="#10201a"/><path d="M734 1315 L753 1409 L734 1409 Z" fill="#0b1711" opacity=".55"/><path d="M158 1321 L178 1412 L139 1412 Z" fill="#13261c"/><path d="M158 1321 L178 1412 L158 1412 Z" fill="#0b1711" opacity=".55"/><path d="M770 1336 L788 1424 L751 1424 Z" fill="#1b3727"/><path d="M770 1336 L788 1424 L770 1424 Z" fill="#0b1711" opacity=".55"/><path d="M596 1359 L612 1424 L581 1424 Z" fill="#1b3727"/><path d="M596 1359 L612 1424 L596 1424 Z" fill="#0b1711" opacity=".55"/><path d="M474 1385 L484 1428 L464 1428 Z" fill="#10201a"/><path d="M474 1385 L484 1428 L474 1428 Z" fill="#0b1711" opacity=".55"/><path d="M280 1338 L295 1414 L266 1414 Z" fill="#10201a"/><path d="M280 1338 L295 1414 L280 1414 Z" fill="#0b1711" opacity=".55"/><path d="M353 1358 L366 1426 L339 1426 Z" fill="#1b3727"/><path d="M353 1358 L366 1426 L353 1426 Z" fill="#0b1711" opacity=".55"/><path d="M122 1346 L137 1407 L107 1407 Z" fill="#13261c"/><path d="M122 1346 L137 1407 L122 1407 Z" fill="#0b1711" opacity=".55"/><path d="M160 1360 L171 1415 L149 1415 Z" fill="#10201a"/><path d="M160 1360 L171 1415 L160 1415 Z" fill="#0b1711" opacity=".55"/><path d="M871 1346 L885 1409 L858 1409 Z" fill="#10201a"/><path d="M871 1346 L885 1409 L871 1409 Z" fill="#0b1711" opacity=".55"/><path d="M967 1353 L977 1403 L957 1403 Z" fill="#173022"/><path d="M967 1353 L977 1403 L967 1403 Z" fill="#0b1711" opacity=".55"/><path d="M2 1387 L13 1437 L-8 1437 Z" fill="#173022"/><path d="M2 1387 L13 1437 L2 1437 Z" fill="#0b1711" opacity=".55"/><path d="M417 1342 L435 1413 L400 1413 Z" fill="#13261c"/><path d="M417 1342 L435 1413 L417 1413 Z" fill="#0b1711" opacity=".55"/><path d="M456 1346 L477 1439 L434 1439 Z" fill="#10201a"/><path d="M456 1346 L477 1439 L456 1439 Z" fill="#0b1711" opacity=".55"/><path d="M396 1348 L410 1415 L382 1415 Z" fill="#173022"/><path d="M396 1348 L410 1415 L396 1415 Z" fill="#0b1711" opacity=".55"/><path d="M59 1357 L69 1405 L48 1405 Z" fill="#13261c"/><path d="M59 1357 L69 1405 L59 1405 Z" fill="#0b1711" opacity=".55"/><path d="M94 1354 L112 1423 L77 1423 Z" fill="#13261c"/><path d="M94 1354 L112 1423 L94 1423 Z" fill="#0b1711" opacity=".55"/><path d="M62 1345 L76 1405 L48 1405 Z" fill="#1b3727"/><path d="M62 1345 L76 1405 L62 1405 Z" fill="#0b1711" opacity=".55"/><path d="M604 1372 L614 1419 L594 1419 Z" fill="#10201a"/><path d="M604 1372 L614 1419 L604 1419 Z" fill="#0b1711" opacity=".55"/><path d="M480 1363 L491 1411 L469 1411 Z" fill="#1b3727"/><path d="M480 1363 L491 1411 L480 1411 Z" fill="#0b1711" opacity=".55"/><path d="M478 1361 L492 1430 L464 1430 Z" fill="#1b3727"/><path d="M478 1361 L492 1430 L478 1430 Z" fill="#0b1711" opacity=".55"/><path d="M140 1381 L149 1422 L130 1422 Z" fill="#13261c"/><path d="M140 1381 L149 1422 L140 1422 Z" fill="#0b1711" opacity=".55"/><path d="M700 1348 L712 1408 L688 1408 Z" fill="#173022"/><path d="M700 1348 L712 1408 L700 1408 Z" fill="#0b1711" opacity=".55"/><path d="M533 1376 L545 1434 L521 1434 Z" fill="#173022"/><path d="M533 1376 L545 1434 L533 1434 Z" fill="#0b1711" opacity=".55"/><path d="M812 1355 L829 1436 L796 1436 Z" fill="#10201a"/><path d="M812 1355 L829 1436 L812 1436 Z" fill="#0b1711" opacity=".55"/><path d="M353 1355 L361 1396 L344 1396 Z" fill="#1b3727"/><path d="M353 1355 L361 1396 L353 1396 Z" fill="#0b1711" opacity=".55"/><path d="M188 1366 L202 1425 L173 1425 Z" fill="#1b3727"/><path d="M188 1366 L202 1425 L188 1425 Z" fill="#0b1711" opacity=".55"/><path d="M964 1361 L975 1413 L953 1413 Z" fill="#173022"/><path d="M964 1361 L975 1413 L964 1413 Z" fill="#0b1711" opacity=".55"/><path d="M334 1325 L356 1419 L313 1419 Z" fill="#13261c"/><path d="M334 1325 L356 1419 L334 1419 Z" fill="#0b1711" opacity=".55"/><path d="M479 1344 L495 1428 L463 1428 Z" fill="#13261c"/><path d="M479 1344 L495 1428 L479 1428 Z" fill="#0b1711" opacity=".55"/><path d="M918 1353 L936 1434 L900 1434 Z" fill="#173022"/><path d="M918 1353 L936 1434 L918 1434 Z" fill="#0b1711" opacity=".55"/><path d="M433 1382 L444 1427 L422 1427 Z" fill="#10201a"/><path d="M433 1382 L444 1427 L433 1427 Z" fill="#0b1711" opacity=".55"/><path d="M462 1387 L471 1432 L454 1432 Z" fill="#173022"/><path d="M462 1387 L471 1432 L462 1432 Z" fill="#0b1711" opacity=".55"/><path d="M18 1359 L33 1425 L3 1425 Z" fill="#10201a"/><path d="M18 1359 L33 1425 L18 1425 Z" fill="#0b1711" opacity=".55"/><path d="M660 1342 L674 1413 L647 1413 Z" fill="#13261c"/><path d="M660 1342 L674 1413 L660 1413 Z" fill="#0b1711" opacity=".55"/><path d="M805 1386 L816 1431 L795 1431 Z" fill="#173022"/><path d="M805 1386 L816 1431 L805 1431 Z" fill="#0b1711" opacity=".55"/><path d="M432 1353 L450 1439 L415 1439 Z" fill="#1b3727"/><path d="M432 1353 L450 1439 L432 1439 Z" fill="#0b1711" opacity=".55"/><path d="M207 1338 L224 1420 L190 1420 Z" fill="#10201a"/><path d="M207 1338 L224 1420 L207 1420 Z" fill="#0b1711" opacity=".55"/><path d="M841 1317 L861 1398 L821 1398 Z" fill="#10201a"/><path d="M841 1317 L861 1398 L841 1398 Z" fill="#0b1711" opacity=".55"/><path d="M834 1392 L843 1439 L824 1439 Z" fill="#13261c"/><path d="M834 1392 L843 1439 L834 1439 Z" fill="#0b1711" opacity=".55"/><path d="M880 1360 L898 1434 L863 1434 Z" fill="#173022"/><path d="M880 1360 L898 1434 L880 1434 Z" fill="#0b1711" opacity=".55"/><path d="M166 1339 L184 1419 L148 1419 Z" fill="#1b3727"/><path d="M166 1339 L184 1419 L166 1419 Z" fill="#0b1711" opacity=".55"/><path d="M686 1355 L702 1422 L670 1422 Z" fill="#13261c"/><path d="M686 1355 L702 1422 L686 1422 Z" fill="#0b1711" opacity=".55"/><path d="M243 1326 L262 1409 L225 1409 Z" fill="#13261c"/><path d="M243 1326 L262 1409 L243 1409 Z" fill="#0b1711" opacity=".55"/><path d="M765 1376 L780 1441 L751 1441 Z" fill="#173022"/><path d="M765 1376 L780 1441 L765 1441 Z" fill="#0b1711" opacity=".55"/><path d="M697 1348 L712 1418 L681 1418 Z" fill="#173022"/><path d="M697 1348 L712 1418 L697 1418 Z" fill="#0b1711" opacity=".55"/><path d="M703 1347 L722 1439 L684 1439 Z" fill="#173022"/><path d="M703 1347 L722 1439 L703 1439 Z" fill="#0b1711" opacity=".55"/><path d="M847 1355 L857 1402 L837 1402 Z" fill="#13261c"/><path d="M847 1355 L857 1402 L847 1402 Z" fill="#0b1711" opacity=".55"/><path d="M675 1365 L685 1416 L664 1416 Z" fill="#13261c"/><path d="M675 1365 L685 1416 L675 1416 Z" fill="#0b1711" opacity=".55"/><path d="M905 1323 L923 1403 L887 1403 Z" fill="#173022"/><path d="M905 1323 L923 1403 L905 1403 Z" fill="#0b1711" opacity=".55"/><path d="M248 1336 L264 1402 L233 1402 Z" fill="#13261c"/><path d="M248 1336 L264 1402 L248 1402 Z" fill="#0b1711" opacity=".55"/><path d="M396 1325 L419 1419 L374 1419 Z" fill="#173022"/><path d="M396 1325 L419 1419 L396 1419 Z" fill="#0b1711" opacity=".55"/><path d="M710 1382 L724 1445 L697 1445 Z" fill="#1b3727"/><path d="M710 1382 L724 1445 L710 1445 Z" fill="#0b1711" opacity=".55"/><path d="M315 1390 L324 1431 L306 1431 Z" fill="#10201a"/><path d="M315 1390 L324 1431 L315 1431 Z" fill="#0b1711" opacity=".55"/><path d="M707 1346 L721 1414 L693 1414 Z" fill="#13261c"/><path d="M707 1346 L721 1414 L707 1414 Z" fill="#0b1711" opacity=".55"/><path d="M105 1388 L118 1441 L92 1441 Z" fill="#13261c"/><path d="M105 1388 L118 1441 L105 1441 Z" fill="#0b1711" opacity=".55"/><path d="M261 1314 L278 1397 L244 1397 Z" fill="#173022"/><path d="M261 1314 L278 1397 L261 1397 Z" fill="#0b1711" opacity=".55"/><path d="M826 1360 L845 1437 L807 1437 Z" fill="#10201a"/><path d="M826 1360 L845 1437 L826 1437 Z" fill="#0b1711" opacity=".55"/><path d="M142 1370 L159 1441 L126 1441 Z" fill="#13261c"/><path d="M142 1370 L159 1441 L142 1441 Z" fill="#0b1711" opacity=".55"/><path d="M275 1385 L287 1435 L262 1435 Z" fill="#1b3727"/><path d="M275 1385 L287 1435 L275 1435 Z" fill="#0b1711" opacity=".55"/></g>
       <line x1="605" y1="80" x2="605" y2="8" stroke="#e9e2ff" stroke-width="6"/>
       <polygon points="608,8 700,26 608,44" fill="#a3e635"/>
-      <text id="mtTop" x="640" y="35" text-anchor="middle" font-size="26" font-weight="900" fill="#0b0916" style="font-family:'Segoe UI',system-ui,Roboto,sans-serif">10</text>
+      <text id="mtTop" x="360" y="35" transform="translate(1000 0) scale(-1 1)" text-anchor="middle" font-size="26" font-weight="900" fill="#0b0916" style="font-family:'Segoe UI',system-ui,Roboto,sans-serif">10</text>
     </svg>
     <div class="m-mk"></div>
     <div class="m-figs"></div>
@@ -948,7 +948,7 @@ const Mountain = {
     return Math.ceil(v / 500) * 500;
   },
   frac(v) { return Math.max(0, Math.min(1, v / this.top)); },
-  pt(f) { const p = $("#trail"), L = p.getTotalLength(), q = p.getPointAtLength(L * f); return [q.x, q.y]; },
+  pt(f) { const p = $("#trail"), L = p.getTotalLength(), q = p.getPointAtLength(L * f); return [1000 - q.x, q.y]; },   // mirrored: the art is flipped
   place(fig, f) { fig._f = f; const [x, y] = this.pt(f); fig.style.left = (x - 25) + "px"; fig.style.top = (y - 98) + "px"; },
   markers() {
     const box = $("#mountain .m-mk"); box.innerHTML = "";
@@ -1003,7 +1003,7 @@ const Mountain = {
           fig.classList.toggle("left", x < lastX);
           if (Math.floor(ph) > bounce) {               // a thud: little dust puff
             bounce = Math.floor(ph);
-            const [px, py] = this.pt(f), mx = 1560 + px, my = py;
+            const [px, py] = this.pt(f), mx = px, my = py;
             for (let i = 0; i < 10; i++) P.push({ type: "spark", x: mx, y: my, vx: rand(-3, 3), vy: rand(-3, -.5), life: 0, max: rand(400, 700),
               c: [200, 185, 230], s: rand(4, 9), drag: .93, g: .05 });
             kick();
@@ -1777,7 +1777,7 @@ const SOLDIER_SVG = `<svg viewBox="0 0 120 160">
 const Scrap = {
   KEY: "scroopHaul", TEAMKEY: "scroopTeams", RESET: 8 * 3600 * 1000,
   FIRST: 60000, GAP: [60000, 600000], MAX: 1,     // first pile a minute after load, then a new one 1-10 minutes after each claim; one pile at a time
-  SLOTS: [40],                                     // one pile; its left edge is picked at random, 25-100px from the left side, each time it appears
+  SLOTS: [2400],                                   // one pile, bottom-right; its right edge is picked at random, 25-100px from the right side, each time it appears
   piles: [], timer: 0, boardT: 0, built: false, teams: {}, teamAt: {},
   build() {
     if (this.built) return; this.built = true;
@@ -1828,7 +1828,7 @@ const Scrap = {
     if (!free.length) return null;
     const p = free[Math.floor(Math.random() * free.length)];
     p.state = "up"; p.at = Date.now(); const h = p.el;
-    p.x = Math.round(rand(25, 100)); h.style.left = p.x + "px";
+    p.x = Math.round(2560 - 190 - rand(25, 100)); h.style.left = p.x + "px";      // the pile is 190px wide
     h.innerHTML = heapSVG();      // a new look every time
     h.classList.remove("gone", "up", "hit"); void h.offsetWidth; h.classList.add("up");     // silent: no sound when a pile appears
     for (let j = 0; j < 18; j++) P.push({ type: "spark", x: p.x + rand(10, 180), y: 1426, vx: rand(-2.5, 2.5), vy: rand(-3, -.5), life: 0, max: rand(500, 900),
@@ -1883,8 +1883,8 @@ const Scrap = {
   },
   run(p, job) {
     Sound.init(); MySounds.play("scroop");
-    const box = $("#scrap"), uc = css(bright(job.color)), X = p.x + 137;     // the soldier stands just right of the pile, facing it
-    const w = el("div", "scroop flip" + (job.team ? " " + job.team : "")); w.style.left = X + "px"; w.style.setProperty("--uc", uc); w.dataset.k = job.k; w._job = job;
+    const box = $("#scrap"), uc = css(bright(job.color)), X = p.x - 67;      // the soldier stands just left of the pile, facing it (toward the right edge)
+    const w = el("div", "scroop" + (job.team ? " " + job.team : "")); w.style.left = X + "px"; w.style.setProperty("--uc", uc); w.dataset.k = job.k; w._job = job;
     w.innerHTML = SOLDIER_SVG; w.append(el("div", "tag", job.name)); box.append(w);
     requestAnimationFrame(() => w.classList.add("on"));
     const arm = w.querySelector(".arm"), SW = 760, HITS = 10 + Math.floor(Math.random() * 6);   // 10 to 15 hits to break a pile
@@ -1893,14 +1893,14 @@ const Scrap = {
       { transform: "rotate(100deg)", offset: .6, easing: "ease-out" }, { transform: "rotate(94deg)", offset: .72 }, { transform: "rotate(-60deg)", offset: 1 }],
       { duration: SW, iterations: HITS, delay: 500, fill: "both" })
       .onfinish = () => arm.animate([{ transform: "rotate(-60deg)" }, { transform: "rotate(0deg)" }], { duration: 400, easing: "ease-out", fill: "forwards" });
-    // where the hammer head lands (bottom of the head at 100deg), mirrored because the soldier faces left
-    const hitX = X + 120 - 98, hitY = 1440 - 160 + 128;
+    // where the hammer head lands (bottom of the head at 100deg)
+    const hitX = X + 98, hitY = 1440 - 160 + 128;
     const h = p.el;
     for (let i = 0; i < HITS; i++) setTimeout(() => {
       const last = i === HITS - 1;
       Sound.tap();
       if (!last) { h.classList.remove("hit"); void h.offsetWidth; h.classList.add("hit"); }
-      for (let j = 0; j < (last ? 10 : 16); j++) P.push({ type: "spark", x: hitX, y: hitY, vx: rand(-6, 4), vy: rand(-9, -2), life: 0, max: rand(250, 520),
+      for (let j = 0; j < (last ? 10 : 16); j++) P.push({ type: "spark", x: hitX, y: hitY, vx: rand(-4, 6), vy: rand(-9, -2), life: 0, max: rand(250, 520),
         c: [[255, 214, 120], [255, 170, 80], [255, 245, 220]][j % 3], s: rand(1.8, 3), drag: .965, g: .3, trail: true });
       if (last) this.breakApart(p, job);
       kick();
@@ -1915,7 +1915,7 @@ const Scrap = {
     const shapes = [[[-1, -.6], [.9, -.8], [.7, .7], [-.8, .6]], [[-1, 0], [0, -1], [1, -.2], [.4, .9], [-.6, .7]], [[-1, -.3], [1, -.5], [.8, .4], [-.9, .3]], [[0, -1], [1, .8], [-1, .7]]];
     for (let j = 0; j < 28; j++) {
       const x = ox + rand(15, 175), y = 1440 - rand(8, 95);
-      P.push({ type: "chunk", x, y, vx: (x - ox - 150) / 14 + rand(-3, 2), vy: rand(-12, -4), a: rand(0, 6.28), va: rand(-.25, .25), r: rand(6, 14),
+      P.push({ type: "chunk", x, y, vx: (x - ox - 50) / 16 + rand(-2, 3), vy: rand(-12, -4), a: rand(0, 6.28), va: rand(-.25, .25), r: rand(6, 14),
         pts: shapes[j % shapes.length], c: cols[j % cols.length], hi: Math.random() < .5 ? "#e6e8ec" : null, life: 0, max: rand(2200, 3200) });
     }
     for (let j = 0; j < 22; j++) P.push({ type: "spark", x: ox + rand(20, 170), y: 1440 - rand(8, 60), vx: rand(-2, 2), vy: rand(-3, -.5), life: 0, max: rand(600, 1100),
@@ -1927,7 +1927,7 @@ const Scrap = {
       u.name = job.name; u.color = job.color; u[l.k] = (u[l.k] || 0) + n; u.pts += n * l.pts;
     }
     this.save();
-    const sx = ox + 95, sy = 1440 - 90, ex = ox + 130, ey = 1440 - (l.rare ? 400 : 330);
+    const sx = ox + 95, sy = 1440 - 90, ex = ox + 40, ey = 1440 - (l.rare ? 400 : 330);
     const o = el("div", "loot" + (l.rare ? " rare" : "")); o.style.setProperty("--lc", l.c);
     o.innerHTML = l.svg; o.append("+" + n + " " + l.name); o.style.left = sx + "px"; o.style.top = sy + "px"; layer.append(o);
     o.animate([{ transform: "translate(-50%,-50%) scale(.3)", left: sx + "px", top: sy + "px", opacity: 0 },
@@ -1937,7 +1937,7 @@ const Scrap = {
       { transform: "translate(-50%,-50%) scale(.95)", left: ex + "px", top: (ey - 50) + "px", opacity: 0 }],
       { duration: l.rare ? 4200 : 3000, easing: "ease-out", fill: "forwards" });
     setTimeout(() => o.remove(), l.rare ? 4300 : 3100);
-    if (l.rare) fireworks(l.c, 5, 1800, ox + 100, ox + 800);
+    if (l.rare) fireworks(l.c, 5, 1800, ox - 700, ox + 100);
     setTimeout(() => { p.state = "none"; this.next(); }, 3000);
   }
 };
@@ -2445,7 +2445,7 @@ window.KZRelay = function (topic, onMessage, servers) {
 (() => {
   const qs = new URLSearchParams(location.search), key = qs.get("ctl");
   if (!key || !window.WebSocket) return;
-  const PAGE = "html3", VERSION = "5397ccc";
+  const PAGE = "html3", VERSION = "c149bd5";
   let said = false;
   const relay = KZRelay("kzctl/" + key, c => {
     if (!c || c.from === "overlay" || (c.to && c.to !== "all" && c.to !== PAGE)) return;
