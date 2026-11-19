@@ -2198,7 +2198,7 @@ const Chat = {
         Lurk.leave(login);
       }
       else if (/^!scroopleaderboard\b/i.test(msg)) Scrap.showBoard();
-      else if (/^!scroop\b/i.test(msg)) Scrap.dig(tags["display-name"] || login, login, tags.color || chatColors[tags["user-id"]]);   // lurkers can scroop without leaving the tower
+      else if (/^!scroop\b/i.test(msg) || /(^|\s)kruuuuCatch1(\s|$)/.test(msg)) Scrap.dig(tags["display-name"] || login, login, tags.color || chatColors[tags["user-id"]]);   // lurkers can scroop without leaving the tower
       else Lurk.leave(login);
       return;
     }
@@ -2445,7 +2445,7 @@ window.KZRelay = function (topic, onMessage, servers) {
 (() => {
   const qs = new URLSearchParams(location.search), key = qs.get("ctl");
   if (!key || !window.WebSocket) return;
-  const PAGE = "html3", VERSION = "c149bd5";
+  const PAGE = "html3", VERSION = "b63c4de";
   let said = false;
   const relay = KZRelay("kzctl/" + key, c => {
     if (!c || c.from === "overlay" || (c.to && c.to !== "all" && c.to !== PAGE)) return;
