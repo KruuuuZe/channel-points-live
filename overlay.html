@@ -1,0 +1,893 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Channel Points Prediction Overlay</title>
+<link rel="icon" id="favicon">
+<style>
+:root{
+  --lime:#a3e635; --lime2:#6fcf2f; --purple:#a855f7; --purple2:#6d28d9;
+  --ring:#22d36b; --big:clamp(20px,5.4vw,40px); --ink:#f5f2ff; --mute:#a59cc4; --panel:#110e1f; --line:#2a2342;
+  --font:"Segoe UI",system-ui,-apple-system,Roboto,"Helvetica Neue",Arial,sans-serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:transparent;color:var(--ink);font-family:var(--font);-webkit-font-smoothing:antialiased}
+body.live,body.autodemo{min-height:100vh;display:flex;flex-direction:column;overflow:hidden}
+body.pos-bottom #stage{margin-top:auto}
+body.pos-bottom .stage{align-items:end}
+
+/* ---------- starfield ---------- */
+.stars{
+  background-color:#07060d;
+  background-image:
+    radial-gradient(1px 1px at 18px 24px,#ffffffcc,transparent 60%),
+    radial-gradient(1px 1px at 92px 70px,#ffffff88,transparent 60%),
+    radial-gradient(1.6px 1.6px at 150px 30px,#d8c8ffcc,transparent 60%),
+    radial-gradient(1px 1px at 210px 110px,#ffffff99,transparent 60%),
+    radial-gradient(1.3px 1.3px at 60px 125px,#c6f7a1aa,transparent 60%),
+    radial-gradient(1px 1px at 250px 58px,#ffffff77,transparent 60%),
+    radial-gradient(1px 1px at 120px 150px,#ffffffaa,transparent 60%),
+    radial-gradient(120% 140% at 0% 0%,#1a1033 0%,transparent 55%),
+    radial-gradient(120% 140% at 100% 100%,#0f2614 0%,transparent 55%);
+  background-size:270px 170px,270px 170px,270px 170px,270px 170px,270px 170px,270px 170px,270px 170px,100% 100%,100% 100%;
+}
+
+/* ---------- stage + cards ---------- */
+#stage{display:grid;justify-items:center;align-items:start;padding:24px 12px;transform-origin:top center}
+#stage>.card{grid-area:1/1}
+.card{
+  position:relative;width:min(860px,96vw);padding:18px 22px 22px;border-radius:24px;
+  border:3px solid var(--ring);
+  box-shadow:0 0 0 1px #000,0 0 26px #22d36b55,0 12px 40px #0009,inset 0 0 50px #8b2cf522;
+  opacity:0;transform:translateY(-14px) scale(.97);pointer-events:none;
+  transition:opacity .8s ease,transform .8s cubic-bezier(.2,.8,.2,1);
+}
+.card.show{opacity:1;transform:none}
+.card::before{ /* thin gradient sheen along the top edge */
+  content:"";position:absolute;inset:0;border-radius:21px;pointer-events:none;
+  background:linear-gradient(90deg,#a3e63514,transparent 40%,transparent 60%,#a855f714);
+}
+
+.hd{display:flex;align-items:center;gap:14px}
+.logo{width:64px;height:64px;border-radius:50%;flex:none;box-shadow:0 0 18px #22d36b66}
+.hd-txt{flex:1;min-width:0}
+.kicker{display:flex;align-items:center;gap:10px;font-size:13px;font-weight:800;letter-spacing:.14em;text-transform:uppercase}
+.pill{display:inline-flex;align-items:center;gap:6px;padding:4px 11px 4px 8px;border-radius:999px;color:#0b0a12;
+  background:linear-gradient(90deg,var(--lime),var(--purple))}
+.pill svg{width:12px;height:14px}
+.tbox{flex:none;text-align:right}
+.timer{white-space:nowrap;color:var(--lime);font-variant-numeric:tabular-nums;font-size:var(--big);font-weight:900;line-height:1;text-shadow:0 0 14px #a3e63566,0 2px 0 #000}
+.timer.urgent{color:#ff5fb3;animation:blink 1s steps(2) infinite}
+@keyframes blink{50%{opacity:.45}}
+.title{margin-top:4px;font-size:clamp(18px,4.6vw,26px);font-weight:800;line-height:1.15;
+  overflow-wrap:anywhere;text-wrap:balance;text-shadow:0 2px 0 #000}
+.mid{flex:none;text-align:center;align-self:flex-start;padding-top:2px}
+.pool-n{font-size:var(--big);line-height:1;font-weight:900;font-variant-numeric:tabular-nums;
+  background:linear-gradient(90deg,var(--lime),var(--purple));-webkit-background-clip:text;background-clip:text;color:transparent}
+.pool-l{margin-top:5px;font-size:11px;letter-spacing:.14em;color:var(--mute);font-weight:700}
+
+/* ---------- outcome labels ---------- */
+.labels{display:flex;justify-content:space-between;gap:16px;margin:16px 2px 10px}
+.side{min-width:0;flex:1}
+.side.right{text-align:right}
+.side .top{display:flex;align-items:baseline;gap:10px;min-width:0}
+.side.right .top{flex-direction:row-reverse}
+.pts{font-size:var(--big);font-weight:900;line-height:1;color:#fff;font-variant-numeric:tabular-nums;text-shadow:0 2px 0 #000}
+.pct{font-size:var(--big);font-weight:900;line-height:1;color:var(--c);font-variant-numeric:tabular-nums;
+  text-shadow:0 0 14px var(--c),0 2px 0 #000}
+.nm{display:block;margin-top:6px;font-size:clamp(15px,3.8vw,20px);font-weight:800;line-height:1.15;overflow-wrap:anywhere}
+.st{margin-top:5px;font-size:13px;color:var(--mute);font-weight:600;font-variant-numeric:tabular-nums;white-space:nowrap}
+.st b{color:var(--ink)}
+.labels.multi{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px 16px}
+.labels.multi .pct,.labels.multi .pts{font-size:26px}
+.labels.multi .mid{grid-column:1/-1;order:-1}
+
+/* ---------- bar ---------- */
+.track{position:relative;height:30px;border-radius:999px;background:#1a1530;box-shadow:inset 0 2px 6px #000a}
+.segs{display:flex;height:100%;border-radius:999px;overflow:hidden}
+.seg{height:100%;transition:width .9s cubic-bezier(.2,.8,.2,1),filter .3s;position:relative}
+.seg::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,#ffffff40,transparent 55%)}
+.seg.pulse{filter:brightness(1.5) saturate(1.2)}
+
+/* ---------- results ---------- */
+.winner{margin:0;flex:none;max-width:48%;display:flex;align-items:center;gap:12px;padding:12px 16px;border-radius:16px;
+  background:linear-gradient(90deg,var(--cbg),#ffffff08);border:1px solid var(--cbd)}
+.winner svg{width:20px;height:28px;flex:none;filter:drop-shadow(0 0 8px var(--c))}
+.winner .lbl{font-size:12px;letter-spacing:.16em;font-weight:800;color:var(--mute)}
+.winner .wn{font-size:clamp(20px,5vw,30px);line-height:1.1;font-weight:900;color:var(--c);overflow-wrap:anywhere}
+.winner .wp{margin-top:3px;font-size:13px;color:var(--mute);font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cols{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px}
+.cols{margin-top:16px}
+.col h4{margin:0 0 8px;font-size:clamp(15px,3.6vw,20px);letter-spacing:.06em;font-weight:900;text-transform:uppercase;line-height:1.2;overflow-wrap:anywhere}
+
+.col ol{list-style:none;margin:0;padding:0}
+.col li{display:flex;align-items:center;gap:8px;padding:5px 10px;margin-bottom:4px;border-radius:10px;background:#ffffff09;
+  font-size:15px;font-weight:700;opacity:0;transform:translateX(-8px);animation:rowin .45s forwards}
+.col.lose li{transform:translateX(8px)}
+@keyframes rowin{to{opacity:1;transform:none}}
+.col li .n{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.col li .a{font-variant-numeric:tabular-nums;font-weight:900}
+.col li .b{font-size:11px;color:var(--mute);font-weight:600;font-variant-numeric:tabular-nums}
+.col.win .a{color:var(--lime)} .col.lose .a{color:#c78bff}
+.col li.me{outline:1px solid #ffffff55}
+.col .empty{color:var(--mute);font-size:14px;padding:6px 2px;font-weight:600}
+.drain{margin-top:14px;height:4px;border-radius:9px;background:#ffffff12;overflow:hidden}
+.drain i{display:block;height:100%;width:100%;background:linear-gradient(90deg,var(--lime),var(--purple));transform-origin:left}
+@keyframes drain{from{transform:scaleX(1)}to{transform:scaleX(0)}}
+
+.labels:not(.multi) .side{max-width:40%}
+@media (max-width:600px){
+  .card{padding:14px 14px 16px;border-radius:20px}
+  .logo{width:48px;height:48px}
+  .kicker{font-size:11px;gap:6px}
+  .st{white-space:normal;font-size:11px;line-height:1.35}
+  .st .sep{display:none} .st .ln{display:block}
+  .col li{font-size:13px;padding:5px 8px;gap:6px}
+  .col li .b{display:none}
+  .winner{padding:8px 10px;gap:8px}
+  .winner .wp{display:none}
+  .winner{max-width:38%}
+  .winner .wn{font-size:17px}
+  .winner svg{display:none}
+}
+.cx .msg{margin-top:12px;font-size:16px;color:var(--mute);font-weight:600}
+
+/* ---------- toast (live status) ---------- */
+#toast{position:fixed;left:16px;bottom:16px;max-width:min(560px,90vw);padding:10px 14px;border-radius:12px;
+  background:#0d0b17ee;border:1px solid var(--line);font-size:14px;font-weight:600;opacity:0;transform:translateY(8px);
+  transition:.4s;pointer-events:none;z-index:9}
+#toast.show{opacity:1;transform:none}
+#toast.err{border-color:#ff5fb3;color:#ffd0ea}
+
+/* ---------- studio (phone / browser testing) ---------- */
+body.studio{background:#05040a}
+.studio-top{display:flex;align-items:center;gap:12px;padding:14px 16px 0;max-width:900px;margin:0 auto}
+.studio-top img{width:40px;height:40px;border-radius:50%}
+.studio-top h1{font-size:18px;margin:0;font-weight:800}
+.studio-top p{margin:2px 0 0;color:var(--mute);font-size:13px}
+.preview{margin:12px auto 0;max-width:900px;border-radius:18px;border:1px solid var(--line);min-height:240px;overflow:hidden}
+.panel{max-width:900px;margin:14px auto 40px;padding:0 12px}
+.tabs{display:flex;gap:6px;margin-bottom:12px}
+.tabs button{flex:1}
+.tab-on{background:linear-gradient(90deg,var(--lime2),var(--purple2))!important;color:#fff!important;border-color:transparent!important}
+.box{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:14px;margin-bottom:12px}
+.box h3{margin:0 0 10px;font-size:14px;letter-spacing:.08em;text-transform:uppercase;color:var(--mute)}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:8px}
+.row>*{flex:1 1 120px}
+label.f{display:block;font-size:12px;color:var(--mute);font-weight:700;margin-bottom:4px}
+input,select,button,textarea{font:inherit;font-size:15px;color:var(--ink);background:#1a1530;border:1px solid var(--line);border-radius:12px;padding:11px 12px;width:100%}
+textarea{min-height:64px;resize:vertical;font-size:13px}
+button{font-weight:800;cursor:pointer}
+button:disabled{opacity:.35;cursor:not-allowed}
+.b-a{background:linear-gradient(90deg,#4f9a1f,#6fcf2f);border-color:transparent;color:#0b0a12}
+.b-b{background:linear-gradient(90deg,#6d28d9,#9b4dff);border-color:transparent}
+.b-go{background:linear-gradient(90deg,var(--lime2),var(--purple2));border-color:transparent}
+.wallet{font-size:22px;font-weight:900;color:var(--lime)}
+.status{font-size:14px;font-weight:700;color:var(--ink);padding:8px 10px;border-radius:10px;background:#ffffff0a;margin-bottom:10px}
+.chips{display:flex;gap:6px;flex-wrap:wrap}
+.chips button{flex:1 1 60px;padding:8px 6px;font-size:13px}
+.note{font-size:13px;color:var(--mute);line-height:1.5}
+.note b{color:var(--ink)} .note a{color:var(--lime)}
+.note ol{padding-left:20px;margin:6px 0}
+code{background:#000;padding:2px 6px;border-radius:6px;font-size:12px;word-break:break-all}
+.ok{color:var(--lime)} .bad{color:#ff7ac2}
+.hide{display:none!important}
+.chk{display:flex;align-items:center;gap:8px;font-size:14px;font-weight:700}
+.chk input{width:auto}
+</style>
+</head>
+<body>
+
+<!-- ===== Studio header (only in practice/setup mode) ===== -->
+<header class="studio-top studio-only hide">
+  <img data-logo alt="">
+  <div><h1>Prediction Overlay Studio</h1><p>Practice here. In OBS, only the overlay shows.</p></div>
+</header>
+
+<div id="previewWrap">
+<div id="stage" class="stage">
+  <!-- live prediction card -->
+  <section id="predCard" class="card stars" aria-live="polite">
+    <div class="hd">
+      <img class="logo" data-logo alt="">
+      <div class="hd-txt">
+        <div class="kicker"><span class="pill"><svg viewBox="0 0 20 24"><path d="M13 0 3 13h6.5L7 24l10-14h-6.5L14 0z" fill="#0b0a12"/></svg>Prediction</span></div>
+        <div id="pTitle" class="title"></div>
+      </div>
+      <div class="tbox"><div id="pTimer" class="timer">0:00</div><div class="pool-l" id="pTimerL">LEFT</div></div>
+    </div>
+    <div id="pLabels" class="labels"></div>
+    <div class="track"><div id="pSegs" class="segs"></div>
+    </div>
+  </section>
+
+  <!-- results card -->
+  <section id="resCard" class="card stars">
+    <div class="hd">
+      <img class="logo" data-logo alt="">
+      <div class="hd-txt">
+        <div class="kicker"><span class="pill"><svg viewBox="0 0 20 24"><path d="M13 0 3 13h6.5L7 24l10-14h-6.5L14 0z" fill="#0b0a12"/></svg>Results</span></div>
+        <div id="rTitle" class="title"></div>
+      </div>
+      <div id="rWinner" class="winner">
+        <svg viewBox="0 0 20 34"><path d="M14 0 2 19h7L6 34 18 14h-7.5L15 0z" fill="var(--c)"/></svg>
+        <div style="min-width:0"><div class="lbl">WINNER</div><div id="rWinName" class="wn"></div><div class="wp"><span id="rPool"></span> · <span id="rCounts"></span></div></div>
+      </div>
+    </div>
+    <div class="cols">
+      <div class="col win"><h4 id="rWinHead"></h4><ol id="rWinners"></ol></div>
+      <div class="col lose"><h4 id="rLoseHead"></h4><ol id="rLosers"></ol></div>
+    </div>
+    <div class="drain"><i id="rDrain"></i></div>
+  </section>
+
+  <!-- canceled card -->
+  <section id="cxCard" class="card stars cx">
+    <div class="hd">
+      <img class="logo" data-logo alt="">
+      <div class="hd-txt">
+        <div class="kicker"><span class="pill"><svg viewBox="0 0 20 24"><path d="M13 0 3 13h6.5L7 24l10-14h-6.5L14 0z" fill="#0b0a12"/></svg>Canceled</span></div>
+        <div id="cxTitle" class="title"></div>
+      </div>
+    </div>
+    <div class="msg">Prediction canceled. All points were refunded.</div>
+  </section>
+</div>
+</div>
+
+<!-- ===== Studio controls ===== -->
+<main class="panel studio-only hide">
+  <div class="tabs">
+    <button id="tabPractice" class="tab-on">Practice</button>
+    <button id="tabLive">Connect Twitch / OBS</button>
+  </div>
+
+  <!-- PRACTICE -->
+  <section id="practice">
+    <div id="dStatus" class="status">No prediction running.</div>
+
+    <div class="box" id="dSetup">
+      <h3>1 · Start a practice prediction</h3>
+      <label class="f">Question</label>
+      <div class="row"><input id="dTitle" maxlength="45" value="Will we win this match?"></div>
+      <div class="row">
+        <div><label class="f">Outcome 1 (green)</label><input id="dA" maxlength="25" value="Yes"></div>
+        <div><label class="f">Outcome 2 (purple)</label><input id="dB" maxlength="25" value="No"></div>
+      </div>
+      <div class="row">
+        <div><label class="f">Betting window</label>
+          <select id="dWin"><option value="30">30 seconds</option><option value="60" selected>1 minute</option><option value="120">2 minutes</option><option value="300">5 minutes</option></select></div>
+        <div><label class="f">Fake viewers</label>
+          <select id="dBots"><option value="0">Off (just me)</option><option value="1">Chill</option><option value="2" selected>Busy</option><option value="3">Hype train</option></select></div>
+      </div>
+      <button id="dStart" class="b-go">Start prediction</button>
+    </div>
+
+    <div class="box">
+      <h3>2 · Bet with practice points</h3>
+      <div class="row" style="align-items:baseline"><div>Your practice points</div><div class="wallet" id="dWallet" style="text-align:right">10,000</div></div>
+      <div class="row"><input id="dAmt" type="number" inputmode="numeric" min="1" value="500"></div>
+      <div class="chips row"><button data-amt="100">100</button><button data-amt="500">500</button><button data-amt="1000">1K</button><button data-amt="5000">5K</button><button data-amt="all">All in</button></div>
+      <div class="row"><button id="dBetA" class="b-a">Bet on Yes</button><button id="dBetB" class="b-b">Bet on No</button></div>
+      <div class="note">As on Twitch, once you pick a side you can only add more to that side.</div>
+    </div>
+
+    <div class="box">
+      <h3>3 · Lock &amp; pay out</h3>
+      <div class="row"><button id="dLock">Lock betting now</button></div>
+      <div class="row"><button id="dWinA" class="b-a">Yes wins</button><button id="dWinB" class="b-b">No wins</button></div>
+      <div class="row"><button id="dCancel">Cancel &amp; refund</button><button id="dReset">Reset my points</button></div>
+    </div>
+  </section>
+
+  <!-- LIVE SETUP -->
+  <section id="live" class="hide">
+    <div class="box">
+      <h3>A · Make a Twitch app (one time)</h3>
+      <div class="note"><ol>
+        <li>Open <a href="https://dev.twitch.tv/console/apps" target="_blank" rel="noopener">dev.twitch.tv/console/apps</a>, signed in as <b>KruuuuZe</b>. Twitch asks you to turn on two-factor login first if you haven't.</li>
+        <li><b>Register Your Application</b>. Name: anything, e.g. <b>kruuuuze-overlay</b>. OAuth Redirect URL: <code>http://localhost</code>. Category: <b>Broadcaster Suite</b>. Client Type: <b>Public</b>.</li>
+        <li>Open the app with <b>Manage</b> and copy the <b>Client ID</b>.</li>
+      </ol></div>
+      <label class="f">Client ID</label>
+      <div class="row"><input id="lCid" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="paste Client ID"></div>
+      <a id="lAuth" class="hide" target="_blank" rel="noopener"><button class="b-go">Log in with Twitch &amp; allow access</button></a>
+    </div>
+    <div class="box">
+      <h3>B · Grab your token</h3>
+      <div class="note">After you click <b>Authorize</b>, Twitch sends you to a page that won't load. That's expected. Copy the <b>whole web address</b> from the address bar and paste it here.</div>
+      <div class="row" style="margin-top:8px"><textarea id="lPaste" autocapitalize="off" spellcheck="false" placeholder="http://localhost/#access_token=..."></textarea></div>
+      <button id="lCheck" class="b-go">Check token</button>
+      <div id="lResult" class="note" style="margin-top:10px"></div>
+    </div>
+    <div class="box">
+      <h3>C · Add to OBS (on your PC)</h3>
+      <div class="note"><ol>
+        <li>Put <b>overlay.html</b> somewhere it will stay, e.g. <code>C:\Stream\overlay.html</code>.</li>
+        <li>In OBS: <b>Sources → + → Browser</b>. <b>Leave “Local file” unchecked.</b></li>
+        <li>URL: <code>file:///C:/Stream/overlay.html</code> followed by the <code>?token=…</code> part from step B.</li>
+        <li>Width <b>1920</b>, Height <b>1080</b>. Turn on <b>Refresh browser when scene becomes active</b>.</li>
+        <li>To place it on screen, add <code>&amp;demo</code> to the end of the URL. Fake predictions will loop until you remove it.</li>
+      </ol>
+      Extra options for the end of the URL: <code>&amp;pos=bottom</code> moves the card to the bottom. <code>&amp;scale=1.2</code> makes it bigger. <code>&amp;results=30</code> sets how many seconds the results stay up.<br><br>
+      Keep this URL off stream, because it contains your token. The token can only <i>read</i> predictions. Twitch tokens expire after a while. When the overlay says the token expired, redo step B.</div>
+    </div>
+  </section>
+</main>
+
+<div id="toast"></div>
+
+<script>
+"use strict";
+const LOGO = "data:image/webp;base64,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";
+document.querySelectorAll("[data-logo]").forEach(i => i.src = LOGO);
+document.getElementById("favicon").href = LOGO;
+/* ================= helpers ================= */
+const $ = s => document.querySelector(s);
+const qs = new URLSearchParams(location.search);
+const hs = new URLSearchParams(location.hash.replace(/^#/, ""));
+const TOKEN = qs.get("token") || hs.get("token") || hs.get("access_token") || "";
+const MODE = TOKEN ? "live" : (qs.has("demo") ? "autodemo" : "studio");
+const RESULT_MS = Math.max(5, +qs.get("results") || 30) * 1000;
+const CANCEL_MS = 8000;
+const EXPECTED_LOGIN = "kruuuuze";
+// one token works for both overlay.html (predictions) and html2.html (followers, subs, bits)
+const SCOPES = ["channel:read:predictions", "moderator:read:followers", "channel:read:subscriptions", "bits:read"];
+const store = {
+  get(k, d) { try { const v = localStorage.getItem("cpo_" + k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } },
+  set(k, v) { try { localStorage.setItem("cpo_" + k, JSON.stringify(v)); } catch (e) {} }
+};
+const fmtFull = n => Math.round(n).toLocaleString("en-US");
+const compact = new Intl.NumberFormat("en-US", { notation: "compact", maximumFractionDigits: 1 });
+const fmtC = n => n < 10000 ? fmtFull(n) : compact.format(n);
+const COLORS = [
+  { c: "#a3e635", g: "linear-gradient(90deg,#5fb52a,#b6f24a)" },
+  { c: "#b26bff", g: "linear-gradient(90deg,#9b4dff,#6d28d9)" },
+  { c: "#38bdf8", g: "#38bdf8" }, { c: "#f472b6", g: "#f472b6" }, { c: "#facc15", g: "#facc15" },
+  { c: "#fb923c", g: "#fb923c" }, { c: "#2dd4bf", g: "#2dd4bf" }, { c: "#e879f9", g: "#e879f9" },
+  { c: "#4ade80", g: "#4ade80" }, { c: "#818cf8", g: "#818cf8" }
+];
+const col = i => COLORS[i % COLORS.length];
+const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
+
+function tween(node, to, fmt, ms = 650) {
+  const from = +node.dataset.v || 0; node.dataset.v = to;
+  cancelAnimationFrame(node._raf);
+  const t0 = performance.now();
+  const step = t => {
+    const k = Math.min(1, (t - t0) / ms), e = 1 - Math.pow(1 - k, 3);
+    node.textContent = fmt(from + (to - from) * e);
+    if (k < 1) node._raf = requestAnimationFrame(step);
+  };
+  node._raf = requestAnimationFrame(step);
+}
+/* long questions wrap onto a second line; if they'd need a third, the text shrinks a little */
+function fitTitle(node) {
+  node.style.fontSize = "";
+  let fs = parseFloat(getComputedStyle(node).fontSize);
+  while (node.scrollHeight > fs * 1.15 * 2 + 4 && fs > 13) { fs -= 1; node.style.fontSize = fs + "px"; }
+}
+addEventListener("resize", () => document.querySelectorAll(".title").forEach(fitTitle));
+let toastT;
+function toast(msg, err = false, ms = 5000) {
+  const t = $("#toast"); t.textContent = msg; t.classList.toggle("err", err); t.classList.add("show");
+  clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove("show"), ms);
+}
+const show = s => $(s).classList.add("show");
+const hide = s => $(s).classList.remove("show");
+
+/* ================= overlay renderer =================
+   A prediction looks like:
+   { id, title, locksAt(ms), winningId?,
+     outcomes:[{ id, title, users, points, top:[{name, used, me?}] }] }          */
+const Overlay = {
+  pid: null, locked: new Set(), prev: [], tick: null, resT: null, cxT: null, p: null,
+
+  showPrediction(p) {
+    if (this.locked.has(p.id)) return;            // late progress after lock: ignore
+    clearTimeout(this.resT); clearTimeout(this.cxT);
+    hide("#resCard"); hide("#cxCard");
+    if (this.pid !== p.id) this.build(p);
+    this.update(p);
+    show("#predCard");
+  },
+
+  build(p) {
+    this.pid = p.id; this.prev = [];
+    $("#pTitle").textContent = p.title; fitTitle($("#pTitle"));
+    const n = p.outcomes.length, labels = $("#pLabels"), segs = $("#pSegs");
+    labels.className = "labels" + (n > 2 ? " multi" : "");
+    labels.innerHTML = ""; segs.innerHTML = "";
+    p.outcomes.forEach((o, i) => {
+      const side = el("div", "side" + (n === 2 && i === 1 ? " right" : ""));
+      side.style.setProperty("--c", col(i).c);
+      const top = el("div", "top");
+      const pct = el("span", "pct", "0%"); pct.dataset.v = 0;
+      const pts = el("span", "pts", "0"); pts.dataset.v = 0;
+      top.append(pct, pts);
+      const st = el("div", "st");
+      side.append(top, el("span", "nm", o.title), st);
+      labels.append(side);
+      // total pool sits centered between the two sides (or on its own row above, for 3+ outcomes)
+      if (i === 0 || n > 2 && i === n - 1) {
+        if (!labels.querySelector(".mid")) {
+          const mid = el("div", "mid");
+          const pn = el("div", "pool-n", "0"); pn.id = "pPool"; pn.dataset.v = 0;
+          mid.append(pn, el("div", "pool-l", "TOTAL POINTS"));
+          labels.append(mid);
+        }
+      }
+      const seg = el("div", "seg"); seg.style.background = col(i).g; seg.style.width = (100 / n) + "%";
+      segs.append(seg);
+    });
+    clearInterval(this.tick);
+    this.tick = setInterval(() => this.renderTimer(), 250);
+  },
+
+  update(p) {
+    this.p = p;
+    const total = p.outcomes.reduce((s, o) => s + (o.points || 0), 0);
+    const n = p.outcomes.length;
+    tween($("#pPool"), total, fmtC);
+    const sides = $("#pLabels").querySelectorAll(".side"), segs = $("#pSegs").children;
+    p.outcomes.forEach((o, i) => {
+      const share = total ? o.points / total * 100 : 0;
+      const width = total ? share : 100 / n;
+      const pctEl = sides[i].querySelector(".pct");
+      tween(pctEl, share, v => Math.round(v) + "%");
+      tween(sides[i].querySelector(".pts"), o.points || 0, fmtC);
+      const st = sides[i].querySelector(".st");
+      st.innerHTML = "";
+      const ratio = o.points ? (total / o.points) : 0;
+      const ln2 = el("span", "ln");
+      ln2.append(el("b", null, fmtFull(o.users || 0)), " voters · ", el("b", null, ratio ? "1:" + ratio.toFixed(2) : "1:—"));
+      st.append(ln2);
+      segs[i].style.width = width + "%";
+      if (this.prev[i] != null && o.points > this.prev[i]) {
+        segs[i].classList.add("pulse"); setTimeout(() => segs[i].classList.remove("pulse"), 350);
+      }
+      this.prev[i] = o.points || 0;
+    });
+    this.renderTimer();
+  },
+
+  renderTimer() {
+    if (!this.p) return;
+    const t = $("#pTimer"), rem = Math.max(0, (this.p.locksAt || 0) - Date.now());
+    const s = Math.ceil(rem / 1000);
+    t.textContent = `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
+    $("#pTimerL").textContent = rem > 0 ? "LEFT" : "LOCKING…";
+    t.classList.toggle("urgent", rem > 0 && rem <= 10000);
+  },
+
+  lock() {
+    if (this.pid) this.locked.add(this.pid);
+    clearInterval(this.tick);
+    hide("#predCard");
+  },
+
+  showResults(p) {
+    this.locked.add(p.id);
+    clearInterval(this.tick); clearTimeout(this.resT); clearTimeout(this.cxT);
+    hide("#predCard"); hide("#cxCard");
+
+    const total = p.outcomes.reduce((s, o) => s + (o.points || 0), 0);
+    const wi = Math.max(0, p.outcomes.findIndex(o => o.id === p.winningId));
+    const win = p.outcomes[wi];
+    // Twitch payout: each winner gets their stake × (whole pool ÷ winning side's pool)
+    const mult = win && win.points ? total / win.points : 1;
+
+    $("#rTitle").textContent = p.title;
+    const wc = col(wi).c, rw = $("#rWinner");
+    rw.style.setProperty("--c", wc); rw.style.setProperty("--cbg", wc + "4d"); rw.style.setProperty("--cbd", wc + "99");
+    $("#rWinName").textContent = win ? win.title : "—";
+    $("#rPool").textContent = fmtFull(total) + " pts in the pot";
+    const nLose = p.outcomes.reduce((s, o, i) => i === wi ? s : s + (o.users || 0), 0);
+    $("#rCounts").textContent = `${fmtFull(win ? win.users : 0)} won · ${fmtFull(nLose)} lost`;
+    // column headings are the choices people picked
+    const others = p.outcomes.map((o, i) => ({ o, i })).filter(x => x.i !== wi);
+    const wh = $("#rWinHead"), lh = $("#rLoseHead");
+    wh.textContent = win ? win.title : ""; wh.style.color = wc;
+    lh.textContent = others.map(x => x.o.title).join(" · ");
+    lh.style.color = others.length === 1 ? col(others[0].i).c : "var(--mute)";
+
+    const winners = (win ? win.top : []).map(t => {
+      const payout = Math.floor(t.used * mult);
+      return { name: t.name, used: t.used, delta: payout - t.used, me: t.me };
+    }).sort((a, b) => b.delta - a.delta);
+    const losers = p.outcomes.flatMap((o, i) => i === wi ? [] : o.top.map(t => ({ name: t.name, used: t.used, delta: -t.used, me: t.me })))
+      .sort((a, b) => a.delta - b.delta);
+
+    this.fillList($("#rWinners"), capWithMe(winners), "+", "Nobody called it!");
+    this.fillList($("#rLosers"), capWithMe(losers), "−", "No losers this time.");
+
+    const d = $("#rDrain"); d.style.animation = "none"; void d.offsetWidth;
+    d.style.animation = `drain ${RESULT_MS}ms linear forwards`;
+    fitTitle($("#rTitle"));
+    show("#resCard");
+    this.resT = setTimeout(() => hide("#resCard"), RESULT_MS);
+  },
+
+  fillList(ol, rows, sign, emptyMsg) {
+    ol.innerHTML = "";
+    if (!rows.length) { ol.append(el("div", "empty", emptyMsg)); return; }
+    rows.forEach((r, i) => {
+      const li = el("li", r.me ? "me" : null);
+      li.style.animationDelay = (0.25 + i * 0.07) + "s";
+      li.append(el("span", "n", r.name), el("span", "b", "bet " + fmtC(r.used)), el("span", "a", sign + fmtFull(Math.abs(r.delta))));
+      ol.append(li);
+    });
+  },
+
+  showCanceled(p) {
+    this.locked.add(p.id);
+    clearInterval(this.tick); clearTimeout(this.resT); clearTimeout(this.cxT);
+    hide("#predCard"); hide("#resCard");
+    $("#cxTitle").textContent = p.title; fitTitle($("#cxTitle"));
+    show("#cxCard");
+    this.cxT = setTimeout(() => hide("#cxCard"), CANCEL_MS);
+  }
+};
+function capWithMe(rows) {   // top 10 (same as Twitch), but always keep "You" in practice
+  const top = rows.slice(0, 10), me = rows.find(r => r.me);
+  if (me && !top.includes(me)) top[top.length - 1] = me;
+  return top;
+}
+
+/* ================= practice engine ================= */
+const BOT_NAMES = ["NebulaNacho","PixelPaladin","ZapZilla","CosmoCrumb","GlitchGoblin","StarDustSam","VoltVixen","LunaLag","OrbitOtter",
+  "BoltBandit","QuasarQueso","MeteorMo","NovaNoodle","AstroAvo","ByteBison","CometKat","PlasmaPanda","WarpWizard","GalaxyGus",
+  "ThunderTaco","SpaceSloth","ZoomZebra","EchoEmu","HyperHippo","RocketRay","FluxFerret","NeonNarwhal","SolarSquid","PulsarPip",
+  "TwitchyTurtle","LagLlama","ClutchCobra","SniperSnail","FragFalcon","KappaKoala","PogPenguin","LurkerLynx","EmoteEagle","ChatChimp","SubSeal"];
+
+const Practice = {
+  p: null, bets: new Map(), state: "idle", lockT: null, botT: null, botLevel: 0, bias: .5,
+  wallet: store.get("wallet", 10000), myBet: null,
+
+  start(cfg) {
+    this.clearTimers();
+    this.p = { id: "practice-" + Date.now(), title: cfg.title, locksAt: Date.now() + cfg.window * 1000,
+      outcomes: [{ id: "a", title: cfg.a }, { id: "b", title: cfg.b }] };
+    this.bets = new Map(); this.myBet = null; this.state = "open";
+    this.botLevel = cfg.bots; this.bias = .3 + Math.random() * .4;
+    Overlay.showPrediction(this.view());
+    this.lockT = setTimeout(() => this.lock(), cfg.window * 1000);
+    if (this.botLevel) this.scheduleBot();
+    UI.refresh();
+  },
+  view() {
+    const outcomes = this.p.outcomes.map((o, i) => {
+      const list = [...this.bets.values()].filter(b => b.side === i).sort((a, b) => b.used - a.used);
+      const top = list.slice(0, 10).map(b => ({ name: b.name, used: b.used, me: b.me }));
+      const me = list.find(b => b.me);
+      if (me && !top.some(t => t.me)) top.push({ name: me.name, used: me.used, me: true });
+      return { id: o.id, title: o.title, users: list.length, points: list.reduce((s, b) => s + b.used, 0), top };
+    });
+    return { ...this.p, outcomes };
+  },
+  place(name, side, amount, me = false) {
+    if (this.state !== "open" || amount <= 0) return false;
+    const cur = this.bets.get(name);
+    if (cur && cur.side !== side) return false;
+    if (cur) cur.used += amount; else this.bets.set(name, { name, side, used: amount, me });
+    Overlay.update(this.view());
+    return true;
+  },
+  scheduleBot() {
+    const gap = [0, [1600, 3200], [500, 1400], [120, 450]][this.botLevel];
+    this.botT = setTimeout(() => {
+      if (this.state !== "open") return;
+      const name = BOT_NAMES[Math.floor(Math.random() * BOT_NAMES.length)];
+      const existing = this.bets.get(name);
+      this.bias = Math.min(.85, Math.max(.15, this.bias + (Math.random() - .5) * .08)); // momentum drift
+      const side = existing ? existing.side : (Math.random() < this.bias ? 0 : 1);
+      this.place(name, side, randomBet());
+      this.scheduleBot();
+    }, gap[0] + Math.random() * (gap[1] - gap[0]));
+  },
+  lock() {
+    if (this.state !== "open") return;
+    this.state = "locked"; this.clearTimers();
+    Overlay.lock(); UI.refresh();
+  },
+  resolve(side) {
+    if (this.state === "open") this.lock();
+    if (this.state !== "locked") return;
+    const v = this.view(); v.winningId = this.p.outcomes[side].id;
+    Overlay.showResults(v);
+    if (this.myBet) {
+      const total = v.outcomes.reduce((s, o) => s + o.points, 0), win = v.outcomes[side];
+      if (this.myBet.side === side) this.addWallet(Math.floor(this.myBet.used * total / win.points));
+    }
+    this.state = "results"; UI.refresh();
+    setTimeout(() => { if (this.state === "results") { this.state = "idle"; UI.refresh(); } }, RESULT_MS);
+  },
+  cancel() {
+    if (this.state !== "open" && this.state !== "locked") return;
+    this.clearTimers();
+    if (this.myBet) this.addWallet(this.myBet.used);
+    Overlay.showCanceled(this.p);
+    this.state = "idle"; UI.refresh();
+  },
+  addWallet(n) { this.wallet += n; store.set("wallet", this.wallet); },
+  clearTimers() { clearTimeout(this.lockT); clearTimeout(this.botT); }
+};
+function randomBet() {
+  const r = Math.random();
+  const [lo, hi] = r < .5 ? [10, 250] : r < .85 ? [250, 2000] : r < .98 ? [2000, 20000] : [20000, 100000];
+  return Math.round((lo + Math.random() * (hi - lo)) / 10) * 10;
+}
+
+/* ================= studio UI ================= */
+const UI = {
+  init() {
+    document.body.classList.add("studio");
+    document.querySelectorAll(".studio-only").forEach(e => e.classList.remove("hide"));
+    $("#previewWrap").className = "preview stars";
+    $("#tabPractice").onclick = () => this.tab("practice");
+    $("#tabLive").onclick = () => this.tab("live");
+    ["#dA", "#dB"].forEach(s => $(s).addEventListener("input", () => this.refresh()));
+    $("#dStart").onclick = () => {
+      const g = s => $(s).value.trim();
+      Practice.start({ title: g("#dTitle") || "Prediction", a: g("#dA") || "Yes", b: g("#dB") || "No",
+        window: +$("#dWin").value, bots: +$("#dBots").value });
+      $("#previewWrap").scrollIntoView({ behavior: "smooth", block: "start" });
+    };
+    document.querySelectorAll("[data-amt]").forEach(b => b.onclick = () => {
+      $("#dAmt").value = b.dataset.amt === "all" ? Practice.wallet : b.dataset.amt;
+    });
+    const bet = side => {
+      const amt = Math.floor(+$("#dAmt").value || 0);
+      if (amt <= 0) return toast("Enter how many points to bet.", true);
+      if (amt > Practice.wallet) return toast("You don't have that many practice points.", true);
+      if (Practice.myBet && Practice.myBet.side !== side) return toast("You already picked the other side. Twitch only lets you add to your side.", true);
+      if (!Practice.place("You", side, amt, true)) return toast("Betting is closed.", true);
+      Practice.myBet = Practice.bets.get("You");
+      Practice.addWallet(-amt); this.refresh();
+    };
+    $("#dBetA").onclick = () => bet(0);
+    $("#dBetB").onclick = () => bet(1);
+    $("#dLock").onclick = () => Practice.lock();
+    $("#dWinA").onclick = () => Practice.resolve(0);
+    $("#dWinB").onclick = () => Practice.resolve(1);
+    $("#dCancel").onclick = () => Practice.cancel();
+    $("#dReset").onclick = () => { Practice.wallet = 10000; store.set("wallet", 10000); this.refresh(); };
+    setInterval(() => this.refresh(), 500);
+    LiveSetup.init();
+    this.refresh();
+  },
+  tab(which) {
+    $("#practice").classList.toggle("hide", which !== "practice");
+    $("#live").classList.toggle("hide", which !== "live");
+    $("#tabPractice").classList.toggle("tab-on", which === "practice");
+    $("#tabLive").classList.toggle("tab-on", which === "live");
+  },
+  refresh() {
+    const s = Practice.state, a = $("#dA").value.trim() || "Yes", b = $("#dB").value.trim() || "No";
+    const names = Practice.p && s !== "idle" ? Practice.p.outcomes.map(o => o.title) : [a, b];
+    $("#dBetA").textContent = "Bet on " + names[0]; $("#dBetB").textContent = "Bet on " + names[1];
+    $("#dWinA").textContent = names[0] + " wins"; $("#dWinB").textContent = names[1] + " wins";
+    $("#dWallet").textContent = fmtFull(Practice.wallet);
+    $("#dStart").disabled = s === "open" || s === "locked";
+    $("#dBetA").disabled = $("#dBetB").disabled = s !== "open";
+    $("#dLock").disabled = s !== "open";
+    $("#dWinA").disabled = $("#dWinB").disabled = !(s === "open" || s === "locked");
+    $("#dCancel").disabled = !(s === "open" || s === "locked");
+    let msg = "No prediction running. Start one below.";
+    if (s === "open") {
+      const rem = Math.max(0, Math.ceil((Practice.p.locksAt - Date.now()) / 1000));
+      msg = `Betting open, ${rem}s left` + (Practice.myBet ? ` · you bet ${fmtFull(Practice.myBet.used)} on ${names[Practice.myBet.side]}` : "");
+    } else if (s === "locked") msg = "Betting locked. The overlay is hidden until you pick a winner.";
+    else if (s === "results") msg = `Showing results for ${RESULT_MS / 1000}s…`;
+    $("#dStatus").textContent = msg;
+  }
+};
+
+/* ================= live setup helper (in studio) ================= */
+const LiveSetup = {
+  init() {
+    const cid = $("#lCid"); cid.value = store.get("cid", "");
+    const upd = () => {
+      const v = cid.value.trim(); store.set("cid", v);
+      const a = $("#lAuth");
+      a.classList.toggle("hide", !v);
+      a.href = "https://id.twitch.tv/oauth2/authorize?response_type=token&force_verify=true&client_id=" +
+        encodeURIComponent(v) + "&redirect_uri=" + encodeURIComponent("http://localhost") +
+        "&scope=" + encodeURIComponent(SCOPES.join(" "));
+    };
+    cid.addEventListener("input", upd); upd();
+    $("#lCheck").onclick = () => this.check();
+  },
+  async check() {
+    const raw = $("#lPaste").value.trim(), out = $("#lResult");
+    const m = raw.match(/access_token=([a-z0-9]+)/i);
+    const token = m ? m[1] : raw.replace(/^oauth:/i, "");
+    if (!/^[a-z0-9]{20,}$/i.test(token)) { out.innerHTML = '<span class="bad">That doesn’t look like a token. Paste the whole address bar.</span>'; return; }
+    out.textContent = "Checking…";
+    try {
+      const r = await fetch("https://id.twitch.tv/oauth2/validate", { headers: { Authorization: "OAuth " + token } });
+      if (!r.ok) throw new Error("Twitch rejected this token (" + r.status + ").");
+      const v = await r.json();
+      const have = v.scopes || [];
+      const scopeOk = have.includes("channel:read:predictions");
+      const extraOk = SCOPES.every(x => have.includes(x));
+      const days = Math.round((v.expires_in || 0) / 86400);
+      out.innerHTML = "";
+      const line = (cls, txt) => { const d = el("div", cls, txt); out.append(d); };
+      line(v.login === EXPECTED_LOGIN ? "ok" : "bad",
+        v.login === EXPECTED_LOGIN ? "✓ Signed in as KruuuuZe" : `⚠ Signed in as “${v.login}”, not KruuuuZe. The overlay will follow that account’s predictions.`);
+      line(scopeOk ? "ok" : "bad", scopeOk ? "✓ Can read predictions" : "✗ Missing permission. Log in again with the button above.");
+      line(extraOk ? "ok" : "bad", extraOk ? "✓ Can read followers, subs and bits (for HTML2 and HTML3)" : "✗ Can't read followers/subs/bits for HTML2 and HTML3. Log in again with the button above.");
+      if (days) line(null, `Token lasts about ${days} days.`);
+      const suffix = "?token=" + token;
+      const box = el("div"); box.style.marginTop = "8px";
+      box.append(el("div", null, "Add this to the end of your OBS file URLs (overlay.html, html2.html and html3.html):"));
+      const ta = el("textarea"); ta.readOnly = true; ta.value = suffix; ta.style.marginTop = "6px";
+      const cp = el("button", "b-go", "Copy"); cp.style.marginTop = "6px";
+      cp.onclick = async () => { try { await navigator.clipboard.writeText(suffix); cp.textContent = "Copied ✓"; } catch (e) { ta.select(); document.execCommand("copy"); cp.textContent = "Copied ✓"; } };
+      const test = el("a", null); test.href = location.href.split(/[?#]/)[0] + suffix; test.target = "_blank";
+      const tb = el("button", null, "Test live overlay in a new tab"); tb.style.marginTop = "6px"; test.append(tb);
+      box.append(ta, cp, test); out.append(box);
+    } catch (e) {
+      out.innerHTML = ""; out.append(el("span", "bad", (e.message || "Couldn't reach Twitch.") + " If you're on the Claude preview page, try the downloaded file instead."));
+    }
+  }
+};
+
+/* ================= live Twitch connection ================= */
+const Live = {
+  cid: null, uid: null, ws: null, seen: [], watchdog: null, keepalive: 10, backoff: 2000, closing: new Set(),
+
+  async init() {
+    try {
+      const r = await fetch("https://id.twitch.tv/oauth2/validate", { headers: { Authorization: "OAuth " + TOKEN } });
+      if (r.status === 401) return toast("Twitch token expired or invalid. Redo step B in the studio page.", true, 600000);
+      const v = await r.json();
+      if (!(v.scopes || []).includes("channel:read:predictions"))
+        return toast("Token is missing the channel:read:predictions permission. Redo step B.", true, 600000);
+      this.cid = v.client_id; this.uid = v.user_id;
+      if (v.login !== EXPECTED_LOGIN) toast(`Connected as ${v.login} (not KruuuuZe).`, true, 15000);
+      await this.restore();
+      this.connect("wss://eventsub.wss.twitch.tv/ws", false);
+      setInterval(() => this.revalidate(), 3600 * 1000);  // Twitch asks apps to re-check tokens hourly
+    } catch (e) {
+      toast("Can't reach Twitch. Retrying in 15s…", true, 14000);
+      setTimeout(() => this.init(), 15000);
+    }
+  },
+  async revalidate() {
+    try {
+      const r = await fetch("https://id.twitch.tv/oauth2/validate", { headers: { Authorization: "OAuth " + TOKEN } });
+      if (r.status === 401) toast("Twitch token expired. Redo step B in the studio page.", true, 600000);
+    } catch (e) {}
+  },
+  helix(path, opts = {}) {
+    return fetch("https://api.twitch.tv/helix/" + path, { ...opts,
+      headers: { Authorization: "Bearer " + TOKEN, "Client-Id": this.cid, "Content-Type": "application/json" } });
+  },
+  async restore() {  // if OBS refreshes mid-prediction, pick it back up
+    try {
+      const r = await this.helix("predictions?first=1&broadcaster_id=" + this.uid);
+      if (!r.ok) return;
+      const p = (await r.json()).data?.[0];
+      if (p && p.status === "ACTIVE") Overlay.showPrediction({ id: p.id, title: p.title, outcomes: this.outcomes(p.outcomes),
+        locksAt: Date.parse(p.created_at) + p.prediction_window * 1000 });
+    } catch (e) {}
+  },
+  outcomes(list) {
+    return (list || []).map(o => ({ id: o.id, title: o.title, users: o.users || 0, points: o.channel_points || 0,
+      top: (o.top_predictors || []).map(t => ({ name: t.user_name || t.user_login || "viewer", used: t.channel_points_used || 0 })) }));
+  },
+  connect(url, isReconnect) {
+    const ws = new WebSocket(url);
+    ws.onmessage = e => {
+      let m; try { m = JSON.parse(e.data); } catch (x) { return; }
+      const type = m.metadata?.message_type, id = m.metadata?.message_id;
+      if (id) { if (this.seen.includes(id)) return; this.seen.push(id); if (this.seen.length > 200) this.seen.shift(); }
+      this.kick();
+      if (type === "session_welcome") {
+        const old = this.ws; this.ws = ws; this.backoff = 2000;
+        this.keepalive = m.payload.session.keepalive_timeout_seconds || 10;
+        this.kick();
+        if (isReconnect && old && old !== ws) { this.closing.add(old); old.close(); }
+        else this.subscribe(m.payload.session.id);
+      } else if (type === "session_reconnect") {
+        this.connect(m.payload.session.reconnect_url, true);
+      } else if (type === "notification") {
+        this.handle(m.metadata.subscription_type, m.payload.event);
+      } else if (type === "revocation") {
+        toast("Twitch stopped sending prediction events (" + (m.payload?.subscription?.status || "revoked") + "). Redo step B.", true, 600000);
+      }
+    };
+    ws.onclose = () => {
+      if (this.closing.has(ws)) { this.closing.delete(ws); return; }
+      if (ws !== this.ws && this.ws) return;  // a reconnect socket that never took over
+      this.ws = null; clearTimeout(this.watchdog);
+      setTimeout(() => this.connect("wss://eventsub.wss.twitch.tv/ws", false), this.backoff);
+      this.backoff = Math.min(60000, this.backoff * 2);
+    };
+    if (!isReconnect && !this.ws) this.ws = ws;
+  },
+  kick() {  // if Twitch goes silent past the keepalive window, reconnect
+    clearTimeout(this.watchdog);
+    this.watchdog = setTimeout(() => { if (this.ws) this.ws.close(); }, (this.keepalive + 10) * 1000);
+  },
+  async subscribe(sessionId) {
+    const types = ["channel.prediction.begin", "channel.prediction.progress", "channel.prediction.lock", "channel.prediction.end"];
+    let ok = 0, err = "";
+    for (const type of types) {
+      try {
+        const r = await this.helix("eventsub/subscriptions", { method: "POST", body: JSON.stringify({
+          type, version: "1", condition: { broadcaster_user_id: this.uid },
+          transport: { method: "websocket", session_id: sessionId } }) });
+        if (r.ok || r.status === 409) ok++; else err = (await r.json().catch(() => ({}))).message || r.status;
+      } catch (e) { err = e.message; }
+    }
+    if (ok === types.length) toast("⚡ Prediction overlay connected to Twitch", false, 4000);
+    else toast("Couldn't subscribe to predictions: " + err, true, 600000);
+  },
+  handle(type, ev) {
+    const base = { id: ev.id, title: ev.title, outcomes: this.outcomes(ev.outcomes) };
+    if (type === "channel.prediction.begin" || type === "channel.prediction.progress")
+      Overlay.showPrediction({ ...base, locksAt: Date.parse(ev.locks_at) });
+    else if (type === "channel.prediction.lock") Overlay.lock();
+    else if (type === "channel.prediction.end") {
+      if (ev.status === "resolved") Overlay.showResults({ ...base, winningId: ev.winning_outcome_id });
+      else Overlay.showCanceled(base);
+    }
+  }
+};
+
+/* ================= auto demo loop (for lining it up in OBS) ================= */
+function autoDemo() {
+  const qs = [["Will we win this match?", "Yes", "No"], ["Boss fight: first try?", "Easy W", "Pain"], ["Top 3 finish?", "Believe", "Doubt"]];
+  let k = 0;
+  const run = () => {
+    const [t, a, b] = qs[k++ % qs.length];
+    Practice.wallet = 0;
+    Practice.start({ title: t, a, b, window: 20, bots: 3 });
+    setTimeout(() => Practice.resolve(Math.random() < .5 ? 0 : 1), 23000);
+    setTimeout(run, 23000 + RESULT_MS + 4000);
+  };
+  run();
+}
+
+/* ================= boot ================= */
+(function boot() {
+  const scale = +qs.get("scale"); if (scale > 0) $("#stage").style.transform = `scale(${scale})`;
+  if (qs.get("pos") === "bottom") document.body.classList.add("pos-bottom");
+  if (MODE === "studio") { UI.refresh = UI.refresh.bind(UI); UI.init(); return; }
+  document.body.classList.add(MODE);
+  UI.refresh = () => {};
+  if (MODE === "autodemo") autoDemo(); else Live.init();
+})();
+</script>
+<script>
+/* ================= remote control from the Channel Points app =================
+   Only runs when the OBS link has &ctl=KEY (the pairing key shown in the app's Control screen).
+   The app and this page talk through a private ntfy.sh channel named after that key:
+   the app sends commands; this page answers "hello" with its name and version, and runs the commands. */
+(() => {
+  const qs = new URLSearchParams(location.search), key = qs.get("ctl");
+  if (!key || !window.EventSource) return;
+  const PAGE = "overlay", VERSION = "dc22efe", url = "https://ntfy.sh/kzc-" + encodeURIComponent(key);
+  const send = o => fetch(url, { method: "POST", body: JSON.stringify(Object.assign({ from: "overlay", page: PAGE, version: VERSION }, o)) }).catch(() => {});
+  const seen = new Set(), born = Date.now() / 1000;
+  const es = new EventSource(url + "/sse");
+  es.onopen = () => send({ cmd: "hello" });
+  es.onmessage = e => {
+    let m, c; try { m = JSON.parse(e.data); } catch (x) { return; }
+    if (m.event !== "message" || seen.has(m.id) || m.time < born - 5) return;   // never re-run old commands
+    seen.add(m.id);
+    try { c = JSON.parse(m.message); } catch (x) { return; }
+    if (!c || c.from === "overlay" || (c.to && c.to !== "all" && c.to !== PAGE)) return;
+    if (c.cmd === "ping") send({ cmd: "hello" });
+    else if (c.cmd === "reload") {                 // load the newest version (a fresh address skips any cached copy)
+      const u = new URL(location.href); u.searchParams.set("_v", Date.now()); location.replace(u.toString());
+    } else if (typeof window.onRemote === "function") { try { window.onRemote(c); } catch (x) { console.error(x); } }
+  };
+})();
+</script>
+</body>
+</html>

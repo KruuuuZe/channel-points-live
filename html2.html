@@ -1,0 +1,643 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>HTML2 · Event Wall</title>
+<link rel="icon" id="favicon">
+<style>
+:root{
+  --lime:#a3e635; --lime2:#5fb52a; --purple:#a855f7; --purple2:#6d28d9; --ring:#22d36b;
+  --flame:#ff8a3d; --sky:#5ee7ff; --pink:#f472b6;
+  --ink:#f5f2ff; --mute:#a59cc4; --line:#2a2342;
+  --font:"Segoe UI",system-ui,-apple-system,Roboto,"Helvetica Neue",Arial,sans-serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0;width:100%;height:100%;overflow:hidden;background:transparent;color:var(--ink);font-family:var(--font);-webkit-font-smoothing:antialiased}
+body.fit{background:#020205}
+
+#view{position:fixed;inset:0;overflow:hidden}
+/* the whole design is drawn at 2560x1440 and scaled to whatever the window is */
+#stage{position:absolute;left:0;top:0;width:2560px;height:1440px;transform-origin:0 0;overflow:hidden;background:transparent}
+
+/* ---------- glass panels ---------- */
+.glass{
+  position:absolute;border-radius:28px;border:2px solid transparent;
+  background:
+    linear-gradient(160deg,#120d24e6,#07060ee6) padding-box,
+    linear-gradient(150deg,var(--a,var(--lime)),#ffffff10 45%,#ffffff10 55%,var(--b,var(--purple))) border-box;
+  box-shadow:0 18px 50px #000a,inset 0 0 60px #8b2cf514;
+}
+
+/* ---------- top bar ---------- */
+/* ---------- chatters bar ---------- */
+#chatbar{left:0;top:0;width:2560px;height:96px;border-radius:0;border-left:0;border-right:0;--a:var(--lime);--b:var(--purple)}
+#track{position:absolute;left:0;right:0;top:0;bottom:0;overflow:hidden;
+  -webkit-mask-image:linear-gradient(90deg,transparent,#000 3%,#000 97%,transparent);mask-image:linear-gradient(90deg,transparent,#000 3%,#000 97%,transparent)}
+#reel{position:absolute;left:0;top:0;height:100%;display:flex;align-items:center;white-space:nowrap;will-change:transform}
+#reel .nm{font-size:42px;font-weight:900;letter-spacing:.02em;padding:0 26px;text-shadow:0 3px 0 #000}
+#reel .nm.c0{color:var(--lime);text-shadow:0 3px 0 #000,0 0 18px #a3e63566}
+#reel .nm.c1{color:#c48bff;text-shadow:0 3px 0 #000,0 0 18px #a855f766}
+#reel .nm.c2{color:#fff}
+#reel .nm.new{animation:newname 3s}
+@keyframes newname{0%,40%{color:#fff;text-shadow:0 0 18px #fff,0 0 40px var(--lime)}}
+#reel svg{width:20px;height:20px;flex:none;fill:#e9e2ff;filter:drop-shadow(0 0 8px #c4a6ff);animation:twinkle 3s ease-in-out infinite}
+#reel svg:nth-of-type(3n+1){animation-delay:-1s;fill:#e4ffd0;filter:drop-shadow(0 0 8px #a3e635)} #reel svg:nth-of-type(3n+2){animation-delay:-2s}
+#chatEmpty{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:34px;font-weight:800;color:var(--mute);letter-spacing:.04em}
+
+/* alert banner under the chatters bar */
+#alert{position:absolute;left:1280px;top:124px;width:980px;transform:translate(-50%,0) scale(.85);opacity:0;
+  transition:opacity .45s,transform .55s cubic-bezier(.2,1.4,.3,1);text-align:center;padding:18px 34px 20px;border-radius:26px;--a:var(--lime);--b:var(--purple)}
+#alert.show{opacity:1;transform:translate(-50%,0) scale(1)}
+#alert .ak{font-size:22px;font-weight:900;letter-spacing:.28em;color:var(--a);text-shadow:0 0 16px var(--a)}
+#alert .an{margin-top:4px;font-size:54px;font-weight:900;line-height:1.1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-shadow:0 3px 0 #000}
+#alert::after{content:"";position:absolute;inset:0;border-radius:26px;pointer-events:none;
+  background:linear-gradient(105deg,transparent 35%,#ffffff2a 50%,transparent 65%);background-size:250% 100%;background-position:120% 0}
+#alert.show::after{animation:sheen 1.4s .2s}
+@keyframes sheen{to{background-position:-60% 0}}
+
+/* ---------- side panels ---------- */
+.panel{display:flex;flex-direction:column;padding:22px 24px 18px}
+.panel header{display:flex;align-items:center;gap:16px;padding-bottom:16px;margin-bottom:12px;border-bottom:2px solid #ffffff12}
+.panel .pic{width:52px;height:52px;border-radius:16px;display:grid;place-items:center;flex:none;background:var(--a);box-shadow:0 0 20px var(--a)}
+.panel .pic svg{width:30px;height:30px;fill:#0b0a12}
+.panel h2{margin:0;flex:1;font-size:28px;font-weight:900;letter-spacing:.18em}
+.panel .cnt{min-width:64px;padding:6px 16px;border-radius:999px;text-align:center;font-size:26px;font-weight:900;font-variant-numeric:tabular-nums;
+  color:#0b0a12;background:var(--a)}
+.panel .sub{font-size:16px;color:var(--mute);font-weight:700;letter-spacing:.08em;margin:-6px 0 10px}
+.list{list-style:none;margin:0;padding:0;flex:1;overflow:hidden;scroll-behavior:smooth;
+  -webkit-mask-image:linear-gradient(#000 88%,transparent);mask-image:linear-gradient(#000 88%,transparent)}
+.row{display:flex;align-items:center;gap:14px;height:58px;padding:0 16px;margin-bottom:8px;border-radius:16px;background:#ffffff08;border:1px solid #ffffff0a}
+.row .ri{width:28px;height:28px;flex:none;fill:var(--c,var(--a))}
+.row .nm{flex:1;min-width:0;font-size:27px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.row .nt{font-size:18px;color:var(--mute);font-weight:700;white-space:nowrap}
+.row .vl{font-size:25px;font-weight:900;color:var(--c,var(--a));white-space:nowrap;font-variant-numeric:tabular-nums}
+.row .tm{font-size:16px;color:#7d7699;font-weight:700;width:76px;text-align:right;font-variant-numeric:tabular-nums}
+.row.new{animation:rowin .7s cubic-bezier(.2,1,.3,1)}
+.left .row.new{--dx:-40px} .right .row.new{--dx:40px}
+@keyframes rowin{0%{opacity:0;transform:translateX(var(--dx));background:#ffffff40}
+  60%{opacity:1;transform:none;background:#ffffff1c}}
+.empty{color:#7d7699;font-size:22px;font-weight:700;padding:10px 4px}
+.tier{display:inline-block;padding:3px 10px;border-radius:9px;font-size:18px;background:var(--c,var(--a));color:#0b0a12}
+
+/* side panels: positions are set by layout() so only categories with something in them show */
+.panel{width:560px;transition:top .7s cubic-bezier(.2,.9,.2,1),height .7s cubic-bezier(.2,.9,.2,1),opacity .5s,transform .5s}
+.panel.off{opacity:0;visibility:hidden;transform:scale(.96)}
+.left{left:40px} .right{left:1960px}
+#pFollows{--a:var(--lime);--b:var(--lime2)}
+#pSubs{--a:var(--purple);--b:var(--purple2)}
+#pGifts{--a:var(--pink);--b:var(--purple)}
+#pBits{--a:var(--purple);--b:var(--purple2)}
+#pRaids{--a:var(--lime);--b:var(--lime2)}
+#pStreaks{--a:var(--flame);--b:var(--purple)}
+#pScroop{--a:#e2b26b;--b:#8b6b3d}
+#pScroop .row .rk{font-size:22px;font-weight:900;color:var(--a);width:34px;flex:none}
+#pScroop .sec{font-size:18px;font-weight:900;letter-spacing:.18em;color:var(--a);padding:6px 6px 8px;list-style:none}
+
+/* ---------- settings gear ---------- */
+#gear{position:absolute;right:14px;bottom:10px;width:46px;height:46px;border:0;background:none;padding:0;cursor:pointer;opacity:.13;transition:opacity .3s,transform .6s}
+#gear:hover,#gear.on{opacity:.75;transform:rotate(90deg)}
+#gear svg{width:100%;height:100%;fill:#fff}
+#menu{position:absolute;right:20px;bottom:66px;width:520px;padding:22px;border-radius:24px;display:none;--a:var(--lime);--b:var(--purple);z-index:5}
+#menu.open{display:block}
+#menu h3{margin:0 0 4px;font-size:26px;letter-spacing:.12em}
+#menu .since{color:var(--mute);font-size:17px;margin-bottom:16px}
+#menu .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:12px}
+#menu button{font:inherit;font-size:19px;font-weight:800;color:var(--ink);background:#1a1530;border:1px solid var(--line);border-radius:14px;padding:13px 8px;cursor:pointer}
+#menu button:active{transform:scale(.97)}
+#menu .wide{width:100%;margin-top:6px}
+#menu .danger{background:linear-gradient(90deg,#4b1238,#2a0f40);border-color:#ff5fb355}
+#menu .danger.armed{background:#c0266d;border-color:#fff6}
+#menu .lbl{font-size:15px;color:var(--mute);font-weight:800;letter-spacing:.14em;margin:8px 0 8px}
+#menu .mode{font-size:16px;color:var(--mute);margin-top:12px;line-height:1.4}
+
+#toast{position:absolute;left:40px;bottom:12px;max-width:1100px;padding:12px 18px;border-radius:14px;background:#0d0b17ee;border:1px solid var(--line);
+  font-size:20px;font-weight:700;opacity:0;transition:.4s;pointer-events:none}
+#toast.show{opacity:1} #toast.err{border-color:#ff5fb3;color:#ffd0ea}
+</style>
+</head>
+<body>
+<div id="view">
+<div id="stage">
+
+  <!-- ===== top bar ===== -->
+  <div id="chatbar" class="glass">
+    <div id="track"><div id="reel"></div><div id="chatEmpty">Say hi in chat to get your name up here</div></div>
+  </div>
+  <div id="alert" class="glass"><div class="ak"></div><div class="an"></div></div>
+
+  <!-- ===== left column ===== -->
+  <section id="pFollows" class="glass panel left">
+    <header><div class="pic"><svg viewBox="0 0 24 24"><use href="#i-heart"/></svg></div><h2>FOLLOWERS</h2><div class="cnt">0</div></header>
+    <ul class="list"></ul><div class="empty">Waiting for the first follower…</div>
+  </section>
+  <section id="pSubs" class="glass panel left">
+    <header><div class="pic"><svg viewBox="0 0 24 24"><use href="#i-star"/></svg></div><h2>SUBSCRIBERS</h2><div class="cnt">0</div></header>
+    <ul class="list"></ul><div class="empty">Waiting for the first sub…</div>
+  </section>
+
+  <section id="pGifts" class="glass panel left">
+    <header><div class="pic"><svg viewBox="0 0 24 24"><use href="#i-gift"/></svg></div><h2>GIFTED SUBS</h2><div class="cnt">0</div></header>
+    <ul class="list"></ul><div class="empty">No gifted subs yet…</div>
+  </section>
+
+  <!-- ===== right column ===== -->
+  <section id="pBits" class="glass panel right">
+    <header><div class="pic"><svg viewBox="0 0 24 24"><use href="#i-gem"/></svg></div><h2>BITS</h2><div class="cnt">0</div></header>
+    <ul class="list"></ul><div class="empty">No bits yet…</div>
+  </section>
+  <section id="pRaids" class="glass panel right">
+    <header><div class="pic"><svg viewBox="0 0 24 24"><use href="#i-rocket"/></svg></div><h2>RAIDS</h2><div class="cnt">0</div></header>
+    <ul class="list"></ul><div class="empty">No raids yet…</div>
+  </section>
+  <section id="pStreaks" class="glass panel right">
+    <header><div class="pic"><svg viewBox="0 0 24 24"><use href="#i-flame"/></svg></div><h2>WATCH STREAKS</h2><div class="cnt">0</div></header>
+    <ul class="list"></ul><div class="empty">No streaks shared yet…</div>
+  </section>
+  <section id="pScroop" class="glass panel right">
+    <header><div class="pic"><svg viewBox="0 0 24 24"><use href="#i-hammer"/></svg></div><h2>SCROOPERS</h2><div class="cnt">0</div></header>
+    <ul class="list"></ul><div class="empty">No scrap scrooped yet…</div>
+  </section>
+
+  <!-- ===== settings ===== -->
+  <div id="menu" class="glass">
+    <h3>EVENT WALL</h3>
+    <div class="since" id="since"></div>
+    <div class="lbl">TEST EVENTS</div>
+    <div class="grid">
+      <button data-test="follow">+ Follow</button><button data-test="sub">+ Sub</button><button data-test="gift">+ Gift</button>
+      <button data-test="bits">+ Bits</button><button data-test="raid">+ Raid</button><button data-test="streak">+ Streak</button><button data-test="chat">+ Chatter</button><button data-test="chat5">+ 5 Chatters</button><button data-test="chat20">+ 20 Chatters</button>
+    </div>
+    <button id="autoBtn" class="wide">Auto demo: off</button>
+    <button id="resetBtn" class="wide danger">Reset everything</button>
+    <div class="mode" id="modeTxt"></div>
+  </div>
+  <button id="gear" aria-label="Settings"><svg viewBox="0 0 24 24"><path d="M19.4 13a7.6 7.6 0 0 0 0-2l2.1-1.6-2-3.5-2.5 1a7.4 7.4 0 0 0-1.7-1L15 3h-4l-.4 2.9a7.4 7.4 0 0 0-1.7 1l-2.5-1-2 3.5L6.6 11a7.6 7.6 0 0 0 0 2l-2.1 1.6 2 3.5 2.5-1a7.4 7.4 0 0 0 1.7 1L11 21h4l.4-2.9a7.4 7.4 0 0 0 1.7-1l2.5 1 2-3.5zM13 15.5a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 0 7z" transform="translate(-1 0)"/></svg></button>
+  <div id="toast"></div>
+</div>
+</div>
+
+<!-- icon set -->
+<svg width="0" height="0" style="position:absolute">
+  <defs>
+    <path id="i-heart" d="M12 21s-7.5-4.6-9.6-9.2C.9 8.4 3 4.5 6.7 4.5c2.1 0 3.5 1.2 4.3 2.4.8-1.2 2.2-2.4 4.3-2.4 3.7 0 5.8 3.9 4.3 7.3C19.5 16.4 12 21 12 21z"/>
+    <path id="i-star" d="M12 2l2.9 6.3 6.9.7-5.2 4.6 1.5 6.8L12 16.9 5.9 20.4l1.5-6.8L2.2 9l6.9-.7z"/>
+    <path id="i-gift" d="M20 8h-2.2A3 3 0 0 0 12 4.8 3 3 0 0 0 6.2 8H4a1 1 0 0 0-1 1v3h8V8h2v4h8V9a1 1 0 0 0-1-1zM9 8a1.2 1.2 0 1 1 1.2-1.2V8zm6 0h-1.2V6.8A1.2 1.2 0 1 1 15 8zM4 13v7a1 1 0 0 0 1 1h6v-8zm9 0v8h6a1 1 0 0 0 1-1v-7z"/>
+    <path id="i-gem" d="M12 2 3 9l9 13 9-13zm0 3.2L17.2 9 12 17.1 6.8 9z"/>
+    <path id="i-rocket" d="M14 3c3.6-.8 6.4-.6 7 0 .6.6.8 3.4 0 7-1 4.4-5 7.8-7.8 9.5l-.7-3.3-2.7-2.7-3.3-.7C8.2 10 9.6 6 14 3zm1.5 4a1.8 1.8 0 1 0 0 3.6 1.8 1.8 0 0 0 0-3.6zM6 15.5l2.5 2.5C7.6 20 5 21 3 21c0-2 1-4.6 3-5.5z"/>
+    <path id="i-hammer" d="M3.6 5.2 8.8 2l3.4 2.1-1.3 2.1 9.9 9.9-2.8 2.8-9.9-9.9-1.7 1.2z"/>
+    <path id="i-flame" d="M12.5 2s.8 3.2-1.6 6.1C9.4 9.9 7 11.6 7 15a5 5 0 0 0 10 0c0-2.2-1-3.4-1.8-4.3 0 1.6-.8 2.6-1.8 2.6-.9 0-1.4-.8-1.2-2C12.6 8.7 15.6 6.3 12.5 2z"/>
+  </defs>
+</svg>
+
+<script>
+"use strict";
+const LOGO = "data:image/webp;base64,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";
+document.querySelectorAll("[data-logo]").forEach(i => i.src = LOGO);
+document.getElementById("favicon").href = LOGO;
+
+/* ================= helpers ================= */
+const $ = s => document.querySelector(s);
+const qs = new URLSearchParams(location.search);
+const hs = new URLSearchParams(location.hash.replace(/^#/, ""));
+const TOKEN = qs.get("token") || hs.get("token") || "";
+const LIVE = !!TOKEN;
+const KEY = "cpo2_" + (LIVE ? "live" : "practice");
+const fmt = n => Math.round(n).toLocaleString("en-US");
+const clock = t => new Date(t).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
+const icon = (id, cls = "ri") => { const s = document.createElementNS("http://www.w3.org/2000/svg", "svg"); s.setAttribute("viewBox", "0 0 24 24"); s.setAttribute("class", cls);
+  const u = document.createElementNS("http://www.w3.org/2000/svg", "use"); u.setAttribute("href", "#" + id); s.append(u); return s; };
+function tween(node, to, ms = 700) {
+  const from = +node.dataset.v || 0; node.dataset.v = to; cancelAnimationFrame(node._raf);
+  const t0 = performance.now();
+  const step = t => { const k = Math.min(1, (t - t0) / ms), e = 1 - Math.pow(1 - k, 3);
+    node.textContent = fmt(from + (to - from) * e); if (k < 1) node._raf = requestAnimationFrame(step); };
+  node._raf = requestAnimationFrame(step);
+}
+let toastT;
+function toast(msg, err = false, ms = 5000) {
+  const t = $("#toast"); t.textContent = msg; t.classList.toggle("err", err); t.classList.add("show");
+  clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove("show"), ms);
+}
+
+/* ================= fit 2560x1440 to the window ================= */
+function fit() {
+  // measure the fixed full-screen box, not the page (phones report a wider page because the stage is 2560px)
+  const r = $("#view").getBoundingClientRect(), W = r.width, H = r.height;
+  if (!W || !H) return;
+  const s = Math.min(W / 2560, H / 1440);
+  const st = $("#stage");
+  st.style.transform = `translate(${(W - 2560 * s) / 2}px,${(H - 1440 * s) / 2}px) scale(${s})`;
+  document.body.classList.toggle("fit", Math.abs(s - 1) > .01);
+}
+addEventListener("resize", fit); addEventListener("orientationchange", () => setTimeout(fit, 300));
+if (window.ResizeObserver) new ResizeObserver(fit).observe($("#view"));
+fit(); setTimeout(fit, 200);
+
+/* ================= animated starfield ================= */
+
+
+/* ================= data (kept until Reset) ================= */
+const MAX_KEEP = 500;
+function blank() { return { since: Date.now(), chatters: [], follows: [], subs: [], gifts: [], bits: [], raids: [], streaks: [],
+  n: { follows: 0, subs: 0, gifted: 0, bits: 0, raids: 0, raiders: 0, streaks: 0 } }; }
+let D = (() => { try { const v = JSON.parse(localStorage.getItem(KEY)); if (v && v.n) return v; } catch (e) {} return blank(); })();
+if (!D.chatters) D.chatters = [];
+if (!D.gifts) {
+  D.gifts = D.subs.filter(e => e.kind === "gift");
+  D.subs = D.subs.filter(e => e.kind !== "gift");
+  D.n.subs = Math.max(0, D.n.subs - D.n.gifted);
+}
+function save() { try { localStorage.setItem(KEY, JSON.stringify(D)); } catch (e) {} }
+
+const TIER = { "1000": "T1", "2000": "T2", "3000": "T3", prime: "Prime" };
+function bitColor(b) { return b >= 10000 ? "#ff4d6d" : b >= 5000 ? "#5ee7ff" : b >= 1000 ? "#a3e635" : b >= 100 ? "#b26bff" : "#c9c4dc"; }
+
+/* every event comes through here, from Twitch or from the test buttons */
+function add(kind, e) {
+  e.t = Date.now();
+  const list = { follow: "follows", sub: "subs", resub: "subs", gift: "gifts", bits: "bits", raid: "raids", streak: "streaks" }[kind];
+  e.kind = kind;
+  D[list].unshift(e); if (D[list].length > MAX_KEEP) D[list].length = MAX_KEEP;
+  const n = D.n;
+  if (kind === "follow") n.follows++;
+  else if (kind === "sub" || kind === "resub") n.subs++;
+  else if (kind === "gift") n.gifted += e.count;
+  else if (kind === "bits") n.bits += e.amount;
+  else if (kind === "raid") { n.raids++; n.raiders += e.viewers; }
+  else if (kind === "streak") n.streaks++;
+  save();
+  render(list, true);
+  layout();
+  renderTiles();
+  Alerts.push(kind, e);
+}
+
+/* ================= rendering ================= */
+const PANELS = { follows: "#pFollows", subs: "#pSubs", gifts: "#pGifts", bits: "#pBits", raids: "#pRaids", streaks: "#pStreaks" };
+function rowFor(list, e) {
+  const li = el("li", "row");
+  if (list === "follows") {
+    li.append(icon("i-heart"), el("span", "nm", e.name), el("span", "tm", clock(e.t)));
+  } else if (list === "gifts") {
+    li.append(icon("i-gift"), el("span", "nm", e.name), el("span", "nt", "gifted"), el("span", "vl", "×" + fmt(e.count)),
+      el("span", "tier", TIER[e.tier] || "T1"), el("span", "tm", clock(e.t)));
+  } else if (list === "subs") {
+    li.append(icon("i-star"), el("span", "nm", e.name));
+    if (e.kind === "resub") li.append(el("span", "nt", e.months + (e.months === 1 ? " month" : " months")));
+    else li.append(el("span", "nt", "new"));
+    li.append(el("span", "tier", TIER[e.tier] || "T1"));
+    li.append(el("span", "tm", clock(e.t)));
+  } else if (list === "bits") {
+    li.style.setProperty("--c", bitColor(e.amount));
+    li.append(icon("i-gem"), el("span", "nm", e.name), el("span", "vl", fmt(e.amount)), el("span", "tm", clock(e.t)));
+  } else if (list === "raids") {
+    li.append(icon("i-rocket"), el("span", "nm", e.name), el("span", "vl", fmt(e.viewers)), el("span", "nt", "raiders"), el("span", "tm", clock(e.t)));
+  } else if (list === "streaks") {
+    li.append(icon("i-flame"), el("span", "nm", e.name), el("span", "vl", fmt(e.value)), el("span", "nt", "streams"), el("span", "tm", clock(e.t)));
+  }
+  return li;
+}
+function render(list, isNew) {
+  const p = $(PANELS[list]), ul = p.querySelector(".list");
+  ul.innerHTML = "";
+  D[list].slice(0, 120).forEach((e, i) => { const r = rowFor(list, e); if (isNew && i === 0) r.classList.add("new"); ul.append(r); });
+  p.querySelector(".empty").style.display = D[list].length ? "none" : "";
+  ul.style.display = D[list].length ? "" : "none";
+  const cnt = { follows: D.n.follows, subs: D.n.subs, gifts: D.n.gifted, bits: D.n.bits, raids: D.n.raids, streaks: D.n.streaks }[list];
+  p.querySelector(".cnt").textContent = fmt(cnt);
+  if (isNew) { ul.scrollTop = 0; ul._hold = 3; }
+}
+function renderTiles() {
+  $("#since").textContent = "Tracking since " + new Date(D.since).toLocaleString([], { weekday: "short", hour: "numeric", minute: "2-digit" });
+}
+/* ===== scroop leaderboard: the !scroop hauls saved by the alerts page (html3) in this browser ===== */
+const Scroop = {
+  KEY: "scroopHaul", ALLKEY: "scroopAllTime", RESET: 8 * 3600 * 1000, top: [], sig: "",
+  rank(users) { return Object.values(users || {}).filter(u => u.pts > 0).sort((a, b) => b.pts - a.pts); },
+  read() {
+    let d = null, all = null;
+    try { d = JSON.parse(localStorage.getItem(this.KEY)); } catch (e) {}
+    try { all = JSON.parse(localStorage.getItem(this.ALLKEY)); } catch (e) {}
+    const daily = !d || !d.users || Date.now() - (d.t || 0) > this.RESET ? [] : this.rank(d.users);
+    return { daily, all: this.rank(all ? all.users : d && d.users) };
+  },
+  refresh(force) {
+    const r = this.read(), sig = JSON.stringify([r.daily, r.all].map(l => l.map(u => [u.name, u.pts])));
+    if (!force && sig === this.sig) return;
+    const grew = this.sig && sig !== this.sig; this.sig = sig; this.top = r.all.length ? r.all : r.daily;
+    const p = $("#pScroop"), ul = p.querySelector(".list"); ul.innerHTML = "";
+    const section = (title, list) => {
+      ul.append(el("li", "sec", title));
+      if (!list.length) { const li = el("li", "row"); li.append(el("span", "nt", "Nobody yet")); ul.append(li); return; }
+      list.slice(0, 10).forEach((u, i) => {
+        const li = el("li", "row"); li.style.setProperty("--c", "#e2b26b");
+        const nm = el("span", "nm", u.name); if (u.color) nm.style.color = u.color;
+        li.append(el("span", "rk", (i + 1) + "."), icon("i-hammer"), nm, el("span", "vl", fmt(u.pts)), el("span", "nt", "pts"));
+        ul.append(li);
+      });
+    };
+    section("DAILY", r.daily); section("ALL TIME", r.all);
+    const any = r.all.length || r.daily.length;
+    p.querySelector(".empty").style.display = any ? "none" : "";
+    ul.style.display = any ? "" : "none";
+    p.querySelector(".cnt").textContent = fmt(r.daily.length);
+    if (grew) p.querySelector(".cnt").animate([{ transform: "scale(1.35)" }, { transform: "none" }], { duration: 500 });
+    layout();
+  }
+};
+addEventListener("storage", e => { if (e.key === Scroop.KEY || e.key === Scroop.ALLKEY) Scroop.refresh(); });
+setInterval(() => Scroop.refresh(), 3000);
+const COLS = [["follows", "subs", "gifts"], ["bits", "raids", "streaks", "scroop"]];
+PANELS.scroop = "#pScroop";
+const shown = l => l === "scroop" ? Scroop.top.length : D[l].length;
+function layout() {
+  const TOP = 124, BOTTOM = 1380, GAP = 24;
+  COLS.forEach(col => {
+    const on = col.filter(l => shown(l));
+    const h = on.length ? (BOTTOM - TOP - GAP * (on.length - 1)) / on.length : 0;
+    let y = TOP;
+    col.forEach(l => {
+      const p = $(PANELS[l]);
+      if (!shown(l)) { p.classList.add("off"); return; }
+      p.classList.remove("off");
+      p.style.top = y + "px"; p.style.height = h + "px"; y += h + GAP;
+    });
+  });
+}
+function renderAll() { Object.keys(PANELS).forEach(l => l !== "scroop" && render(l, false)); renderTiles(); Scroop.refresh(true); layout(); Reel.build(); }
+
+/* long lists slowly scroll so everyone gets seen, then jump back to the newest */
+setInterval(() => {
+  document.querySelectorAll(".list").forEach(ul => {
+    if (ul._hold > 0) { ul._hold--; return; }
+    if (ul.scrollHeight <= ul.clientHeight + 4) return;
+    if (ul.scrollTop + ul.clientHeight >= ul.scrollHeight - 4) { ul.scrollTop = 0; ul._hold = 3; }
+    else ul.scrollTop += 66;
+  });
+}, 2500);
+
+/* ================= chatters reel ================= */
+// people we never put on the chatters bar: the channel itself and common chat bots
+const SKIP = new Set(["kruuuuze", "nightbot", "streamelements", "streamlabs", "moobot", "fossabot", "wizebot", "soundalerts", "sery_bot", "botrixoficial", "kofistreambot", "pokemoncommunitygame"]);
+function addChatter(name, login) {
+  const key = (login || name).toLowerCase();
+  if (!name || SKIP.has(key) || D.chatters.some(c => c.k === key)) return;
+  D.chatters.push({ k: key, n: name, t: Date.now() });
+  if (D.chatters.length > 3000) D.chatters.shift();
+  save();
+  Reel.build(key);
+}
+const Reel = {
+  x: 0, copyW: 0, last: 0, speed: 110,  // pixels per second
+  build(newKey) {
+    const reel = $("#reel"), list = D.chatters;
+    $("#chatEmpty").style.display = list.length ? "none" : "";
+    reel.innerHTML = "";
+    if (!list.length) { this.copyW = 0; return; }
+    const one = document.createDocumentFragment();
+    const star = () => { const s = document.createElementNS("http://www.w3.org/2000/svg", "svg"); s.setAttribute("viewBox", "0 0 24 24");
+      s.innerHTML = '<path d="M12 0c.6 6 5.4 11.4 12 12-6.6.6-11.4 6-12 12-.6-6-5.4-11.4-12-12 6.6-.6 11.4-6 12-12z"/>'; return s; };
+    list.forEach((c, i) => {
+      const n = el("span", "nm c" + (i % 3), c.n);
+      if (c.k === newKey) n.classList.add("new");
+      one.append(n, star());
+    });
+    const first = el("div"); first.style.display = "flex"; first.style.alignItems = "center"; first.append(one);
+    reel.append(first);
+    this.copyW = first.getBoundingClientRect().width / this.scale();
+    const need = Math.ceil(2300 / Math.max(1, this.copyW)) + 1;   // enough copies to fill the bar with no gap
+    for (let i = 0; i < need; i++) reel.append(first.cloneNode(true));
+    this.x = this.x % this.copyW;
+  },
+  scale() { const m = /scale\(([\d.]+)\)/.exec($("#stage").style.transform); return m ? +m[1] : 1; },
+  tick(t) {
+    requestAnimationFrame(tt => this.tick(tt));
+    const dt = this.last ? Math.min(100, t - this.last) : 0; this.last = t;
+    if (!this.copyW) return;
+    this.x = (this.x + this.speed * dt / 1000) % this.copyW;
+    $("#reel").style.transform = `translateX(${-this.x}px)`;
+  }
+};
+requestAnimationFrame(t => Reel.tick(t));
+addEventListener("resize", () => setTimeout(() => Reel.build(), 50));
+
+/* ================= alert banner ================= */
+const Alerts = {
+  q: [], busy: false,
+  push(kind, e) { this.q.push([kind, e]); if (this.q.length > 12) this.q.splice(0, this.q.length - 12); if (!this.busy) this.next(); },
+  next() {
+    const item = this.q.shift(); if (!item) { this.busy = false; return; }
+    this.busy = true;
+    const [kind, e] = item, a = $("#alert");
+    const C = { follow: ["var(--lime)", "NEW FOLLOWER"], sub: ["var(--purple)", "NEW SUBSCRIBER"],
+      resub: ["var(--purple)", `RESUB · ${e.months} MONTHS`], gift: ["var(--pink)", `GIFTED ${fmt(e.count)} SUB${e.count === 1 ? "" : "S"}`],
+      bits: [bitColor(e.amount), `${fmt(e.amount)} BITS`], raid: ["var(--lime)", `RAID · ${fmt(e.viewers)} RAIDERS`],
+      streak: ["var(--flame)", `WATCH STREAK · ${fmt(e.value)}`] }[kind];
+    a.style.setProperty("--a", C[0]);
+    a.querySelector(".ak").textContent = C[1];
+    a.querySelector(".an").textContent = e.name;
+    a.classList.remove("show"); void a.offsetWidth; a.classList.add("show");
+    setTimeout(() => { a.classList.remove("show"); setTimeout(() => this.next(), 550); }, this.q.length ? 2600 : 4200);
+  }
+};
+
+/* ================= test events / practice ================= */
+const NAMES = ["NebulaNacho","PixelPaladin","ZapZilla","CosmoCrumb","GlitchGoblin","StarDustSam","VoltVixen","LunaLag","OrbitOtter","BoltBandit",
+  "QuasarQueso","MeteorMo","NovaNoodle","AstroAvo","ByteBison","CometKat","PlasmaPanda","WarpWizard","GalaxyGus","ThunderTaco","SpaceSloth",
+  "HyperHippo","RocketRay","FluxFerret","NeonNarwhal","SolarSquid","PulsarPip","ClutchCobra","KappaKoala","PogPenguin","LurkerLynx","SubSeal"];
+const pick = a => a[Math.floor(Math.random() * a.length)];
+const tierPick = () => pick(["1000", "1000", "1000", "1000", "2000", "3000", "prime"]);
+let fakeN = 0;
+function testEvent(kind) {
+  if (kind.startsWith("chat")) {
+    const n = kind === "chat" ? 1 : +kind.slice(4);
+    for (let i = 0; i < n; i++) { const nm = NAMES[fakeN % NAMES.length] + (fakeN >= NAMES.length ? Math.floor(fakeN / NAMES.length) : ""); fakeN++; addChatter(nm, nm); }
+    return;
+  }
+  const name = pick(NAMES);
+  if (kind === "follow") add("follow", { name });
+  else if (kind === "sub") Math.random() < .5 ? add("sub", { name, tier: tierPick() }) : add("resub", { name, tier: tierPick(), months: 2 + Math.floor(Math.random() * 40) });
+  else if (kind === "gift") add("gift", { name, tier: "1000", count: pick([1, 1, 5, 5, 10, 20, 50]) });
+  else if (kind === "bits") add("bits", { name, amount: pick([1, 50, 100, 100, 250, 500, 1000, 1000, 5000, 10000]) });
+  else if (kind === "raid") add("raid", { name, viewers: 3 + Math.floor(Math.random() * 180) });
+  else if (kind === "streak") add("streak", { name, value: pick([3, 5, 7, 10, 12, 15, 20, 25, 30, 50]) });
+}
+let autoT = null;
+function setAuto(on) {
+  clearTimeout(autoT); autoT = null;
+  $("#autoBtn").textContent = "Auto demo: " + (on ? "on" : "off");
+  if (!on) return;
+  const loop = () => {
+    const r = Math.random();
+    if (Math.random() < .5) testEvent("chat");
+    testEvent(r < .36 ? "follow" : r < .56 ? "sub" : r < .63 ? "gift" : r < .82 ? "bits" : r < .87 ? "raid" : "streak");
+    autoT = setTimeout(loop, 1800 + Math.random() * 4200);
+  };
+  autoT = setTimeout(loop, 800);
+}
+
+/* ================= settings menu ================= */
+$("#gear").onclick = e => { e.stopPropagation(); const o = $("#menu").classList.toggle("open"); $("#gear").classList.toggle("on", o); };
+$("#menu").onclick = e => e.stopPropagation();
+document.addEventListener("click", () => { $("#menu").classList.remove("open"); $("#gear").classList.remove("on"); disarm(); });
+document.querySelectorAll("[data-test]").forEach(b => b.onclick = () => testEvent(b.dataset.test));
+$("#autoBtn").onclick = () => setAuto(!autoT);
+let armT;
+function disarm() { const b = $("#resetBtn"); b.classList.remove("armed"); b.textContent = "Reset everything"; clearTimeout(armT); }
+/* commands from the app's Control screen (see remote.js) */
+window.onRemote = c => { if (c.cmd === "wall" && c.action === "reset") { D = blank(); save(); renderAll(); toast("Everything reset to zero (from the app)."); } };
+$("#resetBtn").onclick = () => {
+  const b = $("#resetBtn");
+  if (!b.classList.contains("armed")) { b.classList.add("armed"); b.textContent = "Tap again to reset to zero"; armT = setTimeout(disarm, 4000); return; }
+  disarm(); D = blank(); save(); renderAll(); toast("Everything reset to zero.");
+};
+$("#modeTxt").textContent = LIVE
+  ? "Live: counting your Twitch events. Test events also count, so reset after testing."
+  : "Practice mode: no Twitch token in the URL, so nothing here touches your real channel.";
+
+/* ================= live Twitch ================= */
+const NEED = { "moderator:read:followers": "followers", "channel:read:subscriptions": "subs", "bits:read": "bits" };
+const Live = {
+  cid: null, uid: null, login: null, ws: null, seen: [], watchdog: null, keepalive: 10, backoff: 2000, closing: new Set(),
+  async init() {
+    try {
+      const r = await fetch("https://id.twitch.tv/oauth2/validate", { headers: { Authorization: "OAuth " + TOKEN } });
+      if (r.status === 401) return toast("Twitch token expired or invalid. Get a new one in the Connect tab of overlay.html.", true, 600000);
+      const v = await r.json();
+      this.cid = v.client_id; this.uid = v.user_id; this.login = v.login;
+      const missing = Object.keys(NEED).filter(s => !(v.scopes || []).includes(s));
+      if (missing.length) toast("Token can't read " + missing.map(s => NEED[s]).join(", ") + ". Get a new token in the Connect tab of overlay.html.", true, 600000);
+      this.connect("wss://eventsub.wss.twitch.tv/ws", false);
+      Chat.connect(this.login);
+      setInterval(() => this.revalidate(), 3600 * 1000);
+    } catch (e) { toast("Can't reach Twitch. Retrying in 15s…", true, 14000); setTimeout(() => this.init(), 15000); }
+  },
+  async revalidate() {
+    try { const r = await fetch("https://id.twitch.tv/oauth2/validate", { headers: { Authorization: "OAuth " + TOKEN } });
+      if (r.status === 401) toast("Twitch token expired. Get a new one in the Connect tab of overlay.html.", true, 600000); } catch (e) {}
+  },
+  helix(path, opts = {}) {
+    return fetch("https://api.twitch.tv/helix/" + path, { ...opts,
+      headers: { Authorization: "Bearer " + TOKEN, "Client-Id": this.cid, "Content-Type": "application/json" } });
+  },
+  connect(url, isReconnect) {
+    const ws = new WebSocket(url);
+    ws.onmessage = e => {
+      let m; try { m = JSON.parse(e.data); } catch (x) { return; }
+      const type = m.metadata?.message_type, id = m.metadata?.message_id;
+      if (id) { if (this.seen.includes(id)) return; this.seen.push(id); if (this.seen.length > 300) this.seen.shift(); }
+      this.kick();
+      if (type === "session_welcome") {
+        const old = this.ws; this.ws = ws; this.backoff = 2000;
+        this.keepalive = m.payload.session.keepalive_timeout_seconds || 10; this.kick();
+        if (isReconnect && old && old !== ws) { this.closing.add(old); old.close(); }
+        else this.subscribe(m.payload.session.id);
+      } else if (type === "session_reconnect") this.connect(m.payload.session.reconnect_url, true);
+      else if (type === "notification") this.handle(m.metadata.subscription_type, m.payload.event);
+      else if (type === "revocation") toast("Twitch stopped sending " + (m.payload?.subscription?.type || "events") + ". Get a new token.", true, 600000);
+    };
+    ws.onclose = () => {
+      if (this.closing.has(ws)) { this.closing.delete(ws); return; }
+      if (ws !== this.ws && this.ws) return;
+      this.ws = null; clearTimeout(this.watchdog);
+      setTimeout(() => this.connect("wss://eventsub.wss.twitch.tv/ws", false), this.backoff);
+      this.backoff = Math.min(60000, this.backoff * 2);
+    };
+    if (!isReconnect && !this.ws) this.ws = ws;
+  },
+  kick() { clearTimeout(this.watchdog); this.watchdog = setTimeout(() => { if (this.ws) this.ws.close(); }, (this.keepalive + 10) * 1000); },
+  async subscribe(sessionId) {
+    const b = { broadcaster_user_id: this.uid };
+    const subs = [
+      ["channel.follow", "2", { broadcaster_user_id: this.uid, moderator_user_id: this.uid }],
+      ["channel.subscribe", "1", b], ["channel.subscription.gift", "1", b], ["channel.subscription.message", "1", b],
+      ["channel.cheer", "1", b], ["channel.raid", "1", { to_broadcaster_user_id: this.uid }]
+    ];
+    const failed = []; let why = "";
+    for (const [type, version, condition] of subs) {
+      try {
+        const r = await this.helix("eventsub/subscriptions", { method: "POST",
+          body: JSON.stringify({ type, version, condition, transport: { method: "websocket", session_id: sessionId } }) });
+        if (!r.ok && r.status !== 409) { failed.push(type.replace("channel.", "")); if (!why) try { why = (await r.json()).message || ""; } catch (x) {} }
+      } catch (e) { failed.push(type.replace("channel.", "")); }
+    }
+    if (!failed.length) toast("⚡ Event wall connected to Twitch", false, 4000);
+    else toast("Couldn't listen for: " + failed.join(", ") + (why ? " (Twitch says: " + why + ")" : "") +
+      ". Your token is missing permissions. Open overlay.html, go to the Connect tab, log in again and approve every permission, then put the new token in this browser source's link.", true, 600000);
+  },
+  handle(type, ev) {
+    const who = (n, l, anon) => anon ? "Anonymous" : (n || l || "someone");
+    if (type === "channel.follow") add("follow", { name: who(ev.user_name, ev.user_login) });
+    else if (type === "channel.subscribe") { if (!ev.is_gift) add("sub", { name: who(ev.user_name, ev.user_login), tier: ev.tier }); }  // gifted ones are counted by the gift event
+    else if (type === "channel.subscription.gift") add("gift", { name: who(ev.user_name, ev.user_login, ev.is_anonymous), tier: ev.tier, count: ev.total || 1 });
+    else if (type === "channel.subscription.message") add("resub", { name: who(ev.user_name, ev.user_login), tier: ev.tier, months: ev.cumulative_months || 1 });
+    else if (type === "channel.cheer") add("bits", { name: who(ev.user_name, ev.user_login, ev.is_anonymous), amount: ev.bits || 0 });
+    else if (type === "channel.raid") add("raid", { name: who(ev.from_broadcaster_user_name, ev.from_broadcaster_user_login), viewers: ev.viewers || 0 });
+  }
+};
+
+/* Watch streaks only show up in chat (when a viewer shares theirs), so read chat anonymously */
+const Chat = {
+  ws: null, chan: null, backoff: 2000,
+  connect(login) {
+    this.chan = login.toLowerCase();
+    const ws = this.ws = new WebSocket("wss://irc-ws.chat.twitch.tv:443");
+    ws.onopen = () => {
+      ws.send("CAP REQ :twitch.tv/tags twitch.tv/commands");
+      ws.send("PASS SCHMOOPIIE");
+      ws.send("NICK justinfan" + Math.floor(10000 + Math.random() * 80000));
+      ws.send("JOIN #" + this.chan);
+      this.backoff = 2000;
+    };
+    ws.onmessage = e => e.data.split("\r\n").forEach(line => this.line(line));
+    ws.onclose = () => { setTimeout(() => this.connect(this.chan), this.backoff); this.backoff = Math.min(60000, this.backoff * 2); };
+  },
+  line(line) {
+    if (!line) return;
+    if (line.startsWith("PING")) { this.ws.send("PONG" + line.slice(4)); return; }
+    if (!line.startsWith("@")) return;
+    const isMsg = line.indexOf(" PRIVMSG ") > 0, isNotice = line.indexOf(" USERNOTICE ") > 0;
+    if (!isMsg && !isNotice) return;
+    const tags = {};
+    line.slice(1, line.indexOf(" ")).split(";").forEach(kv => { const i = kv.indexOf("="); tags[kv.slice(0, i)] = kv.slice(i + 1).replace(/\\s/g, " "); });
+    if (isMsg) { const login = (line.match(/ :([^!]+)!/) || [])[1]; addChatter(tags["display-name"] || login, login); return; }
+    if (tags["msg-id"] === "viewermilestone" && tags["msg-param-category"] === "watch-streak")
+      add("streak", { name: tags["display-name"] || tags.login || "viewer", value: +tags["msg-param-value"] || 0 });
+  }
+};
+
+/* ================= boot ================= */
+renderAll();
+if (LIVE) Live.init();
+else setAuto(qs.get("auto") !== "0");
+</script>
+<script>
+/* ================= remote control from the Channel Points app =================
+   Only runs when the OBS link has &ctl=KEY (the pairing key shown in the app's Control screen).
+   The app and this page talk through a private ntfy.sh channel named after that key:
+   the app sends commands; this page answers "hello" with its name and version, and runs the commands. */
+(() => {
+  const qs = new URLSearchParams(location.search), key = qs.get("ctl");
+  if (!key || !window.EventSource) return;
+  const PAGE = "html2", VERSION = "dc22efe", url = "https://ntfy.sh/kzc-" + encodeURIComponent(key);
+  const send = o => fetch(url, { method: "POST", body: JSON.stringify(Object.assign({ from: "overlay", page: PAGE, version: VERSION }, o)) }).catch(() => {});
+  const seen = new Set(), born = Date.now() / 1000;
+  const es = new EventSource(url + "/sse");
+  es.onopen = () => send({ cmd: "hello" });
+  es.onmessage = e => {
+    let m, c; try { m = JSON.parse(e.data); } catch (x) { return; }
+    if (m.event !== "message" || seen.has(m.id) || m.time < born - 5) return;   // never re-run old commands
+    seen.add(m.id);
+    try { c = JSON.parse(m.message); } catch (x) { return; }
+    if (!c || c.from === "overlay" || (c.to && c.to !== "all" && c.to !== PAGE)) return;
+    if (c.cmd === "ping") send({ cmd: "hello" });
+    else if (c.cmd === "reload") {                 // load the newest version (a fresh address skips any cached copy)
+      const u = new URL(location.href); u.searchParams.set("_v", Date.now()); location.replace(u.toString());
+    } else if (typeof window.onRemote === "function") { try { window.onRemote(c); } catch (x) { console.error(x); } }
+  };
+})();
+</script>
+</body>
+</html>
