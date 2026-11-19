@@ -2648,7 +2648,7 @@ const ChefArt = {
   use(name, a) { const img = new Image(); img.onload = () => { this.sprites[name] = Object.assign({ img }, a); }; img.src = a.url; },
   async load() {
     try { const db = await this.open();
-      ["plane", "chef_parachute", "chef_chop", "chef_jump", "chef_slide"].forEach(n => { const r = db.transaction("a").objectStore("a").get(n); r.onsuccess = () => { if (r.result) this.use(n, r.result); }; });
+      ["plane", "title", "chef_parachute", "chef_chop", "chef_jump", "chef_slide"].forEach(n => { const r = db.transaction("a").objectStore("a").get(n); r.onsuccess = () => { if (r.result) this.use(n, r.result); }; });
     } catch (e) {}
   },
   // a piece of art arriving from the app (sent in parts)
@@ -2764,13 +2764,19 @@ const Chef = {
         const a = t - this.nameAt, life = 2200;
         if (a < life) {
           const pop = a < 260 ? .4 + .7 * (a / 260) : a < 380 ? 1.1 - .1 * ((a - 260) / 120) : 1, fade = a > life - 450 ? (life - a) / 450 : 1;
-          g.save(); g.globalAlpha = fade; g.translate((RIGHTX + LEFTX) / 2, MIDY - 360 - a * .02); g.rotate(-.06); g.scale(pop, pop);
+          g.save(); g.globalAlpha = fade; g.translate((RIGHTX + LEFTX) / 2, MIDY - 360 - a * .02);
+          if (S.title) {                                   // the anime title made in the app
+            const w = Math.min(1250, S.title.w * 340 / S.title.h), h = w * S.title.h / S.title.w;
+            g.scale(pop, pop); g.drawImage(S.title.img, 0, 0, S.title.w, S.title.h, -w / 2, -h / 2, w, h); g.restore();
+          } else {
+          g.rotate(-.06); g.scale(pop, pop);
           g.font = "italic 900 168px system-ui, Roboto, sans-serif"; g.textAlign = "center"; g.textBaseline = "middle"; g.lineJoin = "round";
-          g.lineWidth = 34; g.strokeStyle = "#1e1b4b"; g.strokeText("anime-chef", 10, 12);
-          g.lineWidth = 22; g.strokeStyle = "#ec4899"; g.strokeText("anime-chef", 0, 0);
+          g.lineWidth = 34; g.strokeStyle = "#1e1b4b"; g.strokeText("anime_chef", 10, 12);
+          g.lineWidth = 22; g.strokeStyle = "#ec4899"; g.strokeText("anime_chef", 0, 0);
           const gr = g.createLinearGradient(0, -70, 0, 70); gr.addColorStop(0, "#ffffff"); gr.addColorStop(.55, "#e0f2fe"); gr.addColorStop(1, "#7dd3fc");
-          g.shadowColor = "rgba(125,211,252,.8)"; g.shadowBlur = 30; g.fillStyle = gr; g.fillText("anime-chef", 0, 0);
+          g.shadowColor = "rgba(125,211,252,.8)"; g.shadowBlur = 30; g.fillStyle = gr; g.fillText("anime_chef", 0, 0);
           g.restore();
+          }
         }
       }
       // ---- blue goo and dust
@@ -3450,7 +3456,7 @@ window.KZRelay = function (topic, onMessage, servers) {
 (() => {
   const qs = new URLSearchParams(location.search), key = qs.get("ctl");
   if (!key || !window.WebSocket) return;
-  const PAGE = "html3", VERSION = "3ba3caa";
+  const PAGE = "html3", VERSION = "d7b9bd8";
   let said = false;
   const relay = KZRelay("kzctl/" + key, c => {
     if (!c || c.from === "overlay" || (c.to && c.to !== "all" && c.to !== PAGE)) return;
