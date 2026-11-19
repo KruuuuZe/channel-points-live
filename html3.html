@@ -251,7 +251,7 @@ body.fit #stage{background:radial-gradient(1200px 700px at 30% 20%,#1a103322,tra
 #scrapboard .none{color:#7d7699;font-size:18px}
 
 /* ---------- GTA-style wanted level: up to six stars, top-right ---------- */
-#wanted{position:absolute;right:60px;top:44px;display:flex;gap:10px;pointer-events:none;opacity:0;transform:translateY(-14px);
+#wanted{position:absolute;right:235px;top:24px;display:flex;gap:10px;pointer-events:none;opacity:0;transform:translateY(-14px);
   transition:opacity .5s,transform .5s cubic-bezier(.3,1.4,.4,1)}
 #wanted.on{opacity:1;transform:none}
 #wanted svg{width:84px;height:84px;overflow:visible}
@@ -2445,7 +2445,7 @@ window.KZRelay = function (topic, onMessage, servers) {
 (() => {
   const qs = new URLSearchParams(location.search), key = qs.get("ctl");
   if (!key || !window.WebSocket) return;
-  const PAGE = "html3", VERSION = "b63c4de";
+  const PAGE = "html3", VERSION = "11f7a3a";
   let said = false;
   const relay = KZRelay("kzctl/" + key, c => {
     if (!c || c.from === "overlay" || (c.to && c.to !== "all" && c.to !== PAGE)) return;
