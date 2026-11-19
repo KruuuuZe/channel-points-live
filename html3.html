@@ -251,10 +251,10 @@ body.fit #stage{background:radial-gradient(1200px 700px at 30% 20%,#1a103322,tra
 #scrapboard .none{color:#7d7699;font-size:18px}
 
 /* ---------- GTA-style wanted level: up to six stars, top-right ---------- */
-#wanted{position:absolute;right:235px;top:24px;display:flex;gap:10px;pointer-events:none;opacity:0;transform:translateY(-14px);
+#wanted{position:absolute;right:235px;top:24px;display:flex;gap:9px;pointer-events:none;opacity:0;transform:translateY(-14px);
   transition:opacity .5s,transform .5s cubic-bezier(.3,1.4,.4,1)}
 #wanted.on{opacity:1;transform:none}
-#wanted svg{width:84px;height:84px;overflow:visible}
+#wanted svg{width:76px;height:76px;overflow:visible}
 #wanted .st path{fill:#ffffff14;stroke:#ffffff55;stroke-width:5;stroke-linejoin:round;transition:fill .25s,stroke .25s}
 #wanted .st.full path{fill:#f4f4f4;stroke:#111;stroke-width:6;filter:drop-shadow(0 0 3px #000) drop-shadow(0 3px 0 #000)}
 #wanted .st.blink path{animation:wblink .36s steps(1) infinite}
@@ -2445,7 +2445,7 @@ window.KZRelay = function (topic, onMessage, servers) {
 (() => {
   const qs = new URLSearchParams(location.search), key = qs.get("ctl");
   if (!key || !window.WebSocket) return;
-  const PAGE = "html3", VERSION = "11f7a3a";
+  const PAGE = "html3", VERSION = "b992de4";
   let said = false;
   const relay = KZRelay("kzctl/" + key, c => {
     if (!c || c.from === "overlay" || (c.to && c.to !== "all" && c.to !== PAGE)) return;
