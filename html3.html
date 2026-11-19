@@ -251,7 +251,7 @@ body.fit #stage{background:radial-gradient(1200px 700px at 30% 20%,#1a103322,tra
 #scrapboard .none{color:#7d7699;font-size:18px}
 
 /* ---------- GTA-style wanted level: up to six stars, top-right ---------- */
-#wanted{position:absolute;right:235px;top:24px;display:flex;gap:9px;pointer-events:none;opacity:0;transform:translateY(-14px);
+#wanted{position:absolute;right:240px;top:24px;display:flex;gap:9px;pointer-events:none;opacity:0;transform:translateY(-14px);
   transition:opacity .5s,transform .5s cubic-bezier(.3,1.4,.4,1)}
 #wanted.on{opacity:1;transform:none}
 #wanted svg{width:76px;height:76px;overflow:visible}
@@ -1960,14 +1960,21 @@ const Wanted = {
     const prev = this.level; this.level = n;
     try { localStorage.setItem(this.KEY, String(n)); } catch (e) {}
     const box = $("#wanted"), stars = [...box.children];
-    box.classList.toggle("on", n > 0);
+    // stars that are gained pop in and flash; stars that are lost flash too, then go dark
+    if (n > 0 || quiet || !prev) box.classList.toggle("on", n > 0);
     stars.forEach((st, i) => {
-      const full = i < n, gained = full && i >= prev && !quiet;
-      st.classList.toggle("full", full);
-      if (gained) { st.classList.remove("pop"); void st.getBoundingClientRect(); st.classList.add("pop", "blink"); }
-      else if (!full) st.classList.remove("blink");
+      const full = i < n, gained = full && i >= prev && !quiet, lost = !full && i < prev && !quiet;
+      if (full) {
+        st.classList.add("full"); st.classList.remove("losing");
+        if (gained) { st.classList.remove("pop"); void st.getBoundingClientRect(); st.classList.add("pop", "blink"); }
+      } else if (lost) st.classList.add("full", "blink", "losing");
+      else st.classList.remove("full", "blink", "losing");
     });
-    clearTimeout(this.t); if (!quiet) this.t = setTimeout(() => stars.forEach(st => st.classList.remove("blink")), 3200);
+    clearTimeout(this.t);
+    if (!quiet) this.t = setTimeout(() => {
+      stars.forEach(st => { st.classList.remove("blink"); if (st.classList.contains("losing")) st.classList.remove("full", "losing"); });
+      if (!this.level) box.classList.remove("on");          // !staroff: hide once the stars have flashed out
+    }, 3200);
   }
 };
 Wanted.init();
@@ -2445,7 +2452,7 @@ window.KZRelay = function (topic, onMessage, servers) {
 (() => {
   const qs = new URLSearchParams(location.search), key = qs.get("ctl");
   if (!key || !window.WebSocket) return;
-  const PAGE = "html3", VERSION = "b992de4";
+  const PAGE = "html3", VERSION = "e4666a7";
   let said = false;
   const relay = KZRelay("kzctl/" + key, c => {
     if (!c || c.from === "overlay" || (c.to && c.to !== "all" && c.to !== PAGE)) return;
