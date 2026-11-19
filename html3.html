@@ -250,7 +250,7 @@ body.fit #stage{background:radial-gradient(1200px 700px at 30% 20%,#1a103322,tra
 #scrapboard .r span{color:#e2b26b}
 #scrapboard .none{color:#7d7699;font-size:18px}
 
-/* ---------- GTA-style wanted level: up to five stars, top-right ---------- */
+/* ---------- GTA-style wanted level: up to six stars, top-right ---------- */
 #wanted{position:absolute;right:60px;top:44px;display:flex;gap:10px;pointer-events:none;opacity:0;transform:translateY(-14px);
   transition:opacity .5s,transform .5s cubic-bezier(.3,1.4,.4,1)}
 #wanted.on{opacity:1;transform:none}
@@ -443,7 +443,7 @@ body.fit #stage{background:radial-gradient(1200px 700px at 30% 20%,#1a103322,tra
   <select id="tRaider" aria-label="Raider"><option value="">Raid as: name above</option></select>
   <button class="b-raid" data-t="raid">Raid</button><button class="snd" data-snd="raid" title="Add a sound for this alert">+</button>
   <button class="b-lurk" data-t="lurk">!lurk</button><button class="snd" data-snd="lurk" title="Add a sound for this alert">+</button>
-  <select id="tStars" aria-label="Wanted level"><option value="">Wanted stars…</option><option value="0">!staroff</option><option value="1">!star1</option><option value="2">!star2</option><option value="3">!star3</option><option value="4">!star4</option><option value="5">!star5</option></select>
+  <select id="tStars" aria-label="Wanted level"><option value="">Wanted stars…</option><option value="0">!staroff</option><option value="1">!star1</option><option value="2">!star2</option><option value="3">!star3</option><option value="4">!star4</option><option value="5">!star5</option><option value="6">!star6</option></select>
   <select id="tTeam" aria-label="Stream Avatars team"><option value="green">Green team</option><option value="blue">Blue team</option><option value="">No team</option></select>
   <button class="b-scrap" data-t="scroop">!scroop</button><button class="snd" data-snd="scroop" title="Add a sound for this alert">+</button>
   <button class="b-scrap" data-t="scroopboard">!scroopleaderboard</button>
@@ -1944,19 +1944,19 @@ const Scrap = {
 Scrap.start();
 
 /* ================= wanted level (GTA-style stars) =================
-   The streamer types !star1 ... !star5 to show that many stars in the top-right, or !staroff to hide them.
+   The streamer types !star1 ... !star6 to show that many stars in the top-right, or !staroff to hide them.
    Stars that are gained flash for a few seconds. The level is remembered if the page reloads. */
 const WANTED_STAR = "M50 6 L62 37 L95 38 L69 58 L79 91 L50 72 L21 91 L31 58 L5 38 L38 37 Z";
 const Wanted = {
   KEY: "wantedLevel", level: 0,
   init() {
     const box = $("#wanted");
-    for (let i = 0; i < 5; i++) box.insertAdjacentHTML("beforeend", `<svg class="st" viewBox="0 0 100 100"><path d="${WANTED_STAR}"/></svg>`);
+    for (let i = 0; i < 6; i++) box.insertAdjacentHTML("beforeend", `<svg class="st" viewBox="0 0 100 100"><path d="${WANTED_STAR}"/></svg>`);
     let n = 0; try { n = +localStorage.getItem(this.KEY) || 0; } catch (e) {}
     this.set(n, true);
   },
   set(n, quiet) {
-    n = Math.max(0, Math.min(5, n | 0));
+    n = Math.max(0, Math.min(6, n | 0));
     const prev = this.level; this.level = n;
     try { localStorage.setItem(this.KEY, String(n)); } catch (e) {}
     const box = $("#wanted"), stars = [...box.children];
@@ -2193,8 +2193,8 @@ const Chat = {
       const login = (line.match(/ :([^!]+)!/) || [])[1] || "";
       const msg = line.slice(line.indexOf(" :", pm) + 2).trim();
       if (/^!lurk\b/i.test(msg)) Lurk.join(tags["display-name"] || login, login, tags.color || chatColors[tags["user-id"]]);
-      else if (/^!(star[1-5]|staroff)\b/i.test(msg)) {         // wanted stars: the streamer only (counts as chat, so a lurking streamer leaves the tower)
-        if ((tags.badges || "").includes("broadcaster/")) { const m = msg.match(/^!star([1-5])/i); Wanted.set(m ? +m[1] : 0); }
+      else if (/^!(star[1-6]|staroff)\b/i.test(msg)) {         // wanted stars: the streamer only (counts as chat, so a lurking streamer leaves the tower)
+        if ((tags.badges || "").includes("broadcaster/")) { const m = msg.match(/^!star([1-6])/i); Wanted.set(m ? +m[1] : 0); }
         Lurk.leave(login);
       }
       else if (/^!scroopleaderboard\b/i.test(msg)) Scrap.showBoard();
@@ -2445,7 +2445,7 @@ window.KZRelay = function (topic, onMessage, servers) {
 (() => {
   const qs = new URLSearchParams(location.search), key = qs.get("ctl");
   if (!key || !window.WebSocket) return;
-  const PAGE = "html3", VERSION = "e327198";
+  const PAGE = "html3", VERSION = "5397ccc";
   let said = false;
   const relay = KZRelay("kzctl/" + key, c => {
     if (!c || c.from === "overlay" || (c.to && c.to !== "all" && c.to !== PAGE)) return;
