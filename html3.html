@@ -201,7 +201,7 @@ body.fit #stage{background:radial-gradient(1200px 700px at 30% 20%,#1a103322,tra
 #testbar button{font-weight:800}
 #testbar .b-sub{background:#6d28d9;border-color:transparent} #testbar .b-gift{background:#db2777;border-color:transparent} #testbar .b-fol{background:#4d8a1f;border-color:transparent}
 #testbar .b-bit{background:#7c3aed;border-color:transparent} #testbar .b-str{background:#c2410c;border-color:transparent}
-#testbar .b-raid{background:#0e7490;border-color:transparent} #testbar .b-bolt{background:linear-gradient(135deg,#65a30d,#7c3aed);border-color:transparent} #testbar .b-scrap{background:#7c4a1e;border-color:#e2b26b88}
+#testbar .b-raid{background:#0e7490;border-color:transparent} #testbar .b-mango{background:linear-gradient(135deg,#15803d,#f59e0b);border-color:transparent} #testbar .b-bolt{background:linear-gradient(135deg,#65a30d,#7c3aed);border-color:transparent} #testbar .b-scrap{background:#7c4a1e;border-color:#e2b26b88}
 #testbar .b-lurk{background:#334155;border-color:#a3e63588} #testbar .b-chat{background:#1f2937}
 
 /* sound slots: a + next to each test button to give that alert its own sound file */
@@ -264,6 +264,7 @@ body.fit #stage{background:radial-gradient(1200px 700px at 30% 20%,#1a103322,tra
 
 /* ---------- lightning lap: a bolt runs around the screen edge and writes the channel name ---------- */
 #boltcv{position:absolute;inset:0;width:2560px;height:1440px;pointer-events:none;z-index:5}
+#treecv{position:absolute;inset:0;width:2560px;height:1440px;pointer-events:none;z-index:4}
 
 /* ---------- lurk tower (bottom-left) ---------- */
 #tower{position:absolute;left:30px;bottom:0;width:560px;height:820px;transform:translateY(880px);
@@ -316,6 +317,7 @@ body.fit #stage{background:radial-gradient(1200px 700px at 30% 20%,#1a103322,tra
 <div id="stage">
   <div id="scrap"><div id="scrapboard"></div></div>
   <div id="wanted"></div>
+  <canvas id="treecv" width="2560" height="1440"></canvas>
   <canvas id="boltcv" width="2560" height="1440"></canvas>
   <div id="pane"></div>
   <canvas id="holes" width="2560" height="1440"></canvas>
@@ -452,6 +454,7 @@ body.fit #stage{background:radial-gradient(1200px 700px at 30% 20%,#1a103322,tra
   <button class="b-scrap" data-t="scroop">!scroop</button><button class="snd" data-snd="scroop" title="Add a sound for this alert">+</button>
   <button class="b-scrap" data-t="scroopboard">!scroopleaderboard</button>
   <button class="b-bolt" data-t="bolt">⚡ Bolt</button><button class="snd" data-snd="bolt" title="Add a sound for this effect">+</button>
+  <button class="b-mango" data-t="mango">🥭 Mango</button><button class="snd" data-snd="mango" title="Add a sound for this effect">+</button>
   <button class="b-chat" data-t="chat">Chat</button><button class="snd" data-snd="chat" title="Add a sound for this alert">+</button>
 </div>
 
@@ -1988,6 +1991,117 @@ Wanted.init();
    A bolt starts at the bottom middle, runs left along the bottom, up the left side and across the top,
    where it drops down and writes "KruuuuZe" in lightning; then it runs down the right side and back along
    the bottom to where it started, and everything fades out. Colors follow the logo: lime green with a purple glow. */
+/* ================= mango tree =================
+   A mango tree grows out of the bottom-left corner, leafs out and ripens a crop of mangoes. The mangoes
+   then fling off all over the screen, bounce off the edges, land on the bottom and roll away, and the
+   tree slides back down into the ground. */
+const Mango = {
+  busy: false,
+  run() {
+    if (this.busy) return; this.busy = true;
+    Sound.init(); MySounds.play("mango");
+    const H = 1440, X0 = 400;
+    // a random tree: branches (with the time each one grows), leaf clusters on the outer branches, mango spots
+    const branches = [], tips = [];
+    const grow = (x, y, ang, len, w, depth, t0) => {
+      const x2 = x + Math.cos(ang) * len, y2 = y + Math.sin(ang) * len, dur = 260 + len * .9;
+      branches.push({ x, y, x2, y2, w, t0, dur, depth });
+      if (depth >= 6 || len < 34) { tips.push({ x: x2, y: y2, t: t0 + dur, depth }); return; }
+      const n = depth < 2 ? 2 : (Math.random() < .35 ? 3 : 2);
+      for (let i = 0; i < n; i++) {
+        const spread = depth === 0 ? rand(.32, .55) : rand(.28, .62), a = ang + (n === 2 ? (i ? spread : -spread) : (i - 1) * spread) + rand(-.12, .12);
+        grow(x2, y2, a, len * rand(.68, .8), w * .68, depth + 1, t0 + dur * .85);
+      }
+      if (depth >= 3) tips.push({ x: x2, y: y2, t: t0 + dur, depth });
+    };
+    grow(X0, H + 10, -Math.PI / 2 + rand(-.06, .06), rand(250, 290), 46, 0, 0);
+    const leaves = tips.flatMap(tp => Array.from({ length: tp.depth >= 5 ? 5 : 3 }, () => ({
+      x: tp.x + rand(-48, 48), y: tp.y + rand(-40, 30), rx: rand(30, 52), ry: rand(20, 34), a: rand(-.6, .6),
+      c: ["#14532d", "#166534", "#15803d", "#1f7a3a", "#22863f"][Math.floor(Math.random() * 5)], t: tp.t + rand(0, 500) })));
+    const grown = Math.max(...branches.map(b => b.t0 + b.dur)) + 500;
+    const spots = tips.filter(tp => tp.depth >= 4).sort(() => Math.random() - .5).slice(0, 16)
+      .map(tp => ({ x: tp.x + rand(-26, 26), y: tp.y + rand(22, 50), r: rand(30, 38), tilt: rand(-.5, .5), t: grown + rand(0, 700) }));
+    const ripe = grown + 1900, flingAt = ripe + 500, sink0 = flingAt + 2600, sinkDur = 1300;
+    const cv = $("#treecv"), g = cv.getContext("2d"), t0 = performance.now();
+    const mangoes = [];
+    let lastT = t0, flung = false, rustled = false;
+    if (Sound.ctx) { const t = Sound.ctx.currentTime; Sound.burst(t, 1.6, .05, "lowpass", 300, 1400); }   // soft rustle as it grows
+    const drawMango = (x, y, r, rot, ripeK) => {
+      g.save(); g.translate(x, y); g.rotate(rot);
+      const gr = g.createRadialGradient(-r * .35, -r * .45, r * .2, 0, 0, r * 1.25);
+      if (ripeK < 1) { gr.addColorStop(0, `rgb(${170 + 70 * ripeK},${205 - 10 * ripeK},${60 - 20 * ripeK})`); gr.addColorStop(1, `rgb(${60 + 170 * ripeK},${130 - 10 * ripeK},${30})`); }
+      else { gr.addColorStop(0, "#ffe066"); gr.addColorStop(.45, "#ffb020"); gr.addColorStop(.85, "#ff6a2b"); gr.addColorStop(1, "#d9381e"); }
+      g.fillStyle = gr; g.beginPath();                                   // a plump, slightly kidney-shaped mango
+      g.moveTo(0, -r * 1.15);
+      g.bezierCurveTo(r * 1.05, -r * 1.05, r * 1.1, r * .75, r * .1, r * 1.1);
+      g.bezierCurveTo(-r * .9, r * 1.2, -r * 1.05, -r * .2, -r * .55, -r * .7);
+      g.bezierCurveTo(-r * .4, -r * 1, -r * .2, -r * 1.15, 0, -r * 1.15); g.fill();
+      g.strokeStyle = "rgba(90,30,10,.35)"; g.lineWidth = 2; g.stroke();
+      g.fillStyle = "rgba(255,255,255,.35)"; g.beginPath(); g.ellipse(-r * .38, -r * .45, r * .18, r * .3, -.5, 0, 6.283); g.fill();
+      g.strokeStyle = "#5b3a1a"; g.lineWidth = 4; g.beginPath(); g.moveTo(0, -r * 1.12); g.lineTo(r * .1, -r * 1.42); g.stroke();
+      g.fillStyle = "#1f7a3a"; g.beginPath(); g.ellipse(r * .42, -r * 1.36, r * .38, r * .14, -.4, 0, 6.283); g.fill();
+      g.restore();
+    };
+    const frame = now => {
+      const t = now - t0, k = Math.min(3, (now - lastT) / 16.67); lastT = now;
+      g.clearRect(0, 0, 2560, H);
+      const sink = t > sink0 ? Math.min(1, (t - sink0) / sinkDur) : 0, dy = (1 - Math.pow(1 - sink, 2)) * 1000;
+      g.save(); g.translate(0, dy);
+      // branches, growing out one after another
+      g.lineCap = "round";
+      branches.forEach(b => {
+        const p = Math.max(0, Math.min(1, (t - b.t0) / b.dur)); if (!p) return;
+        const ex = b.x + (b.x2 - b.x) * p, ey = b.y + (b.y2 - b.y) * p;
+        g.strokeStyle = "#3b2414"; g.lineWidth = b.w; g.beginPath(); g.moveTo(b.x, b.y); g.lineTo(ex, ey); g.stroke();
+        g.strokeStyle = "#5c3a1e"; g.lineWidth = b.w * .45; g.beginPath(); g.moveTo(b.x - b.w * .12, b.y); g.lineTo(ex - b.w * .12, ey); g.stroke();
+      });
+      // leaves pop in
+      leaves.forEach(l => {
+        const p = Math.max(0, Math.min(1, (t - l.t) / 380)); if (!p) return;
+        const sc = p < 1 ? 1 - Math.pow(1 - p, 3) * 1 + Math.sin(p * Math.PI) * .15 : 1;
+        g.save(); g.translate(l.x, l.y); g.rotate(l.a); g.scale(sc, sc);
+        g.fillStyle = l.c; g.beginPath(); g.ellipse(0, 0, l.rx, l.ry, 0, 0, 6.283); g.fill();
+        g.strokeStyle = "rgba(0,0,0,.18)"; g.lineWidth = 2; g.beginPath(); g.moveTo(-l.rx * .8, 0); g.lineTo(l.rx * .8, 0); g.stroke();
+        g.restore();
+      });
+      // mangoes grow and ripen on the branches, until they fly
+      if (!flung) spots.forEach(m => {
+        const p = Math.max(0, Math.min(1, (t - m.t) / 600)); if (!p) return;
+        const ripeK = Math.max(0, Math.min(1, (t - grown - 700) / 1400));
+        drawMango(m.x, m.y, m.r * (.3 + .7 * p), m.tilt + Math.sin(t / 420 + m.x) * .06, ripeK);
+      });
+      g.restore();
+      if (!rustled && t > grown) { rustled = true; if (Sound.ctx) { const tt = Sound.ctx.currentTime; Sound.tone(tt, .3, .04, 520, 760); } }
+      // fling them all over the screen
+      if (!flung && t >= flingAt) {
+        flung = true;
+        spots.forEach((m, i) => mangoes.push({ x: m.x, y: m.y, r: m.r, rot: m.tilt, vr: rand(-.2, .2), vx: rand(-6, 24), vy: rand(-30, -14), state: "fly", bounces: 0, delay: i * 45 }));
+        if (Sound.ctx) mangoes.forEach((m, i) => { const tt = Sound.ctx.currentTime + i * .045; Sound.tone(tt, .12, .035, rand(500, 700), rand(800, 1000)); });
+      }
+      mangoes.forEach(m => {
+        if (m.delay > 0) { m.delay -= 16.67 * k; drawMango(m.x, m.y, m.r, m.rot, 1); return; }
+        const floor = H - m.r;
+        if (m.state === "fly") {
+          m.vy += .55 * k; m.x += m.vx * k; m.y += m.vy * k; m.rot += m.vr * k;
+          if (m.x < m.r) { m.x = m.r; m.vx = Math.abs(m.vx) * .75; }
+          if (m.x > 2560 - m.r) { m.x = 2560 - m.r; m.vx = -Math.abs(m.vx) * .75; }
+          if (m.y < m.r) { m.y = m.r; m.vy = Math.abs(m.vy) * .6; }
+          if (m.y > floor) {
+            m.y = floor; m.vy = -Math.abs(m.vy) * .42; m.vx *= .9; m.bounces++;
+            if (Sound.ctx && m.bounces < 3) { const tt = Sound.ctx.currentTime; Sound.tone(tt, .1, .03, 160, 90); }
+            if (m.bounces >= 3 || Math.abs(m.vy) < 3) { m.state = "roll"; m.vy = 0; if (Math.abs(m.vx) < 9) m.vx = (m.vx < 0 ? -1 : 1) * rand(9, 15); }
+          }
+        } else { m.x += m.vx * k; m.y = floor; m.rot += (m.vx / m.r) * k; }   // rolling away along the bottom
+        drawMango(m.x, m.y, m.r, m.rot, 1);
+      });
+      for (let i = mangoes.length - 1; i >= 0; i--) if (mangoes[i].x < -80 || mangoes[i].x > 2640) mangoes.splice(i, 1);
+      const over = sink >= 1 && flung && (!mangoes.length || t > sink0 + 7000);
+      if (!over) requestAnimationFrame(frame); else { g.clearRect(0, 0, 2560, H); this.busy = false; }
+    };
+    requestAnimationFrame(frame);
+  }
+};
+
 const Bolt = {
   W: 2560, H: 1440, M: 18, SPEED: 2300, TAIL: 900,
   // single-stroke letters in a box 1 tall (y 0 = top); up: true marks a hop to the next stroke (not drawn)
@@ -2087,6 +2201,7 @@ const Bolt = {
 window.onRemote = c => {
   if (c.cmd === "stars") Wanted.set(+c.n || 0);
   else if (c.cmd === "effect" && c.name === "bolt") Bolt.run();
+  else if (c.cmd === "effect" && c.name === "mango") Mango.run();
   else if (c.cmd === "scroop") {
     if (c.action === "spawn") { if (!Scrap.piles.some(p => p.state !== "none")) { clearTimeout(Scrap.timer); Scrap.timer = 0; Scrap.spawn(); } }
     else if (c.action === "board") Scrap.showBoard();
@@ -2179,6 +2294,7 @@ document.querySelectorAll("#testbar [data-t]").forEach(b => b.onclick = () => {
   else if (t === "scroopboard") Scrap.showBoard();
   else if (t === "scroop") { Scrap.setTeam(name, $("#tTeam").value); Scrap.dig(name, name, color, true); }
   else if (t === "bolt") Bolt.run();
+  else if (t === "mango") Mango.run();
   else if (t === "chat") Lurk.leave(name);
 });
 
@@ -2558,7 +2674,7 @@ window.KZRelay = function (topic, onMessage, servers) {
 (() => {
   const qs = new URLSearchParams(location.search), key = qs.get("ctl");
   if (!key || !window.WebSocket) return;
-  const PAGE = "html3", VERSION = "9388794";
+  const PAGE = "html3", VERSION = "fd4ec23";
   let said = false;
   const relay = KZRelay("kzctl/" + key, c => {
     if (!c || c.from === "overlay" || (c.to && c.to !== "all" && c.to !== PAGE)) return;
