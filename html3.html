@@ -268,17 +268,19 @@ body.fit #stage{background:radial-gradient(1200px 700px at 30% 20%,#1a103322,tra
 
 /* ---------- turkey run ---------- */
 .turkey{position:absolute;left:0;bottom:6px;width:150px;height:150px;pointer-events:none;z-index:4}
-.turkey svg{width:100%;height:100%;overflow:visible;animation:tbob .26s ease-in-out infinite}
-@keyframes tbob{50%{transform:translateY(-7px) rotate(-3deg)}}
-.turkey .legA{transform-origin:72px 104px;animation:tleg .26s linear infinite}
-.turkey .legB{transform-origin:84px 104px;animation:tleg .26s linear infinite reverse}
-@keyframes tleg{0%{transform:rotate(-32deg)}50%{transform:rotate(32deg)}100%{transform:rotate(-32deg)}}
-.turkey .head{transform-origin:112px 62px;animation:thead .26s ease-in-out infinite}
-@keyframes thead{50%{transform:translateX(6px) rotate(6deg)}}
-.turkey .gob{position:absolute;left:96px;top:-34px;padding:6px 12px;border-radius:14px;background:#fff;color:#7a2e0e;font:900 24px/1 system-ui,Roboto,sans-serif;
-  white-space:nowrap;box-shadow:0 3px 0 #0006;opacity:0;transform:scale(.6);transition:opacity .15s,transform .2s cubic-bezier(.3,1.6,.4,1)}
-.turkey .gob::after{content:"";position:absolute;left:14px;bottom:-8px;border:8px solid transparent;border-top-color:#fff;border-bottom:0}
-.turkey .gob.on{opacity:1;transform:none}
+.turkey .flip{position:absolute;inset:0;transform-origin:52% 60%}
+.turkey svg{width:100%;height:100%;overflow:visible;animation:tbob .32s ease-in-out infinite}
+@keyframes tbob{0%,50%,100%{transform:translateY(0) rotate(0)}25%,75%{transform:translateY(-6px) rotate(-2deg)}}
+/* a running gait: the thigh swings from the hip and the shin folds back at the knee (two legs, half a step apart) */
+.turkey .thigh{animation:tthigh .32s linear infinite}
+.turkey .shin{animation:tshin .32s linear infinite}
+.turkey .legB .thigh,.turkey .legB .shin{animation-delay:-.16s}
+.turkey .legA .thigh{transform-origin:72px 100px} .turkey .legA .shin{transform-origin:72px 117px}
+.turkey .legB .thigh{transform-origin:84px 100px} .turkey .legB .shin{transform-origin:84px 117px}
+@keyframes tthigh{0%{transform:rotate(-38deg)}30%{transform:rotate(-4deg)}55%{transform:rotate(30deg)}80%{transform:rotate(6deg)}100%{transform:rotate(-38deg)}}
+@keyframes tshin{0%{transform:rotate(8deg)}30%{transform:rotate(12deg)}55%{transform:rotate(22deg)}75%{transform:rotate(85deg)}100%{transform:rotate(8deg)}}
+.turkey .head{transform-origin:108px 70px;animation:thead .32s ease-in-out infinite}
+@keyframes thead{0%,50%,100%{transform:none}25%,75%{transform:translateX(6px) rotate(5deg)}}
 
 /* ---------- lurk tower (bottom-left) ---------- */
 #tower{position:absolute;left:30px;bottom:0;width:560px;height:820px;transform:translateY(880px);
@@ -2242,16 +2244,21 @@ const Banana = {
 
 /* ================= turkey run =================
    A little turkey runs along the bottom of the screen from left to right, gobbling as it goes. */
+const TURKEY_LEG = (x, cls) => `<g class="${cls}"><g class="thigh">
+    <path d="M${x} 98 L${x} 117" stroke="#5a2b0c" stroke-width="10" stroke-linecap="round"/>
+    <g class="shin"><path d="M${x} 117 L${x} 133" stroke="#f59e0b" stroke-width="5" stroke-linecap="round"/>
+      <path d="M${x} 133 L${x + 11} 135 M${x} 133 L${x + 8} 139 M${x} 133 L${x - 6} 136" stroke="#f59e0b" stroke-width="3.5" stroke-linecap="round"/></g>
+  </g></g>`;
 const TURKEY_SVG = `<svg viewBox="0 0 150 150">
   <g>
     ${[-62, -38, -14, 10, 34].map((a, i) => `<ellipse cx="46" cy="40" rx="15" ry="44" fill="${["#7c3f12", "#b45309", "#7c3f12", "#b45309", "#7c3f12"][i]}" stroke="#3b1d06" stroke-width="2.5" transform="rotate(${a} 58 82)"/>
       <ellipse cx="46" cy="14" rx="10" ry="9" fill="#f5deb3" transform="rotate(${a} 58 82)"/>`).join("")}
   </g>
-  <g class="legA"><path d="M72 104 L68 132 M68 132 L58 136 M68 132 L74 138" stroke="#f59e0b" stroke-width="5" stroke-linecap="round" fill="none"/></g>
-  <g class="legB"><path d="M84 104 L86 132 M86 132 L76 136 M86 132 L94 137" stroke="#f59e0b" stroke-width="5" stroke-linecap="round" fill="none"/></g>
+  ${TURKEY_LEG(84, "legB")}
   <ellipse cx="78" cy="88" rx="34" ry="26" fill="#6b3410" stroke="#2e1505" stroke-width="3"/>
   <path d="M60 84 Q78 66 96 84 Q80 102 60 84 Z" fill="#8a4a1a" stroke="#2e1505" stroke-width="2"/>
   <path d="M66 82 Q78 74 90 82" stroke="#c2742f" stroke-width="2.5" fill="none"/>
+  ${TURKEY_LEG(72, "legA")}
   <g class="head">
     <path d="M98 78 Q106 66 108 54" stroke="#6b3410" stroke-width="13" stroke-linecap="round" fill="none"/>
     <circle cx="112" cy="48" r="13" fill="#7dd3fc" stroke="#2e1505" stroke-width="2.5"/>
@@ -2264,16 +2271,24 @@ const TURKEY_SVG = `<svg viewBox="0 0 150 150">
 const Turkey = {
   run() {
     Sound.init(); MySounds.play("turkey");
-    const w = el("div", "turkey"); w.innerHTML = TURKEY_SVG;
-    const bubble = el("div", "gob", "Gobble!"); w.append(bubble); $("#stage").append(w);
-    const dur = 7000;
+    const w = el("div", "turkey"), flip = el("div", "flip"); flip.innerHTML = TURKEY_SVG; w.append(flip); $("#stage").append(w);
+    const dur = 7000, flipAt = dur / 2 - 450, flipDur = 900;
     w.animate([{ transform: "translateX(-180px)" }, { transform: "translateX(2720px)" }], { duration: dur, easing: "linear", fill: "forwards" });
-    // gobbles along the way, with a little speech bubble each time
-    const words = ["Gobble!", "Gobble gobble!", "GOBBLE!", "Gobble!"];
-    for (let i = 0; i < 4; i++) setTimeout(() => {
-      bubble.textContent = words[i]; bubble.classList.add("on"); Sound.gobble();
-      setTimeout(() => bubble.classList.remove("on"), 750);
-    }, 700 + i * 1550 + rand(-150, 150));
+    // halfway: a backflip (up, all the way over backwards, and back down on its feet)
+    setTimeout(() => {
+      flip.animate([
+        { transform: "translateY(0) rotate(0deg)", easing: "cubic-bezier(.2,.7,.4,1)" },
+        { transform: "translateY(-190px) rotate(-180deg)", offset: .5, easing: "cubic-bezier(.6,0,.8,.3)" },
+        { transform: "translateY(0) rotate(-360deg)" }], { duration: flipDur });
+      if (Sound.ctx) { const t = Sound.ctx.currentTime; Sound.burst(t, .5, .05, "bandpass", 600, 2400); }          // whoosh
+      setTimeout(() => {                                                                                         // landing puff
+        const r = w.getBoundingClientRect(), st = $("#stage").getBoundingClientRect(), sc = scaleNow(), x = (r.left - st.left) / sc + 75;
+        for (let j = 0; j < 14; j++) P.push({ type: "spark", x: x + rand(-30, 30), y: 1430, vx: rand(-4, 4), vy: rand(-3, -.5), life: 0, max: rand(400, 700), c: [190, 170, 140], s: rand(3, 6), drag: .93, g: .03 });
+        kick(); if (Sound.ctx) { const t = Sound.ctx.currentTime; Sound.tone(t, .12, .04, 150, 80); }
+      }, flipDur - 40);
+    }, flipAt);
+    // gobbles along the way (one right after the landing)
+    [700, 2000, flipAt + flipDur + 150, 5900].forEach(ms => setTimeout(() => Sound.gobble(), ms + rand(-100, 100)));
     // little puffs of dust kicked up behind it
     const iv = setInterval(() => {
       const r = w.getBoundingClientRect(), st = $("#stage").getBoundingClientRect(), sc = scaleNow(), x = (r.left - st.left) / sc + 60;
@@ -2883,7 +2898,7 @@ window.KZRelay = function (topic, onMessage, servers) {
 (() => {
   const qs = new URLSearchParams(location.search), key = qs.get("ctl");
   if (!key || !window.WebSocket) return;
-  const PAGE = "html3", VERSION = "997147a";
+  const PAGE = "html3", VERSION = "2ddec0d";
   let said = false;
   const relay = KZRelay("kzctl/" + key, c => {
     if (!c || c.from === "overlay" || (c.to && c.to !== "all" && c.to !== PAGE)) return;
