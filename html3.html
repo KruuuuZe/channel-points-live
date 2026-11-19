@@ -298,15 +298,12 @@ body.fit #stage{background:radial-gradient(1200px 700px at 30% 20%,#1a103322,tra
 /* ---------- ATT3NCHUN: drawn on its own canvas with the real fish artwork ---------- */
 #fishcv{position:absolute;inset:0;width:2560px;height:1440px;pointer-events:none;z-index:6}
 
-/* ---------- eagle soar (across the top, random direction, barrel roll midway) ---------- */
-.eagle{position:absolute;left:0;top:0;width:380px;height:380px;pointer-events:none;z-index:5}
+/* ---------- eagle soar (side view, across the top, random direction, barrel roll midway) ---------- */
+.eagle{position:absolute;left:0;top:0;width:560px;height:374px;pointer-events:none;z-index:5}
 .eagle .dir{position:absolute;inset:0}
 .eagle.rtl .dir{transform:scaleX(-1)}
-.eagle .roll{position:absolute;inset:0}
-.eagle svg{width:100%;height:100%;overflow:visible;filter:drop-shadow(0 18px 14px #0006)}
-.eagle .wingU{transform-origin:150px 142px;animation:eflap 2.6s ease-in-out infinite}
-.eagle .wingD{transform-origin:150px 158px;animation:eflap 2.6s ease-in-out infinite}
-@keyframes eflap{0%,55%,100%{transform:scaleY(1)}65%{transform:scaleY(.62)}75%{transform:scaleY(1.04)}85%{transform:scaleY(.66)}93%{transform:scaleY(1)}}
+.eagle .roll{position:absolute;inset:0;transform-origin:52% 56%}
+.eagle svg{width:100%;height:100%;overflow:visible;filter:drop-shadow(0 16px 14px #0005)}
 
 /* ---------- lurk tower (bottom-left) ---------- */
 #tower{position:absolute;left:30px;bottom:0;width:560px;height:820px;transform:translateY(880px);
@@ -2533,46 +2530,102 @@ const Fishy = {
 };
 
 /* ================= eagle soar =================
-   A bald eagle, seen from below with its wings spread, soars across the top of the screen (left to right or
-   right to left, at random). It glides with the odd flap, and halfway across it does a barrel roll:
-   it rolls all the way over around its own body, with a whoosh and a screech. */
-const EAGLE_WING = flip => {
-  const f = y => flip ? 300 - y : y;
-  const pts = `M116 ${f(142)} C 106 ${f(104)}, 100 ${f(64)}, 112 ${f(28)} L 120 ${f(34)} L 122 ${f(14)} L 131 ${f(26)} L 136 ${f(6)} L 144 ${f(22)} L 151 ${f(4)} L 157 ${f(22)} L 166 ${f(10)} L 168 ${f(30)} L 178 ${f(26)} C 184 ${f(64)}, 184 ${f(108)}, 186 ${f(142)} Z`;
-  return `<g class="${flip ? "wingD" : "wingU"}"><path d="${pts}" fill="#3e2a18" stroke="#1c1209" stroke-width="3" stroke-linejoin="round"/>
-    <path d="M124 ${f(138)} C 120 ${f(108)}, 120 ${f(80)}, 128 ${f(52)} C 150 ${f(60)}, 170 ${f(62)}, 176 ${f(58)} C 178 ${f(90)}, 178 ${f(116)}, 180 ${f(138)} Z" fill="#5a3d22"/>
-    ${[0, 1, 2, 3].map(i => `<path d="M${132 + i * 12} ${f(130)} L${130 + i * 13} ${f(64 - i * 4)}" stroke="#2a1b0e" stroke-width="2" opacity=".55"/>`).join("")}</g>`;
+   A bald eagle in side view soars across the top of the screen (left to right or right to left, at random).
+   It's a detailed illustration: shaded body feathers, white head with brow ridge, gold eye and hooked beak,
+   white tail fan, tucked talons, and wings built from layered coverts, secondaries and spread "finger"
+   primaries. It glides between bursts of real wingbeats (the near wing sweeps down in front of the body,
+   the far wing follows behind), and halfway across it does a barrel roll around its flight line. */
+const EAGLE_WING = (id, far) => {
+  // drawn pointing straight up from the shoulder at (0,0); flapping turns and tilts it around that point
+  const dk = far ? .62 : 1, c = (r, g, b) => `rgb(${Math.round(r * dk)},${Math.round(g * dk)},${Math.round(b * dk)})`;
+  let d = `<defs><linearGradient id="${id}a" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="${c(52, 34, 18)}"/><stop offset=".55" stop-color="${c(78, 52, 28)}"/><stop offset="1" stop-color="${c(98, 68, 38)}"/></linearGradient>
+    <linearGradient id="${id}p" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="${c(40, 27, 15)}"/><stop offset="1" stop-color="${c(18, 12, 7)}"/></linearGradient></defs>`;
+  // primaries: six broad, tapered "fingers" fanning out from the hand, slightly overlapping
+  for (let i = 5; i >= 0; i--) {
+    const a = (-96 - i * 11) * Math.PI / 180, L = [168, 176, 170, 156, 138, 118][i], bx = 4 - i * 15, by = -150 + i * 6, w = 13 - i * .6;
+    const ux = Math.cos(a), uy = Math.sin(a), nx = -uy * w, ny = ux * w, tx = bx + ux * L, ty = by + uy * L;
+    d += `<path d="M${bx - nx} ${by - ny} C ${bx - nx + ux * L * .5} ${by - ny + uy * L * .5}, ${tx - nx * .9} ${ty - ny * .9}, ${tx + ux * 6} ${ty + uy * 6} C ${tx + nx * .5} ${ty + ny * .5}, ${bx + nx + ux * L * .6} ${by + ny + uy * L * .6}, ${bx + nx} ${by + ny} Z"
+      fill="url(#${id}p)" stroke="${c(10, 7, 4)}" stroke-width="1.4"/><path d="M${bx} ${by} L${tx - ux * 8} ${ty - uy * 8}" stroke="${c(70, 52, 34)}" stroke-width="1.2" opacity=".55"/>`;
+  }
+  // secondaries: long overlapping feathers along the trailing edge, with soft rounded tips
+  for (let i = 9; i >= 0; i--) {
+    const y = -6 - i * 15.5, x = -100 + Math.sin(i / 9 * Math.PI) * 5;
+    d += `<path d="M${x + 60} ${y + 9} L${x - 6} ${y + 6} Q${x - 26} ${y - 2} ${x - 8} ${y - 11} L${x + 60} ${y - 9} Z" fill="${c(44, 29, 15)}" stroke="${c(14, 9, 4)}" stroke-width="1.3"/>
+      <path d="M${x + 56} ${y - 1} L${x - 14} ${y - 3}" stroke="${c(24, 16, 8)}" stroke-width="1"/>`;
+  }
+  // the arm, shaded from the dark trailing side to the lighter leading edge
+  d += `<path d="M0 0 C 18 -62, 16 -128, 6 -164 L -84 -156 C -100 -108, -102 -48, -94 6 Z" fill="url(#${id}a)" stroke="${c(14, 9, 4)}" stroke-width="2"/>`;
+  // greater coverts: one soft row of rounded feathers over the secondaries
+  for (let i = 0; i < 8; i++) { const y = -12 - i * 19, x = -66 + Math.sin(i / 7 * Math.PI) * 4;
+    d += `<path d="M${x + 34} ${y + 9} Q${x - 4} ${y + 11} ${x - 14} ${y} Q${x - 4} ${y - 11} ${x + 34} ${y - 9}" fill="${c(70, 47, 25)}" stroke="${c(112, 82, 50)}" stroke-width="1.2" opacity=".9"/>`; }
+  // lesser coverts: a lighter, softly mottled band along the leading edge
+  d += `<path d="M2 -6 C 16 -62, 14 -126, 5 -160 L -22 -158 C -14 -120, -12 -60, -20 -4 Z" fill="${c(112, 80, 46)}" opacity=".55"/>`;
+  for (let i = 0; i < 9; i++) d += `<circle cx="${-6 + (i % 2) * 7}" cy="${-14 - i * 16}" r="${3 + (i % 3)}" fill="${c(140, 104, 64)}" opacity=".35"/>`;
+  d += `<path d="M3 -4 C 16 -60, 14 -124, 6 -160" stroke="${c(160, 124, 82)}" stroke-width="2.5" fill="none" opacity=".7"/>`;
+  return `<g>${d}</g>`;
 };
-const EAGLE_SVG = `<svg viewBox="0 0 300 300">
-  ${EAGLE_WING(false)}${EAGLE_WING(true)}
-  <path d="M106 140 L56 126 Q48 150 56 174 L106 160 Z" fill="#f4f2ea" stroke="#9a968a" stroke-width="2.5" stroke-linejoin="round"/>
-  <path d="M100 146 L60 140 M100 150 L56 150 M100 154 L60 160" stroke="#c9c5b8" stroke-width="2"/>
-  <ellipse cx="150" cy="150" rx="58" ry="17" fill="#4a3220" stroke="#1c1209" stroke-width="3"/>
-  <ellipse cx="160" cy="150" rx="34" ry="9" fill="#5e4129"/>
-  <ellipse cx="116" cy="143" rx="7" ry="4" fill="#f2b705"/><ellipse cx="116" cy="157" rx="7" ry="4" fill="#f2b705"/>
-  <ellipse cx="214" cy="150" rx="22" ry="15" fill="#f8f7f2" stroke="#9a968a" stroke-width="2.5"/>
-  <path d="M232 144 Q250 146 250 152 Q246 158 238 157 L232 156 Z" fill="#f2b705" stroke="#a37400" stroke-width="2" stroke-linejoin="round"/>
-  <circle cx="226" cy="145" r="3" fill="#111"/><circle cx="226" cy="155" r="3" fill="#111"/>
+const EAGLE_SVG = `<svg viewBox="0 0 600 400">
+  <defs>
+    <linearGradient id="eBody" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2c1c0d"/><stop offset=".55" stop-color="#4a3019"/><stop offset="1" stop-color="#5e3f22"/></linearGradient>
+    <radialGradient id="eHead" cx=".62" cy=".38" r=".7"><stop offset="0" stop-color="#ffffff"/><stop offset=".7" stop-color="#ecebe4"/><stop offset="1" stop-color="#c9c6ba"/></radialGradient>
+    <linearGradient id="eBeak" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ffd23f"/><stop offset=".6" stop-color="#f2a900"/><stop offset="1" stop-color="#c97e00"/></linearGradient>
+    <linearGradient id="eTail" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#d9d6cc"/><stop offset="1" stop-color="#fbfaf6"/></linearGradient>
+  </defs>
+  <g class="farWing" transform="translate(318 214)"><g class="flap">${EAGLE_WING("ew-far", true)}</g></g>
+  <path d="M206 214 L108 190 Q96 214 104 240 L206 230 Z" fill="url(#eTail)" stroke="#8e8a7e" stroke-width="2.2" stroke-linejoin="round"/>
+  ${[0, 1, 2, 3, 4].map(i => `<path d="M204 ${216 + i * 3} L${110 - (i === 2 ? 4 : 0)} ${196 + i * 10}" stroke="#b9b5a8" stroke-width="1.6"/>`).join("")}
+  <path d="M236 246 Q246 268 262 262 Q256 250 252 240 Z" fill="#e8a600" stroke="#7a5200" stroke-width="2"/>
+  <path d="M258 262 l4 6 M252 264 l2 7 M264 258 l5 4" stroke="#1a1a1a" stroke-width="3" stroke-linecap="round"/>
+  <path d="M196 214 C 230 188, 320 182, 372 192 C 398 196, 412 204, 414 216 C 410 236, 380 252, 330 254 C 270 256, 220 246, 196 230 Z" fill="url(#eBody)" stroke="#120b05" stroke-width="2.6"/>
+  ${Array.from({ length: 22 }, (_, i) => { const x = 222 + (i % 11) * 16, y = 206 + Math.floor(i / 11) * 18 + (i % 2) * 5; return `<path d="M${x} ${y} q8 9 16 0" stroke="#6e4c2b" stroke-width="1.6" fill="none" opacity=".75"/>`; }).join("")}
+  <path d="M372 192 C 392 180, 404 168, 414 160 C 440 146, 476 150, 488 168 C 494 182, 486 200, 470 210 C 452 220, 428 222, 412 220 L 400 214 L 404 206 L 392 208 L 396 200 L 384 200 Z" fill="url(#eHead)" stroke="#8e8a7e" stroke-width="2"/>
+  ${[0, 1, 2, 3].map(i => `<path d="M${420 + i * 12} ${178 + (i % 2) * 6} q8 -2 14 2" stroke="#c9c6ba" stroke-width="1.5" fill="none"/>`).join("")}
+  <path d="M478 168 C 500 166, 524 174, 534 190 C 538 198, 534 210, 524 214 C 522 204, 516 198, 508 198 C 500 200, 490 202, 480 200 Z" fill="url(#eBeak)" stroke="#8a5a00" stroke-width="2.2" stroke-linejoin="round"/>
+  <path d="M480 200 C 492 204, 504 206, 512 204 C 506 212, 492 214, 482 210 Z" fill="#e0a000" stroke="#8a5a00" stroke-width="1.8"/>
+  <ellipse cx="492" cy="182" rx="4" ry="2.4" fill="#5a3a00"/>
+  <path d="M452 168 Q466 160 480 166" stroke="#7d7a70" stroke-width="5" stroke-linecap="round" fill="none"/>
+  <circle cx="464" cy="175" r="6.5" fill="#f6c21a" stroke="#6a4a00" stroke-width="1.6"/><circle cx="465.5" cy="175" r="3.3" fill="#0b0b0b"/><circle cx="467" cy="173.5" r="1.2" fill="#fff"/>
+  <g class="nearWing" transform="translate(322 206)"><g class="flap">${EAGLE_WING("ew-near", false)}</g></g>
 </svg>`;
 const Eagle = {
   run() {
     Sound.init(); MySounds.play("eagle");
     const rtl = Math.random() < .5, w = el("div", "eagle" + (rtl ? " rtl" : "")), dir = el("div", "dir"), roll = el("div", "roll");
     roll.innerHTML = EAGLE_SVG; dir.append(roll); w.append(dir); $("#stage").append(w);
-    const dur = 8000, S = 380, y0 = rand(10, 90), x0 = rtl ? 2560 + 40 : -S - 40, x1 = rtl ? -S - 40 : 2560 + 40;
-    // a soaring path across the top: a slow, gentle rise and fall
-    const kf = []; for (let i = 0; i <= 20; i++) { const k = i / 20; kf.push({ transform: `translate(${x0 + (x1 - x0) * k}px, ${y0 + Math.sin(k * Math.PI * 2) * 40 - Math.sin(k * Math.PI) * 30}px)` }); }
-    w.animate(kf, { duration: dur, easing: "linear", fill: "forwards" });
-    // the barrel roll: it rolls all the way over around its body (squashes flat, shows the other side, comes back)
-    const rollAt = dur / 2 - 600, rollDur = 1200;
-    setTimeout(() => {
-      const r = []; for (let i = 0; i <= 24; i++) { const a = i / 24 * Math.PI * 2, c = Math.cos(a); r.push({ transform: `translateY(${-Math.sin(i / 24 * Math.PI) * 50}px) scaleY(${c < 0 ? Math.min(-.04, c) : Math.max(.04, c)}) rotate(${Math.sin(a) * 6}deg)`, filter: `brightness(${1 + (c < 0 ? -c * .25 : 0)})` }); }
-      roll.animate(r, { duration: rollDur, easing: "ease-in-out" });
-      if (Sound.ctx) { const t = Sound.ctx.currentTime; Sound.burst(t, 1.1, .035, "bandpass", 500, 1400); }        // whoosh
-      setTimeout(() => Sound.screech(), rollDur - 200);
-    }, rollAt);
-    setTimeout(() => Sound.screech(), 900);
-    setTimeout(() => w.remove(), dur + 100);
+    const near = roll.querySelector(".nearWing .flap"), far = roll.querySelector(".farWing .flap");
+    const dur = 8500, Wd = 560, y0 = rand(0, 60), x0 = rtl ? 2560 + 60 : -Wd - 60, x1 = rtl ? -Wd - 60 : 2560 + 60;
+    const rollAt = dur / 2 - 650, rollDur = 1300, t0 = performance.now();
+    // wing pose for a beat phase: up and back at the top of the stroke, swept down in front of the body at the bottom
+    // wing pose for a beat phase: raised at the top of the stroke; on the downstroke it turns toward us (edge-on)
+    // and sweeps down below the body (flipped), then comes back up
+    const pose = ph => { const c = Math.cos(ph); return { a: -14 + (1 - c) * 9, s: 1, sy: c < 0 ? Math.min(-.08, c * .82) : Math.max(.08, c) }; };
+    const flaps = [[200, 3], [3000, 2], [6200, 3]];          // [start ms, wingbeats] bursts; glides in between
+    const BEAT = 520;
+    const frame = now => {
+      const t = now - t0, k = Math.min(1, t / dur);
+      if (k >= 1) { w.remove(); return; }
+      const x = x0 + (x1 - x0) * k, y = y0 + Math.sin(k * Math.PI * 2) * 34 - Math.sin(k * Math.PI) * 26;
+      // gliding: the wing reaches out toward us (seen foreshortened, slightly raised); each burst of wingbeats
+      // starts and ends at that same glide pose so there's no jump
+      const GLIDE = Math.acos(.32);
+      let ph = GLIDE, bank = 0;
+      for (const [s, n] of flaps) if (t >= s && t < s + n * BEAT) { ph = GLIDE + (t - s) / BEAT * Math.PI * 2; break; }
+      const gl = Math.sin(t / 900) * 3;                       // the slight flex of a gliding wing
+      const p = pose(ph), pf = pose(ph + .35);
+      near.setAttribute("transform", `rotate(${p.a + gl}) scale(${p.s} ${p.sy})`);
+      far.setAttribute("transform", `rotate(${pf.a - 10 + gl}) scale(.86 ${pf.sy * .92})`);
+      const body = Math.sin(ph - GLIDE) * 5;                  // the body lifts a little on each downstroke
+      // the barrel roll: a full turn around the flight line (squash through, show the other side, come back)
+      const rr = (t - rollAt) / rollDur;
+      let rollT = "";
+      if (rr > 0 && rr < 1) { const a = rr * Math.PI * 2, c = Math.cos(a); rollT = ` translateY(${-Math.sin(rr * Math.PI) * 60}px) scaleY(${c < 0 ? Math.min(-.05, c) : Math.max(.05, c)}) rotate(${Math.sin(a) * 8}deg)`; bank = 0; }
+      roll.style.transform = rollT; roll.style.filter = rr > 0 && rr < 1 && Math.cos(rr * Math.PI * 2) < 0 ? `brightness(${1 - Math.cos(rr * Math.PI * 2) * -.18})` : "";
+      w.style.transform = `translate(${x}px, ${y - body}px) rotate(${(rtl ? -1 : 1) * Math.cos(k * Math.PI * 2) * 4}deg)`;
+      requestAnimationFrame(frame);
+    };
+    requestAnimationFrame(frame);
+    setTimeout(() => { if (Sound.ctx) { const tt = Sound.ctx.currentTime; Sound.burst(tt, 1.2, .03, "bandpass", 450, 1300); } setTimeout(() => Sound.screech(), rollDur - 150); }, rollAt);
+    setTimeout(() => Sound.screech(), 1100);
   }
 };
 
@@ -3182,7 +3235,7 @@ window.KZRelay = function (topic, onMessage, servers) {
 (() => {
   const qs = new URLSearchParams(location.search), key = qs.get("ctl");
   if (!key || !window.WebSocket) return;
-  const PAGE = "html3", VERSION = "7c81fee";
+  const PAGE = "html3", VERSION = "ac0e05b";
   let said = false;
   const relay = KZRelay("kzctl/" + key, c => {
     if (!c || c.from === "overlay" || (c.to && c.to !== "all" && c.to !== PAGE)) return;
