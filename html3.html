@@ -201,7 +201,7 @@ body.fit #stage{background:radial-gradient(1200px 700px at 30% 20%,#1a103322,tra
 #testbar button{font-weight:800}
 #testbar .b-sub{background:#6d28d9;border-color:transparent} #testbar .b-gift{background:#db2777;border-color:transparent} #testbar .b-fol{background:#4d8a1f;border-color:transparent}
 #testbar .b-bit{background:#7c3aed;border-color:transparent} #testbar .b-str{background:#c2410c;border-color:transparent}
-#testbar .b-raid{background:#0e7490;border-color:transparent} #testbar .b-scrap{background:#7c4a1e;border-color:#e2b26b88}
+#testbar .b-raid{background:#0e7490;border-color:transparent} #testbar .b-bolt{background:linear-gradient(135deg,#65a30d,#7c3aed);border-color:transparent} #testbar .b-scrap{background:#7c4a1e;border-color:#e2b26b88}
 #testbar .b-lurk{background:#334155;border-color:#a3e63588} #testbar .b-chat{background:#1f2937}
 
 /* sound slots: a + next to each test button to give that alert its own sound file */
@@ -262,6 +262,9 @@ body.fit #stage{background:radial-gradient(1200px 700px at 30% 20%,#1a103322,tra
 #wanted .st.pop{animation:wpop .45s cubic-bezier(.3,1.6,.4,1)}
 @keyframes wpop{0%{transform:scale(.3)}100%{transform:none}}
 
+/* ---------- lightning lap: a bolt runs around the screen edge and writes the channel name ---------- */
+#boltcv{position:absolute;inset:0;width:2560px;height:1440px;pointer-events:none;z-index:5}
+
 /* ---------- lurk tower (bottom-left) ---------- */
 #tower{position:absolute;left:30px;bottom:0;width:560px;height:820px;transform:translateY(880px);
   transition:transform 1.1s cubic-bezier(.5,0,.75,0)}
@@ -313,6 +316,7 @@ body.fit #stage{background:radial-gradient(1200px 700px at 30% 20%,#1a103322,tra
 <div id="stage">
   <div id="scrap"><div id="scrapboard"></div></div>
   <div id="wanted"></div>
+  <canvas id="boltcv" width="2560" height="1440"></canvas>
   <div id="pane"></div>
   <canvas id="holes" width="2560" height="1440"></canvas>
   <canvas id="shards" width="2560" height="1440"></canvas>
@@ -447,6 +451,7 @@ body.fit #stage{background:radial-gradient(1200px 700px at 30% 20%,#1a103322,tra
   <select id="tTeam" aria-label="Stream Avatars team"><option value="green">Green team</option><option value="blue">Blue team</option><option value="">No team</option></select>
   <button class="b-scrap" data-t="scroop">!scroop</button><button class="snd" data-snd="scroop" title="Add a sound for this alert">+</button>
   <button class="b-scrap" data-t="scroopboard">!scroopleaderboard</button>
+  <button class="b-bolt" data-t="bolt">⚡ Bolt</button><button class="snd" data-snd="bolt" title="Add a sound for this effect">+</button>
   <button class="b-chat" data-t="chat">Chat</button><button class="snd" data-snd="chat" title="Add a sound for this alert">+</button>
 </div>
 
@@ -1979,9 +1984,109 @@ const Wanted = {
 };
 Wanted.init();
 
+/* ================= lightning lap =================
+   A bolt starts at the bottom middle, runs left along the bottom, up the left side and across the top,
+   where it drops down and writes "KruuuuZe" in lightning; then it runs down the right side and back along
+   the bottom to where it started, and everything fades out. Colors follow the logo: lime green with a purple glow. */
+const Bolt = {
+  W: 2560, H: 1440, M: 18, SPEED: 2300, TAIL: 900,
+  // single-stroke letters in a box 1 tall (y 0 = top); up: true marks a hop to the next stroke (not drawn)
+  FONT: {
+    K: { w: .62, p: [[0, 1], [0, 0], [0, .56], [.6, 0], [.22, .38], [.62, 1]] },
+    r: { w: .42, p: [[0, 1], [0, .48], [0, .66], [.16, .52], [.42, .5]] },
+    u: { w: .5, p: [[0, .48], [0, .88], [.12, 1], [.36, 1], [.5, .86], [.5, .48], [.5, 1]] },
+    Z: { w: .64, p: [[0, 0], [.64, 0], [0, 1], [.66, 1]] },
+    e: { w: .5, p: [[.02, .76], [.5, .76], [.46, .56], [.26, .48], [.06, .58], [0, .8], [.12, .97], [.34, 1], [.5, .92]] }
+  },
+  build() {
+    const { W, H, M } = this, segs = [], add = (a, b, kind) => segs.push({ a, b, kind });
+    const word = "KruuuuZe", size = 230, gap = 40, top = 62;
+    const widths = [...word].map(ch => this.FONT[ch].w * size);
+    const total = widths.reduce((t, w) => t + w, 0) + gap * (word.length - 1);
+    let x = (W - total) / 2;
+    const x0 = x - 40, x1 = x + total + 40;
+    let at = [W / 2, H - M];
+    const go = (pt, kind) => { add(at, pt, kind); at = pt; };
+    go([M, H - M], "edge"); go([M, M], "edge"); go([x0, M], "edge");
+    [...word].forEach((ch, i) => {
+      const f = this.FONT[ch], pts = f.p.map(([u, v]) => [x + u * size, top + v * size]);
+      go(pts[0], "jump");
+      for (let k = 1; k < pts.length; k++) go(pts[k], "letter");
+      x += widths[i] + gap;
+    });
+    go([x1, M], "jump"); go([W - M, M], "edge"); go([W - M, H - M], "edge"); go([W / 2, H - M], "edge");
+    let d = 0;
+    segs.forEach(s => { s.len = Math.hypot(s.b[0] - s.a[0], s.b[1] - s.a[1]); s.cost = s.kind === "jump" ? s.len * .25 : s.len; s.start = d; d += s.cost; s.end = d; });
+    this.segs = segs; this.total = d;
+  },
+  runs: [],
+  run() {
+    if (!this.segs) this.build();
+    Sound.init(); MySounds.play("bolt");
+    this.runs.push({ t0: performance.now(), done: 0, lastZap: 0 });
+    if (this.runs.length === 1) requestAnimationFrame(t => this.frame(t));
+  },
+  at(s, d) { const k = s.cost ? Math.max(0, Math.min(1, (d - s.start) / s.cost)) : 1; return [s.a[0] + (s.b[0] - s.a[0]) * k, s.a[1] + (s.b[1] - s.a[1]) * k]; },
+  // a jagged, flickering lightning line from a to b
+  zig(g, a, b, amp) {
+    const dx = b[0] - a[0], dy = b[1] - a[1], len = Math.hypot(dx, dy); if (len < 1) return;
+    const n = Math.max(1, Math.round(len / 16)), nx = -dy / len, ny = dx / len;
+    g.moveTo(a[0], a[1]);
+    for (let i = 1; i < n; i++) { const k = i / n, o = (Math.random() * 2 - 1) * amp; g.lineTo(a[0] + dx * k + nx * o, a[1] + dy * k + ny * o); }
+    g.lineTo(b[0], b[1]);
+  },
+  stroke(g, paths, alpha, w) {
+    // purple outer glow, lime body, white-hot core (the logo's colors)
+    [["rgba(124,58,237," + (.6 * alpha) + ")", 26 * w, 30, "source-over"], ["rgba(140,220,40," + alpha + ")", 11 * w, 18, "source-over"], ["rgba(236,255,200," + (.95 * alpha) + ")", 2.6 * w, 0, "lighter"]].forEach(([c, lw, blur, op]) => {
+      g.globalCompositeOperation = op; g.strokeStyle = c; g.lineWidth = lw; g.shadowColor = c; g.shadowBlur = blur; g.beginPath(); paths(); g.stroke();
+    });
+    g.shadowBlur = 0;
+  },
+  frame(now) {
+    const cv = $("#boltcv"), g = cv.getContext("2d");
+    g.clearRect(0, 0, this.W, this.H);
+    g.globalCompositeOperation = "lighter"; g.lineCap = "round"; g.lineJoin = "round";
+    this.runs = this.runs.filter(r => {
+      const d = (now - r.t0) / 1000 * this.SPEED, end = this.total, fadeMs = 1000;
+      const finished = d >= end, fade = finished ? 1 - Math.min(1, (now - r.t0 - end / this.SPEED * 1000) / fadeMs) : 1;
+      if (finished && fade <= 0) return false;
+      const head = Math.min(d, end);
+      // the letters it has written stay lit (flickering) until the bolt is home
+      this.stroke(g, () => this.segs.forEach(s => { if (s.kind === "letter" && s.start < head) this.zig(g, s.a, this.at(s, head), 3.6); }), fade, 1.25);
+      // the running bolt: a tail along the edge behind the head
+      if (!finished) {
+        this.stroke(g, () => this.segs.forEach(s => {
+          if (s.kind !== "edge" || s.end < head - this.TAIL || s.start > head) return;
+          this.zig(g, this.at(s, Math.max(s.start, head - this.TAIL)), this.at(s, head), 7);
+        }), 1, 1.15);
+        const seg = this.segs.find(s => head >= s.start && head <= s.end) || this.segs[this.segs.length - 1], hp = this.at(seg, head);
+        // forks crackling off the head
+        if (Math.random() < .5) this.stroke(g, () => { const a = Math.random() * 6.283, L = rand(50, 140); this.zig(g, hp, [hp[0] + Math.cos(a) * L, hp[1] + Math.sin(a) * L], 9); }, .8, .6);
+        g.fillStyle = "rgba(245,255,225,.95)"; g.shadowColor = "#a3e635"; g.shadowBlur = 40; g.beginPath(); g.arc(hp[0], hp[1], 9, 0, 6.283); g.fill(); g.shadowBlur = 0;
+        if (now - r.lastZap > 45) {
+          r.lastZap = now;
+          for (let j = 0; j < 4; j++) P.push({ type: "spark", x: hp[0], y: hp[1], vx: rand(-5, 5), vy: rand(-5, 5), life: 0, max: rand(200, 420),
+            c: Math.random() < .5 ? [163, 230, 53] : [168, 85, 247], s: rand(1.6, 3), drag: .9, g: .05, trail: true });
+          kick();
+          if (Sound.ctx) { const t = Sound.ctx.currentTime; Sound.burst(t, .05, .025 + Math.random() * .02, "highpass", 2400 + Math.random() * 3000); }
+        }
+      } else if (!r.done) {
+        r.done = 1;                                   // home: a last flash at the bottom middle, then fade
+        for (let j = 0; j < 40; j++) P.push({ type: "spark", x: this.W / 2, y: this.H - this.M, vx: rand(-7, 7), vy: rand(-9, -1), life: 0, max: rand(400, 800),
+          c: Math.random() < .5 ? [163, 230, 53] : [168, 85, 247], s: rand(2, 3.5), drag: .94, g: .15, trail: true });
+        kick();
+      }
+      return true;
+    });
+    g.globalCompositeOperation = "source-over";
+    if (this.runs.length) requestAnimationFrame(t => this.frame(t)); else g.clearRect(0, 0, this.W, this.H);
+  }
+};
+
 /* commands from the app's Control screen (see remote.js) */
 window.onRemote = c => {
   if (c.cmd === "stars") Wanted.set(+c.n || 0);
+  else if (c.cmd === "effect" && c.name === "bolt") Bolt.run();
   else if (c.cmd === "scroop") {
     if (c.action === "spawn") { if (!Scrap.piles.some(p => p.state !== "none")) { clearTimeout(Scrap.timer); Scrap.timer = 0; Scrap.spawn(); } }
     else if (c.action === "board") Scrap.showBoard();
@@ -2073,6 +2178,7 @@ document.querySelectorAll("#testbar [data-t]").forEach(b => b.onclick = () => {
   else if (t === "lurk") Lurk.join(name, name, color);
   else if (t === "scroopboard") Scrap.showBoard();
   else if (t === "scroop") { Scrap.setTeam(name, $("#tTeam").value); Scrap.dig(name, name, color, true); }
+  else if (t === "bolt") Bolt.run();
   else if (t === "chat") Lurk.leave(name);
 });
 
@@ -2452,7 +2558,7 @@ window.KZRelay = function (topic, onMessage, servers) {
 (() => {
   const qs = new URLSearchParams(location.search), key = qs.get("ctl");
   if (!key || !window.WebSocket) return;
-  const PAGE = "html3", VERSION = "d2f090b";
+  const PAGE = "html3", VERSION = "00373c5";
   let said = false;
   const relay = KZRelay("kzctl/" + key, c => {
     if (!c || c.from === "overlay" || (c.to && c.to !== "all" && c.to !== PAGE)) return;
