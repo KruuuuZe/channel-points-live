@@ -616,36 +616,103 @@ else setAuto(qs.get("auto") !== "0");
 <script>
 /* ================= remote control from the Channel Points app =================
    Only runs when the OBS link has &ctl=KEY (the pairing key shown in the app's Control screen).
-   The app and this page talk through a private ntfy.sh channel named after that key: the app sends
-   commands; this page says "hello" (its name and version) once when it loads and whenever the app asks.
-   Pages can add more channels to the same connection (window.REMOTE_TOPICS), so each page keeps just
-   one connection to ntfy.sh, and it backs off politely if ntfy.sh is busy. */
+   The app and this page talk instantly through KZRelay (two public MQTT servers at once) on a channel named
+   after that key. Every command is answered with "ack", so the app knows it arrived. This page also says
+   "hello" (its name and version) when it connects and whenever the app asks. */
+/* ================= KZRelay: instant messages between the app and the overlays =================
+   A tiny MQTT client over WebSockets. It connects to two free public MQTT servers at once and sends every
+   message through both, so if one is slow or down the other still delivers; duplicates are dropped.
+   Connections stay open (with a ping every 25 s) and reconnect within a few seconds if they drop. */
+window.KZRelay = function (topic, onMessage, servers) {
+  const SERVERS = servers || ["wss://broker.hivemq.com:8884/mqtt", "wss://broker.emqx.io:8084/mqtt"];
+  const enc = new TextEncoder(), dec = new TextDecoder();
+  const str = s => { const b = enc.encode(s); return [b.length >> 8, b.length & 255, ...b]; };
+  const packet = (type, body) => {
+    const len = []; let n = body.length;
+    do { let d = n % 128; n = Math.floor(n / 128); if (n > 0) d |= 128; len.push(d); } while (n > 0);
+    return new Uint8Array([type, ...len, ...body]);
+  };
+  const seen = new Set(), seenList = [];
+  const fresh = id => { if (!id || seen.has(id)) return false; seen.add(id); seenList.push(id); if (seenList.length > 500) seen.delete(seenList.shift()); return true; };
+  const conns = [], waiting = [];
+  let up = 0;
+  const openCount = () => conns.filter(c => c.ready).length;
+  function connect(url) {
+    const c = { url, ready: false, ws: null, back: 1000, ping: 0, buf: new Uint8Array(0) };
+    conns.push(c);
+    const start = () => {
+      let ws; try { ws = new WebSocket(url, "mqtt"); } catch (e) { return setTimeout(start, c.back); }
+      c.ws = ws; ws.binaryType = "arraybuffer";
+      ws.onopen = () => {
+        const id = "kz" + Math.random().toString(36).slice(2, 12);
+        ws.send(packet(0x10, [...str("MQTT"), 4, 0x02, 0, 60, ...str(id)]));          // CONNECT, clean session, keepalive 60 s
+      };
+      ws.onmessage = e => {
+        let b = new Uint8Array(e.data);
+        if (c.buf.length) { const j = new Uint8Array(c.buf.length + b.length); j.set(c.buf); j.set(b, c.buf.length); b = j; c.buf = new Uint8Array(0); }
+        let i = 0;
+        while (i < b.length) {
+          const type = b[i] >> 4; let mult = 1, len = 0, k = i + 1, d;
+          do { if (k >= b.length) { c.buf = b.slice(i); return; } d = b[k++]; len += (d & 127) * mult; mult *= 128; } while (d & 128);
+          if (k + len > b.length) { c.buf = b.slice(i); return; }
+          const body = b.subarray(k, k + len);
+          if (type === 2) {                                                               // CONNACK: subscribe
+            ws.send(packet(0x82, [0, 1, ...str(topic), 0]));
+          } else if (type === 9) {                                                        // SUBACK: ready
+            c.ready = true; c.back = 1000; up++;
+            while (waiting.length) { const p = waiting.shift(); conns.forEach(x => x.ready && x.ws.send(p)); }
+            clearInterval(c.ping); c.ping = setInterval(() => { try { ws.send(new Uint8Array([0xC0, 0])); } catch (x) {} }, 25000);
+            if (typeof api.onUp === "function") api.onUp(openCount());
+          } else if (type === 3) {                                                        // PUBLISH
+            const tl = (body[0] << 8) | body[1], qos = (b[i] >> 1) & 3;
+            const msg = dec.decode(body.subarray(2 + tl + (qos ? 2 : 0)));
+            let o; try { o = JSON.parse(msg); } catch (x) { o = null; }
+            if (o && fresh(o._id)) { try { onMessage(o); } catch (x) { console.error(x); } }
+          }
+          i = k + len;
+        }
+      };
+      ws.onclose = ws.onerror = () => {
+        if (c.ws !== ws) return; c.ws = null;
+        if (c.ready) { c.ready = false; up--; } clearInterval(c.ping);
+        setTimeout(start, c.back); c.back = Math.min(8000, c.back * 2);                    // back within 1-8 seconds
+        if (typeof api.onDown === "function") api.onDown(openCount());
+      };
+    };
+    start();
+  }
+  const api = {
+    send(o) {
+      o = Object.assign({ _id: Math.random().toString(36).slice(2) + Date.now().toString(36) }, o);
+      fresh(o._id);                                                                      // don't hear our own message back
+      const p = packet(0x30, [...str(topic), ...enc.encode(JSON.stringify(o))]);
+      const live = conns.filter(c => c.ready);
+      if (live.length) live.forEach(c => { try { c.ws.send(p); } catch (x) {} });
+      else { waiting.push(p); setTimeout(() => { const i = waiting.indexOf(p); if (i >= 0) waiting.splice(i, 1); }, 15000); }
+      return o._id;
+    },
+    connected: () => openCount(),
+    onUp: null, onDown: null
+  };
+  SERVERS.forEach(connect);
+  return api;
+};
+
 (() => {
   const qs = new URLSearchParams(location.search), key = qs.get("ctl");
-  if (!key || !window.EventSource) return;
-  const PAGE = "html2", VERSION = "724fd85", ctl = "kzc-" + key, base = "https://ntfy.sh/";
-  const extra = window.REMOTE_TOPICS || {};
-  const send = o => fetch(base + encodeURIComponent(ctl), { method: "POST", body: JSON.stringify(Object.assign({ from: "overlay", page: PAGE, version: VERSION }, o)) }).catch(() => {});
-  const seen = new Set(), born = Date.now() / 1000;
-  let es, back = 15000, said = false;
-  const open = () => {
-    es = new EventSource(base + [ctl, ...Object.keys(extra)].map(encodeURIComponent).join(",") + "/sse");
-    es.onopen = () => { back = 15000; if (!said) { said = true; send({ cmd: "hello" }); } };
-    es.onerror = () => { es.close(); setTimeout(open, back); back = Math.min(600000, back * 2); };   // retry slowly, never in a tight loop
-    es.onmessage = e => {
-      let m, c; try { m = JSON.parse(e.data); } catch (x) { return; }
-      if (m.event !== "message" || seen.has(m.id) || m.time < born - 5) return;   // never re-run old commands
-      seen.add(m.id);
-      if (m.topic !== ctl) { if (extra[m.topic]) try { extra[m.topic](m.message); } catch (x) {} return; }
-      try { c = JSON.parse(m.message); } catch (x) { return; }
-      if (!c || c.from === "overlay" || (c.to && c.to !== "all" && c.to !== PAGE)) return;
-      if (c.cmd === "ping") setTimeout(() => send({ cmd: "hello" }), Math.random() * 1500);
-      else if (c.cmd === "reload") {               // load the newest version (a fresh address skips any cached copy)
-        const u = new URL(location.href); u.searchParams.set("_v", Date.now()); location.replace(u.toString());
-      } else if (typeof window.onRemote === "function") { try { window.onRemote(c); } catch (x) { console.error(x); } }
-    };
-  };
-  open();
+  if (!key || !window.WebSocket) return;
+  const PAGE = "html2", VERSION = "e327198";
+  let said = false;
+  const relay = KZRelay("kzctl/" + key, c => {
+    if (!c || c.from === "overlay" || (c.to && c.to !== "all" && c.to !== PAGE)) return;
+    if (c.t && Date.now() - c.t > 60000) return;                     // ignore anything stale
+    const ack = () => relay.send({ from: "overlay", page: PAGE, version: VERSION, cmd: "ack", ack: c._id });
+    if (c.cmd === "ping") relay.send({ from: "overlay", page: PAGE, version: VERSION, cmd: "hello" });
+    else if (c.cmd === "reload") {                                  // load the newest version (a fresh address skips any cached copy)
+      ack(); setTimeout(() => { const u = new URL(location.href); u.searchParams.set("_v", Date.now()); location.replace(u.toString()); }, 300);
+    } else if (typeof window.onRemote === "function") { try { window.onRemote(c); ack(); } catch (x) { console.error(x); } }
+  });
+  relay.onUp = () => { if (!said) { said = true; relay.send({ from: "overlay", page: PAGE, version: VERSION, cmd: "hello" }); } };
 })();
 </script>
 </body>
