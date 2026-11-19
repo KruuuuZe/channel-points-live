@@ -201,7 +201,7 @@ body.fit #stage{background:radial-gradient(1200px 700px at 30% 20%,#1a103322,tra
 #testbar button{font-weight:800}
 #testbar .b-sub{background:#6d28d9;border-color:transparent} #testbar .b-gift{background:#db2777;border-color:transparent} #testbar .b-fol{background:#4d8a1f;border-color:transparent}
 #testbar .b-bit{background:#7c3aed;border-color:transparent} #testbar .b-str{background:#c2410c;border-color:transparent}
-#testbar .b-raid{background:#0e7490;border-color:transparent} #testbar .b-eagle{background:linear-gradient(135deg,#3b2a1a,#d97706);border-color:transparent} #testbar .b-fish{background:linear-gradient(135deg,#15803d,#0ea5e9);border-color:transparent} #testbar .b-penguin{background:linear-gradient(135deg,#0f172a,#38bdf8);border-color:transparent} #testbar .b-turkey{background:linear-gradient(135deg,#7c2d12,#ea580c);border-color:transparent} #testbar .b-banana{background:linear-gradient(135deg,#15803d,#facc15);border-color:transparent;color:#1a1400} #testbar .b-mango{background:linear-gradient(135deg,#15803d,#f59e0b);border-color:transparent} #testbar .b-bolt{background:linear-gradient(135deg,#65a30d,#7c3aed);border-color:transparent} #testbar .b-scrap{background:#7c4a1e;border-color:#e2b26b88}
+#testbar .b-raid{background:#0e7490;border-color:transparent} #testbar .b-chef{background:linear-gradient(135deg,#db2777,#38bdf8);border-color:transparent} #testbar .b-eagle{background:linear-gradient(135deg,#3b2a1a,#d97706);border-color:transparent} #testbar .b-fish{background:linear-gradient(135deg,#15803d,#0ea5e9);border-color:transparent} #testbar .b-penguin{background:linear-gradient(135deg,#0f172a,#38bdf8);border-color:transparent} #testbar .b-turkey{background:linear-gradient(135deg,#7c2d12,#ea580c);border-color:transparent} #testbar .b-banana{background:linear-gradient(135deg,#15803d,#facc15);border-color:transparent;color:#1a1400} #testbar .b-mango{background:linear-gradient(135deg,#15803d,#f59e0b);border-color:transparent} #testbar .b-bolt{background:linear-gradient(135deg,#65a30d,#7c3aed);border-color:transparent} #testbar .b-scrap{background:#7c4a1e;border-color:#e2b26b88}
 #testbar .b-lurk{background:#334155;border-color:#a3e63588} #testbar .b-chat{background:#1f2937}
 
 /* sound slots: a + next to each test button to give that alert its own sound file */
@@ -297,6 +297,8 @@ body.fit #stage{background:radial-gradient(1200px 700px at 30% 20%,#1a103322,tra
 
 /* ---------- ATT3NCHUN: drawn on its own canvas with the real fish artwork ---------- */
 #fishcv{position:absolute;inset:0;width:2560px;height:1440px;pointer-events:none;z-index:6}
+/* ---------- anime_chef (canvas; art made in the app) ---------- */
+#chefcv{position:absolute;inset:0;width:2560px;height:1440px;pointer-events:none;z-index:6}
 
 /* ---------- eagle soar (side view, across the top, random direction, barrel roll midway) ---------- */
 .eagle{position:absolute;left:0;top:0;width:560px;height:374px;pointer-events:none;z-index:5}
@@ -360,6 +362,7 @@ body.fit #stage{background:radial-gradient(1200px 700px at 30% 20%,#1a103322,tra
   <canvas id="banacv" width="2560" height="1440"></canvas>
   <canvas id="boltcv" width="2560" height="1440"></canvas>
   <canvas id="fishcv" width="2560" height="1440"></canvas>
+  <canvas id="chefcv" width="2560" height="1440"></canvas>
   <div id="pane"></div>
   <canvas id="holes" width="2560" height="1440"></canvas>
   <canvas id="shards" width="2560" height="1440"></canvas>
@@ -501,6 +504,7 @@ body.fit #stage{background:radial-gradient(1200px 700px at 30% 20%,#1a103322,tra
   <button class="b-penguin" data-t="penguin">🐧 Penguin</button><button class="snd" data-snd="penguin" title="Add a sound for this effect">+</button>
   <button class="b-fish" data-t="fish">🐟 ATT3NCHUN</button><button class="snd" data-snd="fish" title="Add a sound for this effect">+</button>
   <button class="b-eagle" data-t="eagle">🦅 Eagle</button><button class="snd" data-snd="eagle" title="Add a sound for this effect">+</button>
+  <button class="b-chef" data-t="chef">👨‍🍳 anime_chef</button><button class="snd" data-snd="anime_chef" title="Add a sound for this effect">+</button>
   <button class="b-chat" data-t="chat">Chat</button><button class="snd" data-snd="chat" title="Add a sound for this alert">+</button>
 </div>
 
@@ -2629,6 +2633,209 @@ const Eagle = {
   }
 };
 
+/* ================= anime_chef =================
+   Art: made in the app's Art screen with GPT Image (animated), sent here over the relay and kept in this page's
+   own storage (IndexedDB "kzArt"). Each animation is a sprite sheet: frames side by side, all the same size.
+   Until art arrives, a simple drawn chef stands in.
+   1. A paratrooper plane flies in from the left; the chef jumps out and parachutes to the bottom of the screen.
+   2. 3 seconds of frantic chopping of a blue goo.
+   3. A diagonal leap up to the center-right, then a straight leap across to the left; "anime-chef" pops up midway.
+   4. Lands at the left middle, then slides down the screen and off the bottom. */
+const ChefArt = {
+  sprites: {}, parts: {},
+  db: null,
+  open() { return this.db || (this.db = new Promise((ok, no) => { const r = indexedDB.open("kzArt", 1); r.onupgradeneeded = () => r.result.createObjectStore("a"); r.onsuccess = () => ok(r.result); r.onerror = () => no(r.error); })); },
+  use(name, a) { const img = new Image(); img.onload = () => { this.sprites[name] = Object.assign({ img }, a); }; img.src = a.url; },
+  async load() {
+    try { const db = await this.open();
+      ["plane", "chef_parachute", "chef_chop", "chef_jump", "chef_slide"].forEach(n => { const r = db.transaction("a").objectStore("a").get(n); r.onsuccess = () => { if (r.result) this.use(n, r.result); }; });
+    } catch (e) {}
+  },
+  // a piece of art arriving from the app (sent in parts)
+  async receive(c) {
+    const k = c.name + "/" + c.set, p = this.parts[k] || (this.parts[k] = { got: [], n: c.parts });
+    p.got[c.part] = c.data;
+    if (p.got.filter(x => x != null).length < p.n) return;
+    delete this.parts[k];
+    const a = Object.assign({ url: p.got.join(""), at: Date.now() }, c.meta);
+    this.use(c.name, a);
+    try { const db = await this.open(); db.transaction("a", "readwrite").objectStore("a").put(a, c.name); } catch (e) {}
+  }
+};
+ChefArt.load();
+
+const Chef = {
+  busy: false,
+  // how tall each piece is drawn on the 2560x1440 stage
+  H: { chef_parachute: 520, chef_chop: 330, chef_jump: 300, chef_slide: 280 },
+  run() {
+    if (this.busy) { this.again = true; return; }
+    this.busy = true; Sound.init(); MySounds.play("anime_chef");
+    const cv = $("#chefcv"), g = cv.getContext("2d"), t0 = performance.now(), W = 2560, H = 1440;
+    g.imageSmoothingEnabled = true; g.imageSmoothingQuality = "high";
+    const S = ChefArt.sprites;
+    // the timeline (ms)
+    const PLANE = 4200, DROP = 1150, LAND = 4700, CHOP = 3000, J1 = LAND + CHOP, J1D = 900, PAUSE = 320,
+          J2 = J1 + J1D + PAUSE, J2D = 1500, SLIDE = J2 + J2D + 260, SLD = 1400, END = SLIDE + SLD + 200;
+    const GROUND = H - 26, MIDY = 790, CHOPX = 780, RIGHTX = 1820, LEFTX = 250;
+    const goo = [];                                  // blue chunks flying off the board
+    let lastChop = 0, sfx = {};
+    const once = (k, fn) => { if (!sfx[k]) { sfx[k] = 1; fn(); } };
+    const frameOf = (spr, t) => spr ? Math.floor(t / (spr.ms || 100)) % spr.frames : 0;
+    // draw a sprite (or the stand-in) with its bottom-middle at (x,y)
+    const draw = (name, t, x, y, flip, alpha = 1, clipTop = null) => {
+      const spr = S[name], h = this.H[name];
+      g.save(); g.globalAlpha = alpha; g.translate(x, y); if (flip) g.scale(-1, 1);
+      if (clipTop != null) { g.beginPath(); g.rect(-2000, -4000, 4000, 4000 - clipTop); g.clip(); }
+      if (spr) { const w = spr.w * h / spr.h, f = frameOf(spr, t); g.drawImage(spr.img, f * spr.w, 0, spr.w, spr.h, -w / 2, -h, w, h); }
+      else this.standIn(g, name, t, h);
+      g.restore();
+    };
+    const ease = k => k < .5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2;
+    const frame = now => {
+      const t = now - t0; g.clearRect(0, 0, W, H);
+      // ---- the plane
+      if (t < PLANE) {
+        const px = -520 + (W + 1040) * (t / PLANE), py = 190 + Math.sin(t / 260) * 6;
+        g.save(); g.translate(px, py); g.rotate(Math.sin(t / 400) * .015);
+        if (S.plane) { const w = 760, h = w * S.plane.h / S.plane.w; g.drawImage(S.plane.img, 0, 0, S.plane.w, S.plane.h, -w / 2, -h / 2, w, h); }
+        else this.standInPlane(g, t);
+        g.restore();
+        once("drone", () => { if (Sound.ctx) { const s = Sound.ctx.currentTime; Sound.tone(s, PLANE / 1000, .035, 70, 95, "sawtooth"); Sound.burst(s, PLANE / 1000, .03, "lowpass", 300, 500); } });
+      }
+      // ---- parachute down
+      const FALL = 420;
+      if (t >= DROP && t < DROP + FALL) {                 // out of the door, a short free fall
+        const k = (t - DROP) / FALL;
+        draw("chef_jump", t, 560, 300 + 260 * k * k, false);
+        once("whoosh", () => { if (Sound.ctx) Sound.burst(Sound.ctx.currentTime, .5, .05, "bandpass", 600, 1600); });
+      }
+      if (t >= DROP + FALL && t < LAND) {
+        const k = (t - DROP - FALL) / (LAND - DROP - FALL);
+        const x = 560 + (CHOPX - 560) * ease(k) + Math.sin(t / 380) * 26 * (1 - k) * Math.min(1, k * 8);
+        const y = 560 + (GROUND - 560) * k;
+        const open = Math.min(1, (t - DROP - FALL) / 300);
+        g.save(); g.translate(x, y); g.rotate(Math.sin(t / 380) * .07 * (1 - k)); g.scale(.4 + .6 * open, .7 + .3 * open); g.translate(-x, -y);
+        draw("chef_parachute", t, x, y, false); g.restore();
+        once("pop", () => Sound.thump());
+      }
+      // ---- landed: the chute floats off (only the part above the chef's head), then chopping
+      if (t >= LAND && t < LAND + 900) {
+        const k = (t - LAND) / 900, ph = this.H.chef_parachute, cut = ph - this.H.chef_chop * .95;
+        g.save(); g.translate(CHOPX + k * 140, GROUND - k * 60); g.rotate(k * .5); g.translate(-(CHOPX + k * 140), -(GROUND - k * 60));
+        draw("chef_parachute", t, CHOPX + k * 140, GROUND - k * 60, false, 1 - k, ph - cut); g.restore();
+      }
+      if (t >= LAND && t < J1) {
+        draw("chef_chop", t, CHOPX, GROUND, false);
+        if (t - lastChop > 105) {
+          lastChop = t;
+          if (Sound.ctx) { const s = Sound.ctx.currentTime; Sound.tone(s, .045, .05, 900 + Math.random() * 300, 500); Sound.burst(s, .04, .035, "highpass", 2500); }
+          if (t - LAND < CHOP - 150) for (let i = 0; i < 2; i++) goo.push({ x: CHOPX + 60 + rand(-30, 40), y: GROUND - 120, vx: rand(-.5, .7), vy: rand(-1.1, -.55), r: rand(7, 15), born: t });
+        }
+      }
+      // ---- leap 1: diagonal up to the center-right
+      if (t >= J1 && t < J2) {
+        once("boing1", () => this.boing());
+        const k = Math.min(1, (t - J1) / J1D), x = CHOPX + (RIGHTX - CHOPX) * k, y = GROUND + (MIDY - GROUND) * k - Math.sin(k * Math.PI) * 280;
+        if (k >= 1) once("land1", () => { Sound.thump(); this.puff(goo, RIGHTX, MIDY, t); });
+        draw("chef_jump", t, x, y, false);
+      }
+      // ---- leap 2: straight across to the left, name pops up midway
+      if (t >= J2 && t < SLIDE) {
+        once("boing2", () => this.boing(.8));
+        const k = Math.min(1, (t - J2) / J2D), x = RIGHTX + (LEFTX - RIGHTX) * ease(k);
+        if (k >= 1) once("land2", () => { Sound.thump(); this.puff(goo, LEFTX, MIDY, t); });
+        draw("chef_jump", t, x, MIDY, true);
+        if (k >= .5) once("name", () => this.nameAt = t);
+      }
+      // ---- slide down and off the bottom
+      if (t >= SLIDE && t < END) {
+        once("slide", () => { if (Sound.ctx) { const s = Sound.ctx.currentTime; Sound.tone(s, SLD / 1000, .07, 1100, 160, "triangle"); } });
+        const k = (t - SLIDE) / SLD, y = MIDY + (H + 420 - MIDY) * k * k;
+        draw("chef_slide", t, LEFTX + k * 40, y, true);
+      }
+      // ---- the name
+      if (this.nameAt != null) {
+        const a = t - this.nameAt, life = 2200;
+        if (a < life) {
+          const pop = a < 260 ? .4 + .7 * (a / 260) : a < 380 ? 1.1 - .1 * ((a - 260) / 120) : 1, fade = a > life - 450 ? (life - a) / 450 : 1;
+          g.save(); g.globalAlpha = fade; g.translate((RIGHTX + LEFTX) / 2, MIDY - 360 - a * .02); g.rotate(-.06); g.scale(pop, pop);
+          g.font = "italic 900 168px system-ui, Roboto, sans-serif"; g.textAlign = "center"; g.textBaseline = "middle"; g.lineJoin = "round";
+          g.lineWidth = 34; g.strokeStyle = "#1e1b4b"; g.strokeText("anime-chef", 10, 12);
+          g.lineWidth = 22; g.strokeStyle = "#ec4899"; g.strokeText("anime-chef", 0, 0);
+          const gr = g.createLinearGradient(0, -70, 0, 70); gr.addColorStop(0, "#ffffff"); gr.addColorStop(.55, "#e0f2fe"); gr.addColorStop(1, "#7dd3fc");
+          g.shadowColor = "rgba(125,211,252,.8)"; g.shadowBlur = 30; g.fillStyle = gr; g.fillText("anime-chef", 0, 0);
+          g.restore();
+        }
+      }
+      // ---- blue goo and dust
+      for (let i = goo.length - 1; i >= 0; i--) {
+        const p = goo[i], a = t - p.born; p.x += p.vx * 16; p.y += p.vy * 16; p.vy += .045;
+        if (a > (p.dust ? 600 : 1400) || p.y > H + 40) { goo.splice(i, 1); continue; }
+        g.globalAlpha = p.dust ? .5 * (1 - a / 600) : 1;
+        g.fillStyle = p.dust ? "#e7e2f7" : "#38bdf8"; g.beginPath(); g.arc(p.x, p.y, p.r * (p.dust ? 1 + a / 300 : 1), 0, 6.283); g.fill();
+        if (!p.dust) { g.fillStyle = "rgba(255,255,255,.6)"; g.beginPath(); g.arc(p.x - p.r * .3, p.y - p.r * .3, p.r * .3, 0, 6.283); g.fill(); }
+        g.globalAlpha = 1;
+      }
+      if (t < END || goo.length) requestAnimationFrame(frame);
+      else { g.clearRect(0, 0, W, H); this.nameAt = null; this.busy = false; if (this.again) { this.again = false; this.run(); } }
+    };
+    this.nameAt = null;
+    requestAnimationFrame(frame);
+  },
+  boing(p = 1) { if (Sound.ctx) { const s = Sound.ctx.currentTime; Sound.tone(s, .32, .08, 180 * p, 620 * p, "triangle"); Sound.burst(s, .25, .03, "bandpass", 800, 2400); } },
+  puff(list, x, y, t) { for (let i = 0; i < 9; i++) list.push({ x: x + rand(-50, 50), y: y - rand(0, 20), vx: rand(-.5, .5), vy: rand(-.35, -.05), r: rand(8, 16), born: t, dust: true }); },
+  /* ---- the stand-in chef (until art is made in the app) ---- */
+  standIn(g, name, t, h) {
+    const s = h / (name === "chef_parachute" ? 620 : 300); g.scale(s, s); g.lineJoin = g.lineCap = "round";
+    const ink = "#1e1b2e";
+    const body = (lean = 0, armA = 0) => {
+      g.save(); g.rotate(lean);
+      g.fillStyle = "#3f3f46"; g.strokeStyle = ink; g.lineWidth = 5;
+      g.beginPath(); g.roundRect(-30, -95, 24, 95, 8); g.fill(); g.stroke(); g.beginPath(); g.roundRect(6, -95, 24, 95, 8); g.fill(); g.stroke();
+      g.fillStyle = "#fafafa"; g.beginPath(); g.roundRect(-42, -200, 84, 115, 22); g.fill(); g.stroke();
+      g.fillStyle = "#cbd5e1"; [[-12, -175], [12, -175], [-12, -145], [12, -145]].forEach(([x, y]) => { g.beginPath(); g.arc(x, y, 4, 0, 6.283); g.fill(); });
+      g.fillStyle = "#dc2626"; g.beginPath(); g.moveTo(-26, -200); g.lineTo(26, -200); g.lineTo(0, -178); g.closePath(); g.fill(); g.stroke();
+      g.fillStyle = "#fde2c8"; g.beginPath(); g.arc(0, -232, 34, 0, 6.283); g.fill(); g.stroke();
+      g.fillStyle = "#111"; g.beginPath(); g.moveTo(-34, -240); g.lineTo(-20, -272); g.lineTo(-8, -250); g.lineTo(6, -276); g.lineTo(14, -252); g.lineTo(34, -262); g.lineTo(34, -236); g.closePath(); g.fill();
+      g.fillStyle = "#fafafa"; g.beginPath(); g.roundRect(-30, -300, 60, 42, 10); g.fill(); g.stroke();
+      g.beginPath(); g.arc(-16, -306, 18, 0, 6.283); g.arc(4, -314, 20, 0, 6.283); g.arc(20, -304, 17, 0, 6.283); g.fill(); g.stroke();
+      g.fillStyle = ink; g.beginPath(); g.arc(10, -236, 4.5, 0, 6.283); g.arc(24, -236, 4.5, 0, 6.283); g.fill();
+      g.lineWidth = 4; g.beginPath(); g.arc(16, -220, 9, .2, 2.9); g.stroke();
+      g.save(); g.translate(30, -180); g.rotate(armA);                 // knife arm
+      g.lineWidth = 5; g.fillStyle = "#fafafa"; g.beginPath(); g.roundRect(-10, -8, 70, 22, 10); g.fill(); g.stroke();
+      g.fillStyle = "#e5e7eb"; g.beginPath(); g.moveTo(62, -4); g.lineTo(130, -14); g.lineTo(130, 4); g.lineTo(62, 12); g.closePath(); g.fill(); g.stroke();
+      g.restore(); g.restore();
+    };
+    if (name === "chef_parachute") {
+      const sw = Math.sin(t / 380) * .06;
+      g.save(); g.rotate(sw);
+      g.strokeStyle = ink; g.lineWidth = 3; [-110, -40, 40, 110].forEach(x => { g.beginPath(); g.moveTo(0, -300); g.lineTo(x * 1.6, -470); g.stroke(); });
+      g.fillStyle = "#fafafa"; g.lineWidth = 6; g.beginPath(); g.ellipse(0, -470, 190, 120, 0, Math.PI, 0); g.closePath(); g.fill(); g.stroke();
+      g.fillStyle = "#dc2626"; for (let i = 0; i < 3; i++) { g.beginPath(); g.moveTo(0, -470); g.ellipse(0, -470, 190, 120, 0, Math.PI + i * 1.05 + .52 * 0, Math.PI + i * 1.05 + .52); g.closePath(); g.fill(); }
+      g.restore(); body(0, -.3); return;
+    }
+    if (name === "chef_chop") {
+      g.fillStyle = "#a16207"; g.strokeStyle = ink; g.lineWidth = 5; g.beginPath(); g.roundRect(30, -108, 200, 24, 6); g.fill(); g.stroke();
+      g.fillStyle = "#3b82f6"; g.beginPath(); g.ellipse(150, -122, 60, 24, 0, Math.PI, 0); g.fill(); g.stroke();
+      g.fillStyle = "#57534e"; g.fillRect(40, -84, 16, 84); g.fillRect(205, -84, 16, 84);
+      body(0, Math.sin(t / 22) > 0 ? -.5 : .45); return;
+    }
+    if (name === "chef_jump") { g.translate(0, -30); body(.35, -.9); return; }
+    if (name === "chef_slide") { g.rotate(-1.3 + Math.sin(t / 60) * .08); g.translate(120, 40); body(0, Math.sin(t / 70) * .8); return; }
+  },
+  standInPlane(g, t) {
+    g.strokeStyle = "#0f172a"; g.lineWidth = 6; g.lineJoin = "round";
+    g.fillStyle = "#64748b"; g.beginPath(); g.ellipse(0, 0, 330, 58, 0, 0, 6.283); g.fill(); g.stroke();
+    g.fillStyle = "#475569"; g.beginPath(); g.moveTo(-250, -20); g.lineTo(-340, -120); g.lineTo(-290, -120); g.lineTo(-200, -30); g.closePath(); g.fill(); g.stroke();
+    g.beginPath(); g.moveTo(-40, 10); g.lineTo(-130, 120); g.lineTo(-60, 120); g.lineTo(60, 10); g.closePath(); g.fill(); g.stroke();
+    g.fillStyle = "#0f172a"; g.fillRect(-90, -30, 60, 50);
+    g.fillStyle = "#bae6fd"; for (let i = 0; i < 5; i++) { g.beginPath(); g.arc(20 + i * 42, -14, 11, 0, 6.283); g.fill(); g.stroke(); }
+    g.fillStyle = "#1e3a8a"; g.beginPath(); g.arc(-180, 0, 22, 0, 6.283); g.fill(); g.fillStyle = "#fff"; g.beginPath(); g.arc(-180, 0, 9, 0, 6.283); g.fill();
+    g.fillStyle = "rgba(226,232,240,.5)"; g.beginPath(); g.ellipse(335, 0, 10, 70 * Math.abs(Math.sin(t / 30)) + 10, 0, 0, 6.283); g.fill();
+  }
+};
+
 /* ================= automatic effects =================
    - TheNapalmer's first chat message of the day plays the mango tree; Kapelan012's plays the banana tree;
      ATT3NCHUN's plays the fish effect.
@@ -2636,7 +2843,7 @@ const Eagle = {
    - The lightning lap plays once an hour, at the top of the hour. */
 const AutoFx = {
   KEY: "autoFxDay",
-  FIRST_OF_DAY: { thenapalmer: () => Mango.run(), kapelan012: () => Banana.run(), att3nchun: () => Fishy.run() },
+  FIRST_OF_DAY: { thenapalmer: () => Mango.run(), kapelan012: () => Banana.run(), att3nchun: () => Fishy.run(), anime_chef: () => Chef.run() },
   chat(login) {
     const k = (login || "").toLowerCase(), fx = this.FIRST_OF_DAY[k]; if (!fx) return;
     const d = new Date(), today = d.getFullYear() + "-" + (d.getMonth() + 1) + "-" + d.getDate();
@@ -2757,6 +2964,8 @@ window.onRemote = c => {
   else if (c.cmd === "effect" && c.name === "penguin") Penguin.run();
   else if (c.cmd === "effect" && c.name === "fish") Fishy.run();
   else if (c.cmd === "effect" && c.name === "eagle") Eagle.run();
+  else if (c.cmd === "effect" && c.name === "chef") Chef.run();
+  else if (c.cmd === "art") ChefArt.receive(c);
   else if (c.cmd === "scroop") {
     if (c.action === "spawn") { if (!Scrap.piles.some(p => p.state !== "none")) { clearTimeout(Scrap.timer); Scrap.timer = 0; Scrap.spawn(); } }
     else if (c.action === "board") Scrap.showBoard();
@@ -2855,6 +3064,7 @@ document.querySelectorAll("#testbar [data-t]").forEach(b => b.onclick = () => {
   else if (t === "penguin") Penguin.run();
   else if (t === "fish") Fishy.run();
   else if (t === "eagle") Eagle.run();
+  else if (t === "chef") Chef.run();
   else if (t === "chat") Lurk.leave(name);
 });
 
@@ -3235,7 +3445,7 @@ window.KZRelay = function (topic, onMessage, servers) {
 (() => {
   const qs = new URLSearchParams(location.search), key = qs.get("ctl");
   if (!key || !window.WebSocket) return;
-  const PAGE = "html3", VERSION = "ac0e05b";
+  const PAGE = "html3", VERSION = "3f9f431";
   let said = false;
   const relay = KZRelay("kzctl/" + key, c => {
     if (!c || c.from === "overlay" || (c.to && c.to !== "all" && c.to !== PAGE)) return;
