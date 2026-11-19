@@ -201,7 +201,7 @@ body.fit #stage{background:radial-gradient(1200px 700px at 30% 20%,#1a103322,tra
 #testbar button{font-weight:800}
 #testbar .b-sub{background:#6d28d9;border-color:transparent} #testbar .b-gift{background:#db2777;border-color:transparent} #testbar .b-fol{background:#4d8a1f;border-color:transparent}
 #testbar .b-bit{background:#7c3aed;border-color:transparent} #testbar .b-str{background:#c2410c;border-color:transparent}
-#testbar .b-raid{background:#0e7490;border-color:transparent} #testbar .b-fish{background:linear-gradient(135deg,#15803d,#0ea5e9);border-color:transparent} #testbar .b-penguin{background:linear-gradient(135deg,#0f172a,#38bdf8);border-color:transparent} #testbar .b-turkey{background:linear-gradient(135deg,#7c2d12,#ea580c);border-color:transparent} #testbar .b-banana{background:linear-gradient(135deg,#15803d,#facc15);border-color:transparent;color:#1a1400} #testbar .b-mango{background:linear-gradient(135deg,#15803d,#f59e0b);border-color:transparent} #testbar .b-bolt{background:linear-gradient(135deg,#65a30d,#7c3aed);border-color:transparent} #testbar .b-scrap{background:#7c4a1e;border-color:#e2b26b88}
+#testbar .b-raid{background:#0e7490;border-color:transparent} #testbar .b-eagle{background:linear-gradient(135deg,#3b2a1a,#d97706);border-color:transparent} #testbar .b-fish{background:linear-gradient(135deg,#15803d,#0ea5e9);border-color:transparent} #testbar .b-penguin{background:linear-gradient(135deg,#0f172a,#38bdf8);border-color:transparent} #testbar .b-turkey{background:linear-gradient(135deg,#7c2d12,#ea580c);border-color:transparent} #testbar .b-banana{background:linear-gradient(135deg,#15803d,#facc15);border-color:transparent;color:#1a1400} #testbar .b-mango{background:linear-gradient(135deg,#15803d,#f59e0b);border-color:transparent} #testbar .b-bolt{background:linear-gradient(135deg,#65a30d,#7c3aed);border-color:transparent} #testbar .b-scrap{background:#7c4a1e;border-color:#e2b26b88}
 #testbar .b-lurk{background:#334155;border-color:#a3e63588} #testbar .b-chat{background:#1f2937}
 
 /* sound slots: a + next to each test button to give that alert its own sound file */
@@ -297,6 +297,16 @@ body.fit #stage{background:radial-gradient(1200px 700px at 30% 20%,#1a103322,tra
 
 /* ---------- ATT3NCHUN: drawn on its own canvas with the real fish artwork ---------- */
 #fishcv{position:absolute;inset:0;width:2560px;height:1440px;pointer-events:none;z-index:6}
+
+/* ---------- eagle soar (across the top, random direction, barrel roll midway) ---------- */
+.eagle{position:absolute;left:0;top:0;width:380px;height:380px;pointer-events:none;z-index:5}
+.eagle .dir{position:absolute;inset:0}
+.eagle.rtl .dir{transform:scaleX(-1)}
+.eagle .roll{position:absolute;inset:0}
+.eagle svg{width:100%;height:100%;overflow:visible;filter:drop-shadow(0 18px 14px #0006)}
+.eagle .wingU{transform-origin:150px 142px;animation:eflap 2.6s ease-in-out infinite}
+.eagle .wingD{transform-origin:150px 158px;animation:eflap 2.6s ease-in-out infinite}
+@keyframes eflap{0%,55%,100%{transform:scaleY(1)}65%{transform:scaleY(.62)}75%{transform:scaleY(1.04)}85%{transform:scaleY(.66)}93%{transform:scaleY(1)}}
 
 /* ---------- lurk tower (bottom-left) ---------- */
 #tower{position:absolute;left:30px;bottom:0;width:560px;height:820px;transform:translateY(880px);
@@ -493,6 +503,7 @@ body.fit #stage{background:radial-gradient(1200px 700px at 30% 20%,#1a103322,tra
   <button class="b-turkey" data-t="turkey">🦃 Turkey</button><button class="snd" data-snd="turkey" title="Add a sound for this effect">+</button>
   <button class="b-penguin" data-t="penguin">🐧 Penguin</button><button class="snd" data-snd="penguin" title="Add a sound for this effect">+</button>
   <button class="b-fish" data-t="fish">🐟 ATT3NCHUN</button><button class="snd" data-snd="fish" title="Add a sound for this effect">+</button>
+  <button class="b-eagle" data-t="eagle">🦅 Eagle</button><button class="snd" data-snd="eagle" title="Add a sound for this effect">+</button>
   <button class="b-chat" data-t="chat">Chat</button><button class="snd" data-snd="chat" title="Add a sound for this alert">+</button>
 </div>
 
@@ -1197,6 +1208,16 @@ const Sound = {
     this.burst(t, .9, .035, "lowpass", 900, 180);
     this.burst(t + .04, .5, .015, "bandpass", 700, 400);
     this.tone(t + .02, .3, .025, 260, 120);
+  },
+  /* an eagle's screech: a soft, falling cry with a little flutter (kept gentle, nothing sharp) */
+  screech() {
+    const c = this.init(); if (!c) return; const t = c.currentTime;
+    const o = c.createOscillator(), v = c.createOscillator(), vg = c.createGain(), f = c.createBiquadFilter(), g = c.createGain();
+    o.type = "triangle"; o.frequency.setValueAtTime(1500, t); o.frequency.linearRampToValueAtTime(1750, t + .08); o.frequency.exponentialRampToValueAtTime(950, t + .7);
+    v.frequency.value = 26; vg.gain.value = 45; v.connect(vg).connect(o.frequency);
+    f.type = "lowpass"; f.frequency.value = 2200;
+    g.gain.setValueAtTime(.0001, t); g.gain.linearRampToValueAtTime(.03, t + .05); g.gain.exponentialRampToValueAtTime(.0008, t + .75);
+    o.connect(f).connect(g).connect(this.out); o.start(t); v.start(t); o.stop(t + .8); v.stop(t + .8);
   },
   /* the pile coming apart: a gentle patter of little taps */
   crumble() {
@@ -2511,6 +2532,50 @@ const Fishy = {
   }
 };
 
+/* ================= eagle soar =================
+   A bald eagle, seen from below with its wings spread, soars across the top of the screen (left to right or
+   right to left, at random). It glides with the odd flap, and halfway across it does a barrel roll:
+   it rolls all the way over around its own body, with a whoosh and a screech. */
+const EAGLE_WING = flip => {
+  const f = y => flip ? 300 - y : y;
+  const pts = `M116 ${f(142)} C 106 ${f(104)}, 100 ${f(64)}, 112 ${f(28)} L 120 ${f(34)} L 122 ${f(14)} L 131 ${f(26)} L 136 ${f(6)} L 144 ${f(22)} L 151 ${f(4)} L 157 ${f(22)} L 166 ${f(10)} L 168 ${f(30)} L 178 ${f(26)} C 184 ${f(64)}, 184 ${f(108)}, 186 ${f(142)} Z`;
+  return `<g class="${flip ? "wingD" : "wingU"}"><path d="${pts}" fill="#3e2a18" stroke="#1c1209" stroke-width="3" stroke-linejoin="round"/>
+    <path d="M124 ${f(138)} C 120 ${f(108)}, 120 ${f(80)}, 128 ${f(52)} C 150 ${f(60)}, 170 ${f(62)}, 176 ${f(58)} C 178 ${f(90)}, 178 ${f(116)}, 180 ${f(138)} Z" fill="#5a3d22"/>
+    ${[0, 1, 2, 3].map(i => `<path d="M${132 + i * 12} ${f(130)} L${130 + i * 13} ${f(64 - i * 4)}" stroke="#2a1b0e" stroke-width="2" opacity=".55"/>`).join("")}</g>`;
+};
+const EAGLE_SVG = `<svg viewBox="0 0 300 300">
+  ${EAGLE_WING(false)}${EAGLE_WING(true)}
+  <path d="M106 140 L56 126 Q48 150 56 174 L106 160 Z" fill="#f4f2ea" stroke="#9a968a" stroke-width="2.5" stroke-linejoin="round"/>
+  <path d="M100 146 L60 140 M100 150 L56 150 M100 154 L60 160" stroke="#c9c5b8" stroke-width="2"/>
+  <ellipse cx="150" cy="150" rx="58" ry="17" fill="#4a3220" stroke="#1c1209" stroke-width="3"/>
+  <ellipse cx="160" cy="150" rx="34" ry="9" fill="#5e4129"/>
+  <ellipse cx="116" cy="143" rx="7" ry="4" fill="#f2b705"/><ellipse cx="116" cy="157" rx="7" ry="4" fill="#f2b705"/>
+  <ellipse cx="214" cy="150" rx="22" ry="15" fill="#f8f7f2" stroke="#9a968a" stroke-width="2.5"/>
+  <path d="M232 144 Q250 146 250 152 Q246 158 238 157 L232 156 Z" fill="#f2b705" stroke="#a37400" stroke-width="2" stroke-linejoin="round"/>
+  <circle cx="226" cy="145" r="3" fill="#111"/><circle cx="226" cy="155" r="3" fill="#111"/>
+</svg>`;
+const Eagle = {
+  run() {
+    Sound.init(); MySounds.play("eagle");
+    const rtl = Math.random() < .5, w = el("div", "eagle" + (rtl ? " rtl" : "")), dir = el("div", "dir"), roll = el("div", "roll");
+    roll.innerHTML = EAGLE_SVG; dir.append(roll); w.append(dir); $("#stage").append(w);
+    const dur = 8000, S = 380, y0 = rand(10, 90), x0 = rtl ? 2560 + 40 : -S - 40, x1 = rtl ? -S - 40 : 2560 + 40;
+    // a soaring path across the top: a slow, gentle rise and fall
+    const kf = []; for (let i = 0; i <= 20; i++) { const k = i / 20; kf.push({ transform: `translate(${x0 + (x1 - x0) * k}px, ${y0 + Math.sin(k * Math.PI * 2) * 40 - Math.sin(k * Math.PI) * 30}px)` }); }
+    w.animate(kf, { duration: dur, easing: "linear", fill: "forwards" });
+    // the barrel roll: it rolls all the way over around its body (squashes flat, shows the other side, comes back)
+    const rollAt = dur / 2 - 600, rollDur = 1200;
+    setTimeout(() => {
+      const r = []; for (let i = 0; i <= 24; i++) { const a = i / 24 * Math.PI * 2, c = Math.cos(a); r.push({ transform: `translateY(${-Math.sin(i / 24 * Math.PI) * 50}px) scaleY(${c < 0 ? Math.min(-.04, c) : Math.max(.04, c)}) rotate(${Math.sin(a) * 6}deg)`, filter: `brightness(${1 + (c < 0 ? -c * .25 : 0)})` }); }
+      roll.animate(r, { duration: rollDur, easing: "ease-in-out" });
+      if (Sound.ctx) { const t = Sound.ctx.currentTime; Sound.burst(t, 1.1, .035, "bandpass", 500, 1400); }        // whoosh
+      setTimeout(() => Sound.screech(), rollDur - 200);
+    }, rollAt);
+    setTimeout(() => Sound.screech(), 900);
+    setTimeout(() => w.remove(), dur + 100);
+  }
+};
+
 /* ================= automatic effects =================
    - TheNapalmer's first chat message of the day plays the mango tree; Kapelan012's plays the banana tree;
      ATT3NCHUN's plays the fish effect.
@@ -2638,6 +2703,7 @@ window.onRemote = c => {
   else if (c.cmd === "effect" && c.name === "turkey") Turkey.run();
   else if (c.cmd === "effect" && c.name === "penguin") Penguin.run();
   else if (c.cmd === "effect" && c.name === "fish") Fishy.run();
+  else if (c.cmd === "effect" && c.name === "eagle") Eagle.run();
   else if (c.cmd === "scroop") {
     if (c.action === "spawn") { if (!Scrap.piles.some(p => p.state !== "none")) { clearTimeout(Scrap.timer); Scrap.timer = 0; Scrap.spawn(); } }
     else if (c.action === "board") Scrap.showBoard();
@@ -2735,6 +2801,7 @@ document.querySelectorAll("#testbar [data-t]").forEach(b => b.onclick = () => {
   else if (t === "turkey") Turkey.run();
   else if (t === "penguin") Penguin.run();
   else if (t === "fish") Fishy.run();
+  else if (t === "eagle") Eagle.run();
   else if (t === "chat") Lurk.leave(name);
 });
 
@@ -3115,7 +3182,7 @@ window.KZRelay = function (topic, onMessage, servers) {
 (() => {
   const qs = new URLSearchParams(location.search), key = qs.get("ctl");
   if (!key || !window.WebSocket) return;
-  const PAGE = "html3", VERSION = "958d327";
+  const PAGE = "html3", VERSION = "7c81fee";
   let said = false;
   const relay = KZRelay("kzctl/" + key, c => {
     if (!c || c.from === "overlay" || (c.to && c.to !== "all" && c.to !== PAGE)) return;
