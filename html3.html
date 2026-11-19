@@ -201,7 +201,7 @@ body.fit #stage{background:radial-gradient(1200px 700px at 30% 20%,#1a103322,tra
 #testbar button{font-weight:800}
 #testbar .b-sub{background:#6d28d9;border-color:transparent} #testbar .b-gift{background:#db2777;border-color:transparent} #testbar .b-fol{background:#4d8a1f;border-color:transparent}
 #testbar .b-bit{background:#7c3aed;border-color:transparent} #testbar .b-str{background:#c2410c;border-color:transparent}
-#testbar .b-raid{background:#0e7490;border-color:transparent} #testbar .b-mango{background:linear-gradient(135deg,#15803d,#f59e0b);border-color:transparent} #testbar .b-bolt{background:linear-gradient(135deg,#65a30d,#7c3aed);border-color:transparent} #testbar .b-scrap{background:#7c4a1e;border-color:#e2b26b88}
+#testbar .b-raid{background:#0e7490;border-color:transparent} #testbar .b-banana{background:linear-gradient(135deg,#15803d,#facc15);border-color:transparent;color:#1a1400} #testbar .b-mango{background:linear-gradient(135deg,#15803d,#f59e0b);border-color:transparent} #testbar .b-bolt{background:linear-gradient(135deg,#65a30d,#7c3aed);border-color:transparent} #testbar .b-scrap{background:#7c4a1e;border-color:#e2b26b88}
 #testbar .b-lurk{background:#334155;border-color:#a3e63588} #testbar .b-chat{background:#1f2937}
 
 /* sound slots: a + next to each test button to give that alert its own sound file */
@@ -264,7 +264,7 @@ body.fit #stage{background:radial-gradient(1200px 700px at 30% 20%,#1a103322,tra
 
 /* ---------- lightning lap: a bolt runs around the screen edge and writes the channel name ---------- */
 #boltcv{position:absolute;inset:0;width:2560px;height:1440px;pointer-events:none;z-index:5}
-#treecv{position:absolute;inset:0;width:2560px;height:1440px;pointer-events:none;z-index:4}
+#treecv,#banacv{position:absolute;inset:0;width:2560px;height:1440px;pointer-events:none;z-index:4}
 
 /* ---------- lurk tower (bottom-left) ---------- */
 #tower{position:absolute;left:30px;bottom:0;width:560px;height:820px;transform:translateY(880px);
@@ -318,6 +318,7 @@ body.fit #stage{background:radial-gradient(1200px 700px at 30% 20%,#1a103322,tra
   <div id="scrap"><div id="scrapboard"></div></div>
   <div id="wanted"></div>
   <canvas id="treecv" width="2560" height="1440"></canvas>
+  <canvas id="banacv" width="2560" height="1440"></canvas>
   <canvas id="boltcv" width="2560" height="1440"></canvas>
   <div id="pane"></div>
   <canvas id="holes" width="2560" height="1440"></canvas>
@@ -455,6 +456,7 @@ body.fit #stage{background:radial-gradient(1200px 700px at 30% 20%,#1a103322,tra
   <button class="b-scrap" data-t="scroopboard">!scroopleaderboard</button>
   <button class="b-bolt" data-t="bolt">⚡ Bolt</button><button class="snd" data-snd="bolt" title="Add a sound for this effect">+</button>
   <button class="b-mango" data-t="mango">🥭 Mango</button><button class="snd" data-snd="mango" title="Add a sound for this effect">+</button>
+  <button class="b-banana" data-t="banana">🍌 Banana</button><button class="snd" data-snd="banana" title="Add a sound for this effect">+</button>
   <button class="b-chat" data-t="chat">Chat</button><button class="snd" data-snd="chat" title="Add a sound for this alert">+</button>
 </div>
 
@@ -1998,7 +2000,7 @@ Wanted.init();
 const Mango = {
   busy: false,
   run() {
-    if (this.busy) return; this.busy = true;
+    if (this.busy) { this.again = true; return; } this.busy = true;
     Sound.init(); MySounds.play("mango");
     const H = 1440, X0 = 400;
     // a random tree: branches (with the time each one grows), leaf clusters on the outer branches, mango spots
@@ -2096,11 +2098,142 @@ const Mango = {
       });
       for (let i = mangoes.length - 1; i >= 0; i--) if (mangoes[i].x < -80 || mangoes[i].x > 2640) mangoes.splice(i, 1);
       const over = sink >= 1 && flung && (!mangoes.length || t > sink0 + 7000);
-      if (!over) requestAnimationFrame(frame); else { g.clearRect(0, 0, 2560, H); this.busy = false; }
+      if (!over) requestAnimationFrame(frame); else { g.clearRect(0, 0, 2560, H); this.busy = false; if (this.again) { this.again = false; setTimeout(() => this.run(), 400); } }
     };
     requestAnimationFrame(frame);
   }
 };
+
+/* ================= banana tree =================
+   A banana plant shoots up from the bottom middle of the screen, unfurls its big leaves and grows bunches
+   of bananas that ripen from green to yellow. Then the bananas launch all over the screen, bounce, land on
+   the bottom and tumble away, and the plant slides back down. */
+const Banana = {
+  busy: false,
+  run() {
+    if (this.busy) { this.again = true; return; } this.busy = true;
+    Sound.init(); MySounds.play("banana");
+    const H = 1440, X = 1280, TOPY = H - rand(560, 620);
+    const cv = $("#banacv"), g = cv.getContext("2d"), t0 = performance.now();
+    const stemT = 1300;                                    // the trunk shoots up
+    const leaves = Array.from({ length: 8 }, (_, i) => {   // big leaves fanning out from the crown
+      const side = i % 2 ? 1 : -1, spread = .25 + (i >> 1) * .32;
+      return { a: -Math.PI / 2 + side * spread + rand(-.12, .12), len: rand(330, 430), w: rand(70, 92), droop: rand(.35, .7) * side, t: stemT - 200 + i * 140, tear: Math.random() < .6 };
+    });
+    const grown = stemT + 8 * 140 + 500;
+    // two or three bunches hanging below the crown, each a few rows (hands) of bananas
+    const bananas = [];
+    const nb = Math.random() < .5 ? 2 : 3;
+    for (let b = 0; b < nb; b++) {
+      const bx = X + (b - (nb - 1) / 2) * 120 + rand(-15, 15), by = TOPY + 70;
+      for (let row = 0; row < 3; row++) for (let j = 0; j < 5; j++) {
+        const u = (j - 2) / 2;
+        bananas.push({ hx: bx + u * 34, hy: by + row * 46 + Math.abs(u) * 6, rot: u * .45 + rand(-.08, .08) - Math.PI / 2 + .4, L: rand(62, 74), t: grown + b * 200 + row * 120 + rand(0, 150) });
+      }
+    }
+    const ripe = grown + 2200, flingAt = ripe + 400, sink0 = flingAt + 2600, sinkDur = 1300;
+    const flying = []; let lastT = t0, flung = false;
+    if (Sound.ctx) { const tt = Sound.ctx.currentTime; Sound.burst(tt, 1.3, .05, "lowpass", 260, 1200); }
+    const drawBanana = (x, y, L, rot, ripeK, s = 1) => {
+      g.save(); g.translate(x, y); g.rotate(rot); g.scale(s, s);
+      const c1 = `rgb(${Math.round(120 + 135 * ripeK)},${Math.round(190 + 20 * ripeK)},${Math.round(60 - 20 * ripeK)})`;
+      const c2 = `rgb(${Math.round(80 + 150 * ripeK)},${Math.round(140 + 40 * ripeK)},${Math.round(30)})`;
+      const gr = g.createLinearGradient(0, -L * .2, 0, L * .25); gr.addColorStop(0, c1); gr.addColorStop(1, c2);
+      g.fillStyle = gr; g.beginPath();                      // a curved banana, stem end at the origin
+      g.moveTo(0, 0);
+      g.quadraticCurveTo(L * .45, -L * .32, L, -L * .08);
+      g.quadraticCurveTo(L * .5, L * .02, 4, L * .17);
+      g.closePath(); g.fill();
+      g.strokeStyle = "rgba(70,50,10,.45)"; g.lineWidth = 2; g.stroke();
+      g.strokeStyle = "rgba(255,255,255,.28)"; g.lineWidth = 3; g.beginPath(); g.moveTo(L * .15, -L * .08); g.quadraticCurveTo(L * .5, -L * .24, L * .85, -L * .1); g.stroke();
+      g.fillStyle = "#4a3416"; g.beginPath(); g.arc(L * .99, -L * .08, 4, 0, 6.283); g.fill();                    // dark tip
+      g.fillStyle = "#6b5a2a"; g.fillRect(-6, -2, 10, 12);                                                        // stem nub
+      g.restore();
+    };
+    const frame = now => {
+      const t = now - t0, k = Math.min(3, (now - lastT) / 16.67); lastT = now;
+      g.clearRect(0, 0, 2560, H);
+      const sink = t > sink0 ? Math.min(1, (t - sink0) / sinkDur) : 0, dy = (1 - Math.pow(1 - sink, 2)) * 1100;
+      g.save(); g.translate(0, dy);
+      // the trunk: a striped, tapered pseudostem
+      const sp = Math.min(1, t / stemT), se = 1 - Math.pow(1 - sp, 3), topY = H - (H - TOPY) * se;
+      if (sp > 0) {
+        const gr = g.createLinearGradient(X - 40, 0, X + 40, 0); gr.addColorStop(0, "#5b7f2c"); gr.addColorStop(.5, "#8fb34a"); gr.addColorStop(1, "#4d6b24");
+        g.fillStyle = gr; g.beginPath(); g.moveTo(X - 42, H + 4); g.lineTo(X - 26, topY); g.lineTo(X + 26, topY); g.lineTo(X + 42, H + 4); g.closePath(); g.fill();
+        g.strokeStyle = "rgba(60,40,10,.35)"; g.lineWidth = 3;
+        for (let yy = H - 40; yy > topY + 20; yy -= 46) { g.beginPath(); g.moveTo(X - 36 + (H - yy) * .012, yy); g.quadraticCurveTo(X, yy - 14, X + 36 - (H - yy) * .012, yy); g.stroke(); }
+      }
+      // leaves unfurl from the crown
+      leaves.forEach(l => {
+        const p = Math.max(0, Math.min(1, (t - l.t) / 650)); if (!p) return;
+        const e = 1 - Math.pow(1 - p, 3), len = l.len * e;
+        g.save(); g.translate(X, topY + 6); g.rotate(l.a);
+        // midrib curves down (droop); the blade follows it
+        const cx = len * .55, cy = -l.droop * len * .1, ex = len, ey = l.droop * len * .55 * (l.a > -Math.PI / 2 ? 1 : 1);
+        g.fillStyle = "#2f8f3f"; g.beginPath(); g.moveTo(0, 0);
+        g.quadraticCurveTo(cx, cy - l.w * e, ex, ey); g.quadraticCurveTo(cx, cy + l.w * .35 * e, 0, 0); g.fill();
+        g.fillStyle = "#3fae4f"; g.beginPath(); g.moveTo(0, 0); g.quadraticCurveTo(cx, cy - l.w * .55 * e, ex, ey); g.quadraticCurveTo(cx, cy, 0, 0); g.fill();
+        g.strokeStyle = "#c9e58a"; g.lineWidth = 4; g.beginPath(); g.moveTo(0, 0); g.quadraticCurveTo(cx, cy, ex, ey); g.stroke();
+        if (l.tear && p >= 1) { g.strokeStyle = "rgba(10,40,15,.55)"; g.lineWidth = 3; for (let q = .35; q < .9; q += .18) { g.beginPath(); g.moveTo(len * q, cy * q * 1.6 + 2); g.lineTo(len * (q + .04), cy * q - l.w * .5); g.stroke(); } }
+        g.restore();
+      });
+      // bunches grow and ripen on their stalks
+      if (!flung && t > grown - 300) {
+        g.strokeStyle = "#5b4a1e"; g.lineWidth = 9; g.beginPath(); g.moveTo(X, topY + 20); g.lineTo(X, topY + 90); g.stroke();
+        const ripeK = Math.max(0, Math.min(1, (t - grown - 800) / 1400));
+        bananas.forEach(bn => { const p = Math.max(0, Math.min(1, (t - bn.t) / 500)); if (p) drawBanana(bn.hx, bn.hy, bn.L, bn.rot + Math.sin(t / 500 + bn.hx) * .03, ripeK, .3 + .7 * p); });
+      }
+      g.restore();
+      if (!flung && t >= flingAt) {
+        flung = true;
+        bananas.forEach((bn, i) => flying.push({ x: bn.hx, y: bn.hy, L: bn.L, rot: bn.rot, vr: rand(-.25, .25), vx: rand(-20, 20), vy: rand(-32, -16), state: "fly", bounces: 0, delay: i * 30 }));
+        if (Sound.ctx) flying.forEach((m, i) => { if (i % 2) return; const tt = Sound.ctx.currentTime + i * .03; Sound.tone(tt, .12, .03, rand(450, 650), rand(800, 1050)); });
+      }
+      flying.forEach(m => {
+        if (m.delay > 0) { m.delay -= 16.67 * k; drawBanana(m.x, m.y, m.L, m.rot, 1); return; }
+        const floor = H - 16;
+        if (m.state === "fly") {
+          m.vy += .55 * k; m.x += m.vx * k; m.y += m.vy * k; m.rot += m.vr * k;
+          if (m.x < 20) { m.x = 20; m.vx = Math.abs(m.vx) * .75; }
+          if (m.x > 2540) { m.x = 2540; m.vx = -Math.abs(m.vx) * .75; }
+          if (m.y < 20) { m.y = 20; m.vy = Math.abs(m.vy) * .6; }
+          if (m.y > floor) {
+            m.y = floor; m.vy = -Math.abs(m.vy) * .4; m.vx *= .88; m.bounces++; m.vr = rand(-.3, .3);
+            if (Sound.ctx && m.bounces < 2 && Math.random() < .5) { const tt = Sound.ctx.currentTime; Sound.tone(tt, .09, .028, 170, 100); }
+            if (m.bounces >= 3 || Math.abs(m.vy) < 3) { m.state = "roll"; m.vy = 0; if (Math.abs(m.vx) < 9) m.vx = (m.vx < 0 ? -1 : 1) * rand(9, 15); }
+          }
+        } else { m.x += m.vx * k; m.y = floor; m.rot += (m.vx / 30) * k; }   // tumbling away along the bottom
+        drawBanana(m.x, m.y, m.L, m.rot, 1);
+      });
+      for (let i = flying.length - 1; i >= 0; i--) if (flying[i].x < -100 || flying[i].x > 2660) flying.splice(i, 1);
+      const over = sink >= 1 && flung && (!flying.length || t > sink0 + 7000);
+      if (!over) requestAnimationFrame(frame); else { g.clearRect(0, 0, 2560, H); this.busy = false; if (this.again) { this.again = false; setTimeout(() => this.run(), 400); } }
+    };
+    requestAnimationFrame(frame);
+  }
+};
+
+/* ================= automatic effects =================
+   - TheNapalmer's first chat message of the day plays the mango tree; Kapelan012's plays the banana tree.
+     ("Day" is the calendar day on this computer; remembered so a page reload doesn't play it twice.)
+   - The lightning lap plays once an hour, at the top of the hour. */
+const AutoFx = {
+  KEY: "autoFxDay",
+  FIRST_OF_DAY: { thenapalmer: () => Mango.run(), kapelan012: () => Banana.run() },
+  chat(login) {
+    const k = (login || "").toLowerCase(), fx = this.FIRST_OF_DAY[k]; if (!fx) return;
+    const d = new Date(), today = d.getFullYear() + "-" + (d.getMonth() + 1) + "-" + d.getDate();
+    let seen = {}; try { seen = JSON.parse(localStorage.getItem(this.KEY)) || {}; } catch (e) {}
+    if (seen[k] === today) return;
+    seen[k] = today; try { localStorage.setItem(this.KEY, JSON.stringify(seen)); } catch (e) {}
+    fx();
+  },
+  hourly() {
+    const next = () => { const n = new Date(), ms = (60 - n.getMinutes()) * 60000 - n.getSeconds() * 1000 - n.getMilliseconds(); setTimeout(() => { Bolt.run(); next(); }, ms + 50); };
+    next();
+  }
+};
+AutoFx.hourly();
 
 const Bolt = {
   W: 2560, H: 1440, M: 18, SPEED: 2300, TAIL: 900,
@@ -2202,6 +2335,7 @@ window.onRemote = c => {
   if (c.cmd === "stars") Wanted.set(+c.n || 0);
   else if (c.cmd === "effect" && c.name === "bolt") Bolt.run();
   else if (c.cmd === "effect" && c.name === "mango") Mango.run();
+  else if (c.cmd === "effect" && c.name === "banana") Banana.run();
   else if (c.cmd === "scroop") {
     if (c.action === "spawn") { if (!Scrap.piles.some(p => p.state !== "none")) { clearTimeout(Scrap.timer); Scrap.timer = 0; Scrap.spawn(); } }
     else if (c.action === "board") Scrap.showBoard();
@@ -2295,6 +2429,7 @@ document.querySelectorAll("#testbar [data-t]").forEach(b => b.onclick = () => {
   else if (t === "scroop") { Scrap.setTeam(name, $("#tTeam").value); Scrap.dig(name, name, color, true); }
   else if (t === "bolt") Bolt.run();
   else if (t === "mango") Mango.run();
+  else if (t === "banana") Banana.run();
   else if (t === "chat") Lurk.leave(name);
 });
 
@@ -2421,6 +2556,7 @@ const Chat = {
     if (pm > 0) {
       const login = (line.match(/ :([^!]+)!/) || [])[1] || "";
       const msg = line.slice(line.indexOf(" :", pm) + 2).trim();
+      AutoFx.chat(login);
       if (/^!lurk\b/i.test(msg)) Lurk.join(tags["display-name"] || login, login, tags.color || chatColors[tags["user-id"]]);
       else if (/^!(star[1-6]|staroff)\b/i.test(msg)) {         // wanted stars: the streamer only (counts as chat, so a lurking streamer leaves the tower)
         if ((tags.badges || "").includes("broadcaster/")) { const m = msg.match(/^!star([1-6])/i); Wanted.set(m ? +m[1] : 0); }
@@ -2674,7 +2810,7 @@ window.KZRelay = function (topic, onMessage, servers) {
 (() => {
   const qs = new URLSearchParams(location.search), key = qs.get("ctl");
   if (!key || !window.WebSocket) return;
-  const PAGE = "html3", VERSION = "fd4ec23";
+  const PAGE = "html3", VERSION = "eeb4a6f";
   let said = false;
   const relay = KZRelay("kzctl/" + key, c => {
     if (!c || c.from === "overlay" || (c.to && c.to !== "all" && c.to !== PAGE)) return;
