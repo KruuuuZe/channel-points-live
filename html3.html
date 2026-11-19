@@ -2680,7 +2680,9 @@ const Chef = {
     // the timeline (ms)
     const PLANE = 4200, DROP = 1150, LAND = 4700, CHOP = 3000, J1 = LAND + CHOP, J1D = 900, PAUSE = 320,
           J2 = J1 + J1D + PAUSE, J2D = 1500, SLIDE = J2 + J2D + 260, SLD = 1400, END = SLIDE + SLD + 200;
-    const GROUND = H - 26, MIDY = 790, CHOPX = 780, RIGHTX = 1820, LEFTX = 250;
+    // the leaps go right to the screen edges: the chef's own half-width in from each side
+    const jw = S.chef_jump ? S.chef_jump.w * this.H.chef_jump / S.chef_jump.h : 260, half = jw / 2;
+    const GROUND = H - 26, MIDY = 790, CHOPX = 780, RIGHTX = W - half - 8, LEFTX = half + 8;
     const goo = [];                                  // blue chunks flying off the board
     let lastChop = 0, sfx = {};
     const once = (k, fn) => { if (!sfx[k]) { sfx[k] = 1; fn(); } };
@@ -2755,7 +2757,7 @@ const Chef = {
       if (t >= SLIDE && t < END) {
         once("slide", () => { if (Sound.ctx) { const s = Sound.ctx.currentTime; Sound.tone(s, SLD / 1000, .07, 1100, 160, "triangle"); } });
         const k = (t - SLIDE) / SLD, y = MIDY + (H + 420 - MIDY) * k * k;
-        draw("chef_slide", t, LEFTX + k * 40, y, true);
+        draw("chef_slide", t, LEFTX, y, true);
       }
       // ---- the name
       if (this.nameAt != null) {
@@ -3448,7 +3450,7 @@ window.KZRelay = function (topic, onMessage, servers) {
 (() => {
   const qs = new URLSearchParams(location.search), key = qs.get("ctl");
   if (!key || !window.WebSocket) return;
-  const PAGE = "html3", VERSION = "54c17b6";
+  const PAGE = "html3", VERSION = "3ba3caa";
   let said = false;
   const relay = KZRelay("kzctl/" + key, c => {
     if (!c || c.from === "overlay" || (c.to && c.to !== "all" && c.to !== PAGE)) return;
