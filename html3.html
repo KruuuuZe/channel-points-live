@@ -3001,9 +3001,24 @@ const Tank = {
     g.save(); g.translate(0, -255); g.rotate(armA); g.lineWidth = 22; g.strokeStyle = "#5d6346"; g.beginPath(); g.moveTo(0, 0); g.lineTo(0, 100); g.stroke(); g.restore();
     g.restore();
   },
+  /* the sticky grenade, drawn here (OpenAI's image filter won't draw it): an olive ball with a seam,
+     on a dark steel handle with a collar, and a twisted rope tail. Ball on the right. */
   standInGrenade(g) {
-    g.fillStyle = "#2f3436"; g.fillRect(-56, -9, 60, 18); g.strokeStyle = "#d6c7a1"; g.lineWidth = 7; g.beginPath(); g.moveTo(-56, 0); g.quadraticCurveTo(-80, -10, -96, 4); g.stroke();
-    const gr = g.createRadialGradient(18, -8, 4, 22, 0, 30); gr.addColorStop(0, "#9a9466"); gr.addColorStop(1, "#4f4a2c"); g.fillStyle = gr; g.beginPath(); g.arc(22, 0, 28, 0, 6.283); g.fill();
+    g.lineCap = "round"; g.lineJoin = "round";
+    // rope tail: two twisted strands
+    const rope = (off, col) => { g.strokeStyle = col; g.lineWidth = 7; g.beginPath();
+      for (let i = 0; i <= 14; i++) { const u = i / 14, x = -62 - u * 46, y = Math.sin(u * 3) * -6 + Math.sin(u * 22 + off) * 2.2; i ? g.lineTo(x, y) : g.moveTo(x, y); } g.stroke(); };
+    rope(0, "#bfae8a"); rope(Math.PI, "#e9dfc6");
+    // handle
+    const hg = g.createLinearGradient(0, -11, 0, 11); hg.addColorStop(0, "#5c6366"); hg.addColorStop(.35, "#9aa3a6"); hg.addColorStop(.6, "#3a4043"); hg.addColorStop(1, "#1f2426");
+    g.fillStyle = hg; g.beginPath(); g.roundRect(-66, -10, 66, 20, 4); g.fill();
+    g.strokeStyle = "rgba(0,0,0,.45)"; g.lineWidth = 1.5; [-50, -30].forEach(x => { g.beginPath(); g.moveTo(x, -9); g.lineTo(x, 9); g.stroke(); });
+    g.fillStyle = hg; g.beginPath(); g.roundRect(-6, -15, 12, 30, 3); g.fill();                                     // collar
+    // the ball
+    const bg = g.createRadialGradient(22, -12, 3, 30, 0, 34); bg.addColorStop(0, "#c2b98a"); bg.addColorStop(.35, "#8a8150"); bg.addColorStop(1, "#3e3a20");
+    g.fillStyle = bg; g.beginPath(); g.arc(30, 0, 30, 0, 6.283); g.fill();
+    g.strokeStyle = "rgba(30,28,14,.6)"; g.lineWidth = 2; g.beginPath(); g.ellipse(30, 0, 9, 29, 0, 0, 6.283); g.stroke();   // seam
+    g.fillStyle = "rgba(255,255,240,.35)"; g.beginPath(); g.ellipse(21, -14, 9, 5, -.6, 0, 6.283); g.fill();
   },
   standInBoom(g, x, y, a) {
     const k = a / 1100, r = 120 + 420 * Math.sqrt(k);
@@ -3623,7 +3638,7 @@ window.KZRelay = function (topic, onMessage, servers) {
 (() => {
   const qs = new URLSearchParams(location.search), key = qs.get("ctl");
   if (!key || !window.WebSocket) return;
-  const PAGE = "html3", VERSION = "5aa7128";
+  const PAGE = "html3", VERSION = "771001e";
   let said = false;
   const relay = KZRelay("kzctl/" + key, c => {
     if (!c || c.from === "overlay" || (c.to && c.to !== "all" && c.to !== PAGE)) return;
