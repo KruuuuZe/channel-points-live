@@ -2659,7 +2659,10 @@ const ChefArt = {
     delete this.parts[k];
     const a = Object.assign({ url: p.got.join(""), at: Date.now() }, c.meta);
     this.use(c.name, a);
-    try { const db = await this.open(); db.transaction("a", "readwrite").objectStore("a").put(a, c.name); } catch (e) {}
+    let saved = true;
+    try { const db = await this.open(); await new Promise((ok, no) => { const t = db.transaction("a", "readwrite"); t.objectStore("a").put(a, c.name); t.oncomplete = ok; t.onerror = () => no(t.error); }); }
+    catch (e) { saved = false; }
+    if (window.remoteSend) window.remoteSend({ cmd: "artok", name: c.name, set: c.set, saved });
   }
 };
 ChefArt.load();
@@ -3445,7 +3448,7 @@ window.KZRelay = function (topic, onMessage, servers) {
 (() => {
   const qs = new URLSearchParams(location.search), key = qs.get("ctl");
   if (!key || !window.WebSocket) return;
-  const PAGE = "html3", VERSION = "d51cbdd";
+  const PAGE = "html3", VERSION = "54c17b6";
   let said = false;
   const relay = KZRelay("kzctl/" + key, c => {
     if (!c || c.from === "overlay" || (c.to && c.to !== "all" && c.to !== PAGE)) return;
@@ -3456,6 +3459,8 @@ window.KZRelay = function (topic, onMessage, servers) {
       ack(); setTimeout(() => { const u = new URL(location.href); u.searchParams.set("_v", Date.now()); location.replace(u.toString()); }, 300);
     } else if (typeof window.onRemote === "function") { try { window.onRemote(c); ack(); } catch (x) { console.error(x); } }
   });
+  // lets the page answer the app itself (e.g. "the art arrived and is saved")
+  window.remoteSend = o => relay.send(Object.assign({ from: "overlay", page: PAGE, version: VERSION }, o));
   relay.onUp = () => { if (!said) { said = true; relay.send({ from: "overlay", page: PAGE, version: VERSION, cmd: "hello" }); } };
 })();
 </script>
