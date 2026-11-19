@@ -2382,7 +2382,7 @@ const Fishy = {
   busy: false,
   MOUTH: [313, 583],                                         // the mouth in the artwork's own pixels
   run() {
-    if (this.busy) return;
+    if (this.busy) { this.again = true; return; }
     if (!FISH_IMG.complete) { FISH_IMG.onload = () => this.run(); return; }
     this.busy = true; Sound.init(); MySounds.play("fish");
     const cv = $("#fishcv"), g = cv.getContext("2d"), t0 = performance.now(), W = 2560, H = 1440;
@@ -2505,19 +2505,20 @@ const Fishy = {
         });
       }
       const done = t > LEAP0 + LEAP + 200;
-      if (!done) requestAnimationFrame(frame); else { g.clearRect(0, 0, W, H); this.busy = false; }
+      if (!done) requestAnimationFrame(frame); else { g.clearRect(0, 0, W, H); this.busy = false; if (this.again) { this.again = false; setTimeout(() => this.run(), 400); } }
     };
     requestAnimationFrame(frame);
   }
 };
 
 /* ================= automatic effects =================
-   - TheNapalmer's first chat message of the day plays the mango tree; Kapelan012's plays the banana tree.
+   - TheNapalmer's first chat message of the day plays the mango tree; Kapelan012's plays the banana tree;
+     ATT3NCHUN's plays the fish effect.
      ("Day" is the calendar day on this computer; remembered so a page reload doesn't play it twice.)
    - The lightning lap plays once an hour, at the top of the hour. */
 const AutoFx = {
   KEY: "autoFxDay",
-  FIRST_OF_DAY: { thenapalmer: () => Mango.run(), kapelan012: () => Banana.run() },
+  FIRST_OF_DAY: { thenapalmer: () => Mango.run(), kapelan012: () => Banana.run(), att3nchun: () => Fishy.run() },
   chat(login) {
     const k = (login || "").toLowerCase(), fx = this.FIRST_OF_DAY[k]; if (!fx) return;
     const d = new Date(), today = d.getFullYear() + "-" + (d.getMonth() + 1) + "-" + d.getDate();
@@ -3114,7 +3115,7 @@ window.KZRelay = function (topic, onMessage, servers) {
 (() => {
   const qs = new URLSearchParams(location.search), key = qs.get("ctl");
   if (!key || !window.WebSocket) return;
-  const PAGE = "html3", VERSION = "1e22fe5";
+  const PAGE = "html3", VERSION = "958d327";
   let said = false;
   const relay = KZRelay("kzctl/" + key, c => {
     if (!c || c.from === "overlay" || (c.to && c.to !== "all" && c.to !== PAGE)) return;
