@@ -201,7 +201,7 @@ body.fit #stage{background:radial-gradient(1200px 700px at 30% 20%,#1a103322,tra
 #testbar button{font-weight:800}
 #testbar .b-sub{background:#6d28d9;border-color:transparent} #testbar .b-gift{background:#db2777;border-color:transparent} #testbar .b-fol{background:#4d8a1f;border-color:transparent}
 #testbar .b-bit{background:#7c3aed;border-color:transparent} #testbar .b-str{background:#c2410c;border-color:transparent}
-#testbar .b-raid{background:#0e7490;border-color:transparent} #testbar .b-chef{background:linear-gradient(135deg,#db2777,#38bdf8);border-color:transparent} #testbar .b-eagle{background:linear-gradient(135deg,#3b2a1a,#d97706);border-color:transparent} #testbar .b-fish{background:linear-gradient(135deg,#15803d,#0ea5e9);border-color:transparent} #testbar .b-penguin{background:linear-gradient(135deg,#0f172a,#38bdf8);border-color:transparent} #testbar .b-turkey{background:linear-gradient(135deg,#7c2d12,#ea580c);border-color:transparent} #testbar .b-banana{background:linear-gradient(135deg,#15803d,#facc15);border-color:transparent;color:#1a1400} #testbar .b-mango{background:linear-gradient(135deg,#15803d,#f59e0b);border-color:transparent} #testbar .b-bolt{background:linear-gradient(135deg,#65a30d,#7c3aed);border-color:transparent} #testbar .b-scrap{background:#7c4a1e;border-color:#e2b26b88}
+#testbar .b-raid{background:#0e7490;border-color:transparent} #testbar .b-tank{background:linear-gradient(135deg,#7f1d1d,#475569);border-color:transparent} #testbar .b-chef{background:linear-gradient(135deg,#db2777,#38bdf8);border-color:transparent} #testbar .b-eagle{background:linear-gradient(135deg,#3b2a1a,#d97706);border-color:transparent} #testbar .b-fish{background:linear-gradient(135deg,#15803d,#0ea5e9);border-color:transparent} #testbar .b-penguin{background:linear-gradient(135deg,#0f172a,#38bdf8);border-color:transparent} #testbar .b-turkey{background:linear-gradient(135deg,#7c2d12,#ea580c);border-color:transparent} #testbar .b-banana{background:linear-gradient(135deg,#15803d,#facc15);border-color:transparent;color:#1a1400} #testbar .b-mango{background:linear-gradient(135deg,#15803d,#f59e0b);border-color:transparent} #testbar .b-bolt{background:linear-gradient(135deg,#65a30d,#7c3aed);border-color:transparent} #testbar .b-scrap{background:#7c4a1e;border-color:#e2b26b88}
 #testbar .b-lurk{background:#334155;border-color:#a3e63588} #testbar .b-chat{background:#1f2937}
 
 /* sound slots: a + next to each test button to give that alert its own sound file */
@@ -297,6 +297,10 @@ body.fit #stage{background:radial-gradient(1200px 700px at 30% 20%,#1a103322,tra
 
 /* ---------- ATT3NCHUN: drawn on its own canvas with the real fish artwork ---------- */
 #fishcv{position:absolute;inset:0;width:2560px;height:1440px;pointer-events:none;z-index:6}
+/* ---------- Silverhand (canvas + a red shade over the whole screen) ---------- */
+#tankcv{position:absolute;inset:0;width:2560px;height:1440px;pointer-events:none;z-index:7}
+#redtint{position:absolute;inset:0;pointer-events:none;z-index:4;opacity:0;
+  background:radial-gradient(ellipse at center,rgba(150,0,0,.16) 35%,rgba(120,0,0,.5) 100%),rgba(160,0,0,.14)}
 /* ---------- anime_chef (canvas; art made in the app) ---------- */
 #chefcv{position:absolute;inset:0;width:2560px;height:1440px;pointer-events:none;z-index:6}
 
@@ -364,6 +368,8 @@ body.fit #stage{background:radial-gradient(1200px 700px at 30% 20%,#1a103322,tra
   <canvas id="boltcv" width="2560" height="1440"></canvas>
   <canvas id="fishcv" width="2560" height="1440"></canvas>
   <canvas id="chefcv" width="2560" height="1440"></canvas>
+  <div id="redtint"></div>
+  <canvas id="tankcv" width="2560" height="1440"></canvas>
   <div id="pane"></div>
   <canvas id="holes" width="2560" height="1440"></canvas>
   <canvas id="shards" width="2560" height="1440"></canvas>
@@ -506,6 +512,7 @@ body.fit #stage{background:radial-gradient(1200px 700px at 30% 20%,#1a103322,tra
   <button class="b-fish" data-t="fish">🐟 ATT3NCHUN</button><button class="snd" data-snd="fish" title="Add a sound for this effect">+</button>
   <button class="b-eagle" data-t="eagle">🦅 Eagle</button><button class="snd" data-snd="eagle" title="Add a sound for this effect">+</button>
   <button class="b-chef" data-t="chef">👨‍🍳 anime_chef</button><button class="snd" data-snd="anime_chef" title="Add a sound for this effect">+</button>
+  <button class="b-tank" data-t="tank">💥 Silverhand</button><button class="snd" data-snd="tank" title="Add a sound for this effect">+</button>
   <button class="b-chat" data-t="chat">Chat</button><button class="snd" data-snd="chat" title="Add a sound for this alert">+</button>
 </div>
 
@@ -2661,7 +2668,7 @@ const ChefArt = {
   use(name, a) { const img = new Image(); img.onload = () => { this.sprites[name] = Object.assign({ img }, a); }; img.src = a.url; },
   async load() {
     try { const db = await this.open();
-      ["eagle_glide", "eagle_flap", "plane", "title", "chef_parachute", "chef_chop", "chef_jump", "chef_slide"].forEach(n => { const r = db.transaction("a").objectStore("a").get(n); r.onsuccess = () => { if (r.result) this.use(n, r.result); }; });
+      ["tank_drive", "soldier_run", "soldier_throw", "grenade", "explosion", "eagle_glide", "eagle_flap", "plane", "title", "chef_parachute", "chef_chop", "chef_jump", "chef_slide"].forEach(n => { const r = db.transaction("a").objectStore("a").get(n); r.onsuccess = () => { if (r.result) this.use(n, r.result); }; });
     } catch (e) {}
   },
   // a piece of art arriving from the app (sent in parts)
@@ -2860,6 +2867,151 @@ const Chef = {
   }
 };
 
+/* ================= Silverhand (TassieTheDevil) =================
+   Art: made in the app's Art screen from the reference pictures (tank, Colonial soldier, sticky grenade) and
+   sent here like the chef art. Until then, simple drawn stand-ins play.
+   The screen fades to a red shade. The Silverhand tank drives in from the left; a Colonial soldier runs behind
+   it with "TassieTheDevil" fading in above him in red. He throws a sticky grenade; it sticks to the tank, fizzes,
+   and the tank explodes before reaching the right side. The red shade fades back out. */
+const Tank = {
+  busy: false,
+  run() {
+    if (this.busy) { this.again = true; return; }
+    this.busy = true; Sound.init(); MySounds.play("tank");
+    const cv = $("#tankcv"), g = cv.getContext("2d"), tint = $("#redtint"), t0 = performance.now(), W = 2560, H = 1440;
+    g.imageSmoothingEnabled = true; g.imageSmoothingQuality = "high";
+    const S = ChefArt.sprites, GROUND = H - 24;
+    const TANK_W = 820, SOL_H = 330, SPEED = .34, X0 = -TANK_W / 2 - 40;
+    const EXPX = W - TANK_W / 2 - 330, BOOM = (EXPX - X0) / SPEED;               // blows up before reaching the right side
+    const THROW = BOOM - 2300, RELEASE = THROW + 400, FLY = 900, END = BOOM + 3000;
+    const tankX = t => X0 + SPEED * Math.min(t, BOOM);
+    const GAP = TANK_W / 2 + 190;
+    const solX = t => tankX(Math.min(t, THROW)) - GAP;
+    const debris = [], smoke = [];
+    let sfx = {}, shake = 0, nade = null, engine = null, nameAt = null;
+    const once = (k, fn) => { if (!sfx[k]) { sfx[k] = 1; fn(); } };
+    const fr = (spr, t) => spr ? Math.floor(t / (spr.ms || 90)) % spr.frames : 0;
+    const sprite = (spr, f, x, y, w, h) => g.drawImage(spr.img, f * spr.w, 0, spr.w, spr.h, x, y, w, h);
+    tint.style.transition = "opacity 1s"; tint.style.opacity = "1";
+    // engine rumble for the whole drive
+    if (Sound.ctx) { const c = Sound.ctx, o = c.createOscillator(), f = c.createBiquadFilter(), gn = c.createGain();
+      o.type = "sawtooth"; o.frequency.value = 46; f.type = "lowpass"; f.frequency.value = 260; gn.gain.value = 0;
+      gn.gain.linearRampToValueAtTime(.09, c.currentTime + 1.2); o.connect(f).connect(gn).connect(Sound.out); o.start(); engine = { o, gn }; }
+    const frame = now => {
+      const t = now - t0; g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, W, H);
+      if (shake > 0) { g.translate(rand(-1, 1) * shake, rand(-1, 1) * shake); shake *= .9; if (shake < .5) shake = 0; }
+      const tx = tankX(t);
+      // ---- the tank (gone once it blows up)
+      if (t < BOOM + 120) {
+        const bob = Math.sin(t / 70) * 2;
+        if (S.tank_drive) { const s = S.tank_drive, h = TANK_W * s.h / s.w; sprite(s, fr(s, t), tx - TANK_W / 2, GROUND - h + bob, TANK_W, h); }
+        else this.standInTank(g, tx, GROUND + bob, t);
+        if (Sound.ctx && t % 260 < 17) Sound.tone(Sound.ctx.currentTime, .05, .02, 140 + Math.random() * 40, 90, "square");   // tread clank
+      }
+      // ---- the soldier: runs behind, then throws
+      const sx = solX(t), throwing = t >= THROW;
+      const spr = throwing ? S.soldier_throw : S.soldier_run;
+      if (spr) {
+        const h = SOL_H, w = h * spr.w / spr.h;
+        const f = throwing ? Math.min(spr.frames - 1, Math.floor((t - THROW) / (spr.ms || 100))) : fr(spr, t);
+        sprite(spr, f, sx - w / 2, GROUND - h, w, h);
+      } else this.standInSoldier(g, sx, GROUND, SOL_H, t, throwing ? Math.min(1, (t - THROW) / 500) : -1);
+      if (t >= THROW) once("whoosh", () => { if (Sound.ctx) Sound.burst(Sound.ctx.currentTime + .3, .35, .06, "bandpass", 500, 1800); });
+      // ---- the name above him, in red
+      if (nameAt == null && sx > 120) nameAt = t;              // fades in once he is on screen
+      const nameIn = nameAt == null ? 0 : Math.min(1, (t - nameAt) / 900), nameOut = t > BOOM + 1600 ? Math.max(0, 1 - (t - BOOM - 1600) / 900) : 1;
+      if (nameIn * nameOut > 0) {
+        g.save(); g.globalAlpha = nameIn * nameOut; g.font = "900 64px system-ui, Roboto, sans-serif"; g.textAlign = "center"; g.textBaseline = "bottom";
+        const nx = Math.max(sx, g.measureText("TassieTheDevil").width / 2 + 20);    // never cut off at the left edge
+        g.lineJoin = "round"; g.lineWidth = 12; g.strokeStyle = "rgba(20,0,0,.9)"; g.strokeText("TassieTheDevil", nx, GROUND - SOL_H - 18);
+        g.shadowColor = "rgba(255,40,40,.8)"; g.shadowBlur = 22; g.fillStyle = "#ff2a2a"; g.fillText("TassieTheDevil", nx, GROUND - SOL_H - 18);
+        g.restore();
+      }
+      // ---- the sticky grenade: arcs onto the back of the tank, sticks, fizzes
+      if (t >= RELEASE && t < BOOM + 60) {
+        const hx = solX(RELEASE) + 60, hy = GROUND - SOL_H * .92, k = Math.min(1, (t - RELEASE) / FLY);
+        const stickX = () => tankX(t) - TANK_W * .3, stickY = GROUND - TANK_W * .3;
+        let gx, gy, rot;
+        if (k < 1) { const ex = tankX(RELEASE + FLY) - TANK_W * .3; gx = hx + (ex - hx) * k; gy = hy + (stickY - hy) * k - Math.sin(k * Math.PI) * 260; rot = k * 9; }
+        else { once("stick", () => { if (Sound.ctx) { const c = Sound.ctx.currentTime; Sound.tone(c, .12, .1, 220, 120); Sound.burst(c, .1, .05, "lowpass", 900); } }); gx = stickX(); gy = stickY; rot = -.4; }
+        g.save(); g.translate(gx, gy); g.rotate(rot);
+        if (S.grenade) { const s = S.grenade, w = 120, h = w * s.h / s.w; sprite(s, 0, -w / 2, -h / 2, w, h); }
+        else this.standInGrenade(g);
+        g.restore();
+        if (k >= 1) {                                        // fizzing sparks and a blinking light
+          if (Sound.ctx && t % 120 < 17) Sound.burst(Sound.ctx.currentTime, .1, .025, "highpass", 4000);
+          for (let i = 0; i < 2; i++) debris.push({ x: gx - 30, y: gy - 10, vx: rand(-1.2, -.2), vy: rand(-1.4, -.3), r: rand(2, 4), born: t, spark: true });
+          if (Math.floor(t / 150) % 2) { g.fillStyle = "rgba(255,60,40,.9)"; g.beginPath(); g.arc(gx + 20, gy - 6, 9, 0, 6.283); g.fill(); }
+        }
+      }
+      // ---- boom
+      if (t >= BOOM) {
+        once("boom", () => {
+          shake = 34;
+          if (Sound.ctx) { const c = Sound.ctx.currentTime; Sound.burst(c, 2.2, .5, "lowpass", 1400, 60); Sound.tone(c, 1.4, .4, 90, 28); Sound.burst(c + .05, .5, .2, "bandpass", 2200, 400); setTimeout(() => Sound.crumble(), 500); }
+          if (engine) { engine.gn.gain.cancelScheduledValues(Sound.ctx.currentTime); engine.gn.gain.setValueAtTime(0, Sound.ctx.currentTime); engine.o.stop(Sound.ctx.currentTime + .05); engine = null; }
+          for (let i = 0; i < 46; i++) debris.push({ x: EXPX + rand(-200, 200), y: GROUND - rand(60, 260), vx: rand(-1.6, 1.6), vy: rand(-2.4, -.6), r: rand(6, 20), born: t, rot: rand(0, 6), vr: rand(-.02, .02) });
+          for (let i = 0; i < 18; i++) smoke.push({ x: EXPX + rand(-260, 260), y: GROUND - rand(40, 320), vx: rand(-.12, .12), vy: rand(-.25, -.08), r: rand(70, 150), born: t + rand(0, 500) });
+          tint.style.transition = "opacity 1.6s"; setTimeout(() => tint.style.opacity = "0", 500);
+        });
+        const a = t - BOOM;
+        if (a < 500) { g.fillStyle = `rgba(255,240,200,${.55 * (1 - a / 500)})`; g.fillRect(-50, -50, W + 100, H + 100); }   // flash
+        for (const p of smoke) { const b = t - p.born; if (b < 0 || b > 2600) continue; p.x += p.vx * 16; p.y += p.vy * 16;
+          g.fillStyle = `rgba(30,26,24,${.55 * (1 - b / 2600)})`; g.beginPath(); g.arc(p.x, p.y, p.r * (1 + b / 1800), 0, 6.283); g.fill(); }
+        if (S.explosion) { const s = S.explosion, f = Math.floor(a / (s.ms || 90)); if (f < s.frames + 4) { const h = 900, w = h * s.w / s.h;
+          g.globalAlpha = f < s.frames ? 1 : 1 - (f - s.frames + 1) / 5; sprite(s, Math.min(f, s.frames - 1), EXPX - w / 2, GROUND - h + 80, w, h); g.globalAlpha = 1; } }
+        else if (a < 1100) this.standInBoom(g, EXPX, GROUND - 160, a);
+      }
+      // ---- sparks and debris
+      for (let i = debris.length - 1; i >= 0; i--) {
+        const p = debris[i], a = t - p.born; p.x += p.vx * 16; p.y += p.vy * 16; p.vy += p.spark ? .02 : .05;
+        if (a > (p.spark ? 350 : 2400) || p.y > H + 60) { debris.splice(i, 1); continue; }
+        if (p.spark) { g.fillStyle = `rgba(255,${180 + rand(0, 70)},80,${1 - a / 350})`; g.beginPath(); g.arc(p.x, p.y, p.r, 0, 6.283); g.fill(); }
+        else { p.rot += p.vr * 16; g.save(); g.translate(p.x, p.y); g.rotate(p.rot); g.fillStyle = a < 500 ? "#ff8a2a" : "#3d3f45"; g.fillRect(-p.r, -p.r * .6, p.r * 2, p.r * 1.2); g.restore(); }
+      }
+      if (t < END) requestAnimationFrame(frame);
+      else { g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, W, H); tint.style.opacity = "0"; this.busy = false; if (this.again) { this.again = false; this.run(); } }
+    };
+    requestAnimationFrame(frame);
+  },
+  /* ---- stand-ins until the art is made in the app ---- */
+  standInTank(g, x, y, t) {
+    g.save(); g.translate(x, y); g.lineJoin = "round"; g.strokeStyle = "#1c2226"; g.lineWidth = 5;
+    g.fillStyle = "#2b2f33"; g.beginPath(); g.roundRect(-400, -120, 800, 120, 60); g.fill(); g.stroke();                      // tracks
+    g.fillStyle = "#555b60"; for (let i = 0; i < 9; i++) { g.beginPath(); g.arc(-330 + i * 82, -58, 34, 0, 6.283); g.fill(); g.stroke(); }
+    g.strokeStyle = "#7a5a3a"; g.lineWidth = 4; for (let i = 0; i < 26; i++) { const xx = -390 + ((i * 31 + t * .34) % 780); g.beginPath(); g.moveTo(xx, -120); g.lineTo(xx, -110); g.stroke(); }
+    g.strokeStyle = "#1c2226"; g.lineWidth = 5;
+    g.fillStyle = "#56656b"; g.beginPath(); g.moveTo(-380, -110); g.lineTo(-380, -250); g.lineTo(300, -250); g.lineTo(380, -190); g.lineTo(380, -110); g.closePath(); g.fill(); g.stroke();
+    g.fillStyle = "#4a585e"; g.beginPath(); g.roundRect(-140, -350, 260, 110, 30); g.fill(); g.stroke();                    // turret
+    g.fillStyle = "#3a4448"; g.fillRect(110, -315, 230, 26); g.strokeRect(110, -315, 230, 26);                              // turret gun
+    g.fillRect(370, -185, 120, 30); g.strokeRect(370, -185, 120, 30);                                                         // hull gun
+    g.fillStyle = "#8a9aa0"; for (let i = 0; i < 14; i++) { g.beginPath(); g.arc(-350 + i * 50, -235, 4, 0, 6.283); g.fill(); }
+    g.restore();
+  },
+  standInSoldier(g, x, y, h, t, throwK) {
+    const s = h / 330; g.save(); g.translate(x, y); g.scale(s, s); g.lineCap = g.lineJoin = "round"; g.strokeStyle = "#1a1d14";
+    const run = throwK < 0, ph = t / 85, legA = run ? Math.sin(ph) * .7 : .25;
+    const leg = a => { g.save(); g.translate(0, -150); g.rotate(a); g.lineWidth = 26; g.strokeStyle = "#2f3033"; g.beginPath(); g.moveTo(0, 0); g.lineTo(0, 80); g.lineTo(run ? -Math.abs(a) * 30 : 0, 145); g.stroke(); g.restore(); };
+    leg(legA); leg(-legA);
+    g.fillStyle = "#5d6346"; g.beginPath(); g.roundRect(-34, -275, 68, 135, 16); g.fill();
+    g.fillStyle = "#4a4136"; g.fillRect(-36, -168, 72, 16);
+    g.fillStyle = "#cfa98a"; g.beginPath(); g.arc(6, -298, 26, 0, 6.283); g.fill();
+    g.fillStyle = "#3f4234"; g.beginPath(); g.ellipse(2, -312, 38, 22, 0, Math.PI, 0); g.fill(); g.fillRect(-38, -314, 80, 7);
+    const armA = run ? -Math.sin(ph) * .9 : -2.6 + throwK * 3.6;
+    g.save(); g.translate(0, -255); g.rotate(armA); g.lineWidth = 22; g.strokeStyle = "#5d6346"; g.beginPath(); g.moveTo(0, 0); g.lineTo(0, 100); g.stroke(); g.restore();
+    g.restore();
+  },
+  standInGrenade(g) {
+    g.fillStyle = "#2f3436"; g.fillRect(-56, -9, 60, 18); g.strokeStyle = "#d6c7a1"; g.lineWidth = 7; g.beginPath(); g.moveTo(-56, 0); g.quadraticCurveTo(-80, -10, -96, 4); g.stroke();
+    const gr = g.createRadialGradient(18, -8, 4, 22, 0, 30); gr.addColorStop(0, "#9a9466"); gr.addColorStop(1, "#4f4a2c"); g.fillStyle = gr; g.beginPath(); g.arc(22, 0, 28, 0, 6.283); g.fill();
+  },
+  standInBoom(g, x, y, a) {
+    const k = a / 1100, r = 120 + 420 * Math.sqrt(k);
+    const gr = g.createRadialGradient(x, y, 0, x, y, r); gr.addColorStop(0, `rgba(255,250,210,${1 - k})`); gr.addColorStop(.35, `rgba(255,170,40,${1 - k})`); gr.addColorStop(.75, `rgba(200,50,10,${.8 * (1 - k)})`); gr.addColorStop(1, "rgba(60,20,10,0)");
+    g.fillStyle = gr; g.beginPath(); g.arc(x, y, r, 0, 6.283); g.fill();
+  }
+};
+
 /* ================= automatic effects =================
    - TheNapalmer's first chat message of the day plays the mango tree; Kapelan012's plays the banana tree;
      ATT3NCHUN's plays the fish effect.
@@ -2989,6 +3141,7 @@ window.onRemote = c => {
   else if (c.cmd === "effect" && c.name === "fish") Fishy.run();
   else if (c.cmd === "effect" && c.name === "eagle") Eagle.run();
   else if (c.cmd === "effect" && c.name === "chef") Chef.run();
+  else if (c.cmd === "effect" && c.name === "tank") Tank.run();
   else if (c.cmd === "art") ChefArt.receive(c);
   else if (c.cmd === "scroop") {
     if (c.action === "spawn") { if (!Scrap.piles.some(p => p.state !== "none")) { clearTimeout(Scrap.timer); Scrap.timer = 0; Scrap.spawn(); } }
@@ -3089,6 +3242,7 @@ document.querySelectorAll("#testbar [data-t]").forEach(b => b.onclick = () => {
   else if (t === "fish") Fishy.run();
   else if (t === "eagle") Eagle.run();
   else if (t === "chef") Chef.run();
+  else if (t === "tank") Tank.run();
   else if (t === "chat") Lurk.leave(name);
 });
 
@@ -3469,7 +3623,7 @@ window.KZRelay = function (topic, onMessage, servers) {
 (() => {
   const qs = new URLSearchParams(location.search), key = qs.get("ctl");
   if (!key || !window.WebSocket) return;
-  const PAGE = "html3", VERSION = "6439897";
+  const PAGE = "html3", VERSION = "5aa7128";
   let said = false;
   const relay = KZRelay("kzctl/" + key, c => {
     if (!c || c.from === "overlay" || (c.to && c.to !== "all" && c.to !== PAGE)) return;
