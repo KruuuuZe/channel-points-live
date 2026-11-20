@@ -548,24 +548,54 @@ const Live = {
     if (!isReconnect && !this.ws) this.ws = ws;
   },
   kick() { clearTimeout(this.watchdog); this.watchdog = setTimeout(() => { if (this.ws) this.ws.close(); }, (this.keepalive + 10) * 1000); },
-  async subscribe(sessionId) {
+  /* Twitch lets the same event (type + channel) be listened to only a few times per token. Old connections from
+     reloads can linger and use up those slots, so: clear out our dead ones first, subscribe, and if Twitch still
+     says the limit is reached, keep retrying every 30 s (the slots free up when stale or extra copies go away). */
+  async cleanStale() {
+    let after = "", n = 0;
+    try {
+      for (let page = 0; page < 10; page++) {
+        const r = await this.helix("eventsub/subscriptions?first=100" + (after ? "&after=" + after : "")); if (!r.ok) return n;
+        const j = await r.json();
+        for (const sub of j.data || []) if (sub.transport && sub.transport.method === "websocket" && sub.status !== "enabled") {
+          await this.helix("eventsub/subscriptions?id=" + sub.id, { method: "DELETE" }).catch(() => {}); n++; }
+        after = j.pagination && j.pagination.cursor; if (!after) break;
+      }
+    } catch (e) {}
+    return n;
+  },
+  async subscribe(sessionId, retry) {
+    if (sessionId !== this.sid) { this.sid = sessionId; clearTimeout(this.retryT); }
     const b = { broadcaster_user_id: this.uid };
     const subs = [
       ["channel.follow", "2", { broadcaster_user_id: this.uid, moderator_user_id: this.uid }],
       ["channel.subscribe", "1", b], ["channel.subscription.gift", "1", b], ["channel.subscription.message", "1", b],
       ["channel.cheer", "1", b], ["channel.raid", "1", { to_broadcaster_user_id: this.uid }]
     ];
-    const failed = []; let why = "";
-    for (const [type, version, condition] of subs) {
+    if (!retry) await this.cleanStale();
+    const todo = retry || subs, failed = [], full = []; let why = "";
+    for (const sub of todo) {
+      const [type, version, condition] = sub;
       try {
         const r = await this.helix("eventsub/subscriptions", { method: "POST",
           body: JSON.stringify({ type, version, condition, transport: { method: "websocket", session_id: sessionId } }) });
-        if (!r.ok && r.status !== 409) { failed.push(type.replace("channel.", "")); if (!why) try { why = (await r.json()).message || ""; } catch (x) {} }
+        if (!r.ok && r.status !== 409) {
+          let msg = ""; try { msg = (await r.json()).message || ""; } catch (x) {}
+          if (r.status === 429 || /maximum subscriptions/i.test(msg)) full.push(sub); else { failed.push(type.replace("channel.", "")); if (!why) why = msg; }
+        }
       } catch (e) { failed.push(type.replace("channel.", "")); }
     }
-    if (!failed.length) toast("⚡ Event wall connected to Twitch", false, 4000);
-    else toast("Couldn't listen for: " + failed.join(", ") + (why ? " (Twitch says: " + why + ")" : "") +
+    if (sessionId !== this.sid) return;                                  // a newer connection took over
+    if (full.length) {
+      if (!retry) await this.cleanStale();
+      this.retryT = setTimeout(() => this.subscribe(sessionId, full), 30000);
+      if (!this.fullShown) { this.fullShown = true;
+        toast("Twitch says too many copies are listening for: " + full.map(x => x[0].replace("channel.", "")).join(", ") +
+          ". Each overlay should be in OBS only once (the same source can be shared between scenes), and close it anywhere else it's open. Retrying every 30 s…", true, 30000); }
+    } else if (retry && !failed.length) { this.fullShown = false; toast("⚡ Event wall connected to Twitch", false, 4000); }
+    if (failed.length) toast("Couldn't listen for: " + failed.join(", ") + (why ? " (Twitch says: " + why + ")" : "") +
       ". Your token is missing permissions. Open overlay.html, go to the Connect tab, log in again and approve every permission, then put the new token in this browser source's link.", true, 600000);
+    else if (!retry && !full.length) toast("⚡ Event wall connected to Twitch", false, 4000);
   },
   handle(type, ev) {
     const who = (n, l, anon) => anon ? "Anonymous" : (n || l || "someone");
@@ -701,7 +731,7 @@ window.KZRelay = function (topic, onMessage, servers) {
 (() => {
   const qs = new URLSearchParams(location.search), key = qs.get("ctl");
   if (!key || !window.WebSocket) return;
-  const PAGE = "html2", VERSION = "2c5265a";
+  const PAGE = "html2", VERSION = "d73f076";
   let said = false;
   const relay = KZRelay("kzctl/" + key, c => {
     if (!c || c.from === "overlay" || (c.to && c.to !== "all" && c.to !== PAGE)) return;
