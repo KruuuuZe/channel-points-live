@@ -75,7 +75,7 @@ body.fit #stage{background:radial-gradient(1200px 700px at 30% 20%,#1a103322,tra
   text-shadow:0 4px 0 #000,0 0 18px var(--gc),0 0 36px var(--gc);animation:pop .6s cubic-bezier(.2,1.5,.3,1) both;pointer-events:none}
 .gift-line b{color:var(--gc)}
 .gift-line.out{animation:out .8s ease forwards}
-.gift-head{position:absolute;left:0;top:50px;width:2560px;text-align:center;font-size:86px;font-weight:900;color:#fff;line-height:1.05;
+.gift-head{position:absolute;left:0;top:22px;width:2560px;text-align:center;font-size:72px;font-weight:900;color:#fff;line-height:1.05;
   text-shadow:0 6px 0 #000,0 0 30px #f472b6aa}
 .gift-head .who{display:inline-block;color:var(--uc);text-shadow:0 6px 0 #000,0 0 34px var(--uc)}
 .gift-head .cnt{color:#ffd1ec}
@@ -490,7 +490,7 @@ body.fit #stage{background:radial-gradient(1200px 700px at 30% 20%,#1a103322,tra
   <button id="tRand" title="Random name and color">🎲</button>
   <button class="b-sub" data-t="sub">Sub</button><button class="snd" data-snd="sub" title="Add a sound for this alert">+</button>
   <select id="tGifts" aria-label="Gifted subs"><option>1</option><option selected>5</option><option>10</option><option>20</option><option>50</option><option>100</option><option>200</option></select>
-  <button class="b-gift" data-t="gift">Gift subs</button><button class="snd" data-snd="gift" title="Add a sound for this alert">+</button>
+  <button class="b-gift" data-t="gift">Gift subs</button><button class="snd" data-snd="gift" title="Add a sound for this alert">+</button><button class="snd" data-snd="chest" data-label="🗝" title="Add a sound for chests opening">🗝+</button>
   <button class="b-fol" data-t="follow">Follow</button><button class="snd" data-snd="follow" title="Add a sound for this alert">+</button>
   <select id="tBits" aria-label="Bits"><option>1</option><option>50</option><option selected>100</option><option>500</option><option>1000</option><option>5000</option><option>10000</option></select>
   <select id="tBitSound" aria-label="Bit sound"></select>
@@ -1465,9 +1465,12 @@ function doRaidCustom(name) {
 })();
 
 
-/* ================= gifted subs: a present for every gifted sub =================
-   The gifter's name and count show at the top. One gift box per recipient falls out of the gifter's name,
-   with the recipient's name on its tag, lands on the bottom of the screen and stays 1-2 minutes. */
+/* ================= gifted subs: a treasure chest for every gifted sub =================
+   "<gifter> has gifted N subscriptions!" shows at the top until the last chest is open. One treasure chest per
+   recipient falls out of the gifter's name and lands on the bottom of the screen. Then the chests open quickly,
+   several at a time: each pops out Zelda-style rupees and shoots a firework into the sky that spells the
+   recipient's name, at a random free spot so names never overlap. Every other chest plays the chest sound. */
+const CHEST_WOODS = [["#a8652c", "#7a431a", "#4f2a0f"], ["#8f4a24", "#62301a", "#3c1c0e"], ["#b07a3c", "#80532a", "#553417"], ["#7d3b2a", "#57261b", "#35150f"]];
 const GIFT_COLORS = [["#ff2bd6", "#a3008a"], ["#39ff14", "#119c00"], ["#00f0ff", "#007fb8"], ["#b026ff", "#5a00c8"], ["#fff01f", "#c2a800"],
   ["#ff6a00", "#bf3600"], ["#ccff00", "#6f9e00"], ["#ff1f5a", "#a0002c"], ["#00ffa3", "#00986a"], ["#ff5cf4", "#9b00b8"], ["#3d7bff", "#1b2fc4"]];
 const RIBBONS = ["#ffffff", "#fff01f", "#00f0ff", "#ff2bd6", "#39ff14", "#b026ff", "#ccff00"];
@@ -1496,8 +1499,9 @@ const Gifts = {
     const head = el("div", "gift-head pop");
     head.style.setProperty("--uc", css(bright(s.color || "#f472b6")));
     const who = el("span", "who", s.gifter);
-    head.append(who, " gifted ", el("span", "cnt", fmt(s.total)), s.total === 1 ? " sub!" : " subs!", el("small", null, "Thank you!"));
-    layer.append(head);
+    head.append(who, " has gifted ", el("span", "cnt", fmt(s.total)), s.total === 1 ? " subscription!" : " subscriptions!");
+    layer.append(head); s.head = head;
+    setTimeout(() => this.headOut(s), 300000);                   // safety: never stays more than 5 minutes
     s.started = true;
     // presents come out of the gifter's name
     const r = who.getBoundingClientRect(), st = $("#stage").getBoundingClientRect(), sc = scaleNow();
@@ -1506,79 +1510,74 @@ const Gifts = {
     // anyone Twitch didn't name (or still on the way) gets a plain present so the count always matches
     const spread = 500 + s.total * Math.max(60, Math.min(260, 4000 / s.total));
     setTimeout(() => { while (s.dropped < Math.min(s.total, 200)) this.drop(s, null); this.startOpening(); }, spread + 6000);
-    const dur = Math.min(16000, spread + 4500);
+    const dur = Math.min(14000, spread + 1800);
     setTimeout(() => { s.ready = true; this.startOpening(); }, dur);
-    setTimeout(() => { head.classList.add("out"); setTimeout(() => head.remove(), 900); }, dur - 900);
     return dur;
   },
-  /* ---- each present is painted once into its own little picture, then all are drawn on one canvas (smooth even with 200) ---- */
-  paint(o) {
-    const { w, h, kind, c1, c2, rb, deco, name } = o, pad = 30, bowH = Math.round(w * .3);
-    const cv = document.createElement("canvas"); cv.width = Math.ceil(w + pad * 2); cv.height = Math.ceil(h + pad * 2 + bowH);
-    const c = cv.getContext("2d"), X = pad, Y = pad + bowH, rw = Math.max(8, w * .11);
-    const rr = (x, y, ww, hh, r) => { c.beginPath(); c.moveTo(x + r, y); c.arcTo(x + ww, y, x + ww, y + hh, r); c.arcTo(x + ww, y + hh, x, y + hh, r); c.arcTo(x, y + hh, x, y, r); c.arcTo(x, y, x + ww, y, r); c.closePath(); };
-    const shape = () => kind === "hat" ? rr(X, Y, w, h, Math.min(w, h) * .3) : rr(X, Y, w, h, 8);
-    // neon glow + body
-    c.save(); c.shadowColor = c1; c.shadowBlur = 16; shape(); c.fillStyle = c1; c.fill(); c.restore();
-    const gr = c.createLinearGradient(X, Y, X + w, Y + h); gr.addColorStop(0, c1); gr.addColorStop(1, c2);
-    shape(); c.fillStyle = gr; c.fill();
-    c.save(); shape(); c.clip();
-    // decorations
-    c.fillStyle = "rgba(255,255,255,.5)"; c.strokeStyle = "rgba(255,255,255,.22)";
-    const star = (x, y, r, rot = 0) => { c.beginPath(); for (let k = 0; k < 10; k++) { const a = rot - Math.PI / 2 + k * Math.PI / 5, rad = k % 2 ? r * .45 : r; c.lineTo(x + Math.cos(a) * rad, y + Math.sin(a) * rad); } c.closePath(); c.fill(); };
-    if (deco === "stars") for (let yy = Y + 10; yy < Y + h; yy += 30) for (let xx = X + 10 + ((yy / 30) % 2) * 15; xx < X + w; xx += 30) star(xx, yy, 6, .3);
-    else if (deco === "dots") for (let yy = Y + 8; yy < Y + h; yy += 22) for (let xx = X + 8 + ((yy / 22) % 2) * 11; xx < X + w; xx += 22) { c.beginPath(); c.arc(xx, yy, 4, 0, 6.283); c.fill(); }
-    else if (deco === "stripes") { c.lineWidth = 9; for (let k = -h; k < w + h; k += 22) { c.beginPath(); c.moveTo(X + k, Y); c.lineTo(X + k + h, Y + h); c.stroke(); } }
-    else { const cols = ["#ffffff", "#fff01f", rb]; for (let k = 0; k < 3; k++) { c.fillStyle = cols[k]; c.save(); c.shadowColor = cols[k]; c.shadowBlur = 10;
-      star(X + w * rand(.12, .88), Y + h * rand(.12, .5), Math.min(w, h) * rand(.08, .13), rand(-.5, .5)); c.restore(); } }
-    // shading
-    const sh = c.createLinearGradient(X, Y, X + w, Y + h); sh.addColorStop(0, "rgba(255,255,255,.18)"); sh.addColorStop(.5, "rgba(255,255,255,0)"); sh.addColorStop(1, "rgba(0,0,0,.25)");
-    c.fillStyle = sh; c.fillRect(X, Y, w, h);
-    // ribbons
-    c.fillStyle = rb; c.fillRect(X + w / 2 - rw / 2, Y, rw, h); c.fillRect(X, Y + h * .46 - rw / 2, w, rw);
-    c.fillStyle = "rgba(0,0,0,.16)"; c.fillRect(X + w / 2 + rw / 2 - 3, Y, 3, h); c.fillRect(X, Y + h * .46 + rw / 2 - 3, w, 3);
-    c.restore();
-    if (kind === "lid") {                        // lid overhang
-      const lx = X - w * .06, lw = w * 1.12, lh = h * .24;
-      rr(lx, Y - h * .04, lw, lh, 6); c.fillStyle = c1; c.fill();
-      c.fillStyle = "rgba(0,0,0,.2)"; c.fillRect(lx, Y - h * .04 + lh - 6, lw, 6);
-      c.fillStyle = rb; c.fillRect(X + w / 2 - rw / 2, Y - h * .04, rw, lh);
+  // the "has gifted" line stays at the top until the last chest of that gift is open
+  headOut(s) { const h = s.head; if (!h || h.out) return; h.out = true; h.classList.add("out"); setTimeout(() => h.remove(), 900); },
+  /* ---- each treasure chest is painted once into its own little picture (closed, and open), then all are drawn on one canvas ---- */
+  paint(o, open) {
+    const { w, h, wood, trim, glow } = o, pad = 34, top = Math.round(h * .75);         // room above for the open lid
+    const cv = document.createElement("canvas"); cv.width = Math.ceil(w + pad * 2); cv.height = Math.ceil(h + pad * 2 + top);
+    const c = cv.getContext("2d"), X = pad, Y = pad + top, lh = h * .4, bh = h - lh, BY = Y + lh, ink = "#1d0f06";
+    c.lineJoin = "round"; c.lineCap = "round";
+    const woodGrad = (y0, y1, dark) => { const g = c.createLinearGradient(0, y0, 0, y1); g.addColorStop(0, dark ? wood[1] : wood[0]); g.addColorStop(1, dark ? wood[2] : wood[1]); return g; };
+    const bands = (y0, y1) => { c.fillStyle = trim[0]; [.14, .86].forEach(f => c.fillRect(X + w * f - w * .045, y0, w * .09, y1 - y0)); c.fillStyle = "rgba(255,255,255,.35)"; [.14, .86].forEach(f => c.fillRect(X + w * f - w * .045, y0, w * .02, y1 - y0)); };
+    const planks = (y0, y1) => { c.strokeStyle = "rgba(0,0,0,.28)"; c.lineWidth = 2; for (let y = y0 + (y1 - y0) / 3; y < y1 - 2; y += (y1 - y0) / 3) { c.beginPath(); c.moveTo(X + 3, y); c.lineTo(X + w - 3, y); c.stroke(); } };
+    // a soft glow in the gift's color behind it
+    c.save(); c.shadowColor = glow; c.shadowBlur = 18; c.fillStyle = wood[1]; c.fillRect(X + 4, BY + 4, w - 8, bh - 8); c.restore();
+    if (open) {
+      // the lid thrown back: its inside face, leaning away
+      const ly = BY - lh * 1.55;
+      c.beginPath(); c.moveTo(X + w * .03, BY); c.lineTo(X + w * .97, BY); c.lineTo(X + w * .92, ly); c.quadraticCurveTo(X + w / 2, ly - lh * .5, X + w * .08, ly); c.closePath();
+      c.fillStyle = woodGrad(ly, BY, true); c.fill(); c.strokeStyle = ink; c.lineWidth = 4; c.stroke();
+      c.fillStyle = "rgba(0,0,0,.35)"; c.fill();
+      c.fillStyle = trim[1]; c.fillRect(X + w * .05, ly + 2, w * .9, 7);
     }
-    // bow
-    c.save(); c.strokeStyle = rb; c.lineWidth = rw * .55; const bx = X + w / 2, by = Y - (kind === "lid" ? h * .04 : 0), bw = w * .3;
-    c.beginPath(); c.ellipse(bx - bw * .45, by - bw * .32, bw * .48, bw * .3, -.4, 0, 6.283); c.stroke();
-    c.beginPath(); c.ellipse(bx + bw * .45, by - bw * .32, bw * .48, bw * .3, .4, 0, 6.283); c.stroke();
-    c.fillStyle = rb; rr(bx - rw * .75, by - rw * 1.05, rw * 1.5, rw * 1.3, rw * .4); c.fill(); c.restore();
-    // name tag: crisp dark text on a white label
-    const label = name || "🎁";
-    let fs = Math.max(13, Math.min(32, (w * .84) / Math.max(4, label.length * .6)));
-    c.font = `900 ${fs}px ${FONT}`; let tw = c.measureText(label).width;
-    while (tw > w * .86 && fs > 11) { fs -= 1; c.font = `900 ${fs}px ${FONT}`; tw = c.measureText(label).width; }
-    const th = fs * 1.5, tx = X + w / 2 - tw / 2 - 12, ty = Y + h * .62 - th / 2;
-    c.save(); c.shadowColor = "rgba(0,0,0,.55)"; c.shadowBlur = 8; c.shadowOffsetY = 3; rr(tx, ty, tw + 24, th, 8); c.fillStyle = "#fff"; c.fill(); c.restore();
-    c.fillStyle = "#120a24"; c.textAlign = "center"; c.textBaseline = "middle"; c.fillText(label, X + w / 2, ty + th / 2 + 1);
-    return { cv, ox: pad + w / 2, oy: pad + bowH + h / 2 };
+    // body
+    c.beginPath(); c.roundRect(X, BY, w, bh, 6); c.fillStyle = woodGrad(BY, BY + bh); c.fill();
+    planks(BY, BY + bh); bands(BY, BY + bh);
+    c.fillStyle = trim[0]; c.fillRect(X, BY + bh - 9, w, 9); c.fillRect(X, BY, w, 8);
+    c.beginPath(); c.roundRect(X, BY, w, bh, 6); c.strokeStyle = ink; c.lineWidth = 4; c.stroke();
+    if (open) {
+      // the open top: dark inside, glowing treasure
+      c.beginPath(); c.ellipse(X + w / 2, BY + 4, w * .46, lh * .32, 0, 0, 6.283); c.fillStyle = "#170a03"; c.fill();
+      const gl = c.createRadialGradient(X + w / 2, BY, 2, X + w / 2, BY - lh * .2, w * .55); gl.addColorStop(0, "rgba(255,244,190,.95)"); gl.addColorStop(.35, "rgba(255,200,70,.6)"); gl.addColorStop(1, "rgba(255,200,70,0)");
+      c.fillStyle = gl; c.beginPath(); c.ellipse(X + w / 2, BY - lh * .25, w * .6, lh * .9, 0, 0, 6.283); c.fill();
+    } else {
+      // domed lid
+      const dome = () => { c.beginPath(); c.moveTo(X - w * .02, BY + 2); c.lineTo(X - w * .02, Y + lh * .45); c.quadraticCurveTo(X + w / 2, Y - lh * .45, X + w * 1.02, Y + lh * .45); c.lineTo(X + w * 1.02, BY + 2); c.closePath(); };
+      dome(); c.fillStyle = woodGrad(Y, BY); c.fill();
+      c.save(); dome(); c.clip(); planks(Y, BY); bands(Y - lh, BY);
+      const sh = c.createLinearGradient(0, Y - lh * .3, 0, BY); sh.addColorStop(0, "rgba(255,255,255,.28)"); sh.addColorStop(1, "rgba(255,255,255,0)"); c.fillStyle = sh; c.fillRect(X - w * .05, Y - lh, w * 1.1, lh * 2);
+      c.restore();
+      dome(); c.strokeStyle = ink; c.lineWidth = 4; c.stroke();
+      c.fillStyle = trim[0]; c.fillRect(X - w * .02, BY - 6, w * 1.04, 10);                     // rim
+      // lock plate with a keyhole
+      const pw = w * .16, ph = bh * .42, px = X + w / 2 - pw / 2, py = BY - ph * .3;
+      c.beginPath(); c.roundRect(px, py, pw, ph, 5); c.fillStyle = trim[0]; c.fill(); c.strokeStyle = ink; c.lineWidth = 3; c.stroke();
+      c.fillStyle = ink; c.beginPath(); c.arc(X + w / 2, py + ph * .4, pw * .14, 0, 6.283); c.fill(); c.fillRect(X + w / 2 - pw * .06, py + ph * .4, pw * .12, ph * .32);
+    }
+    // studs
+    c.fillStyle = trim[1]; [.14, .86].forEach(f => [.3, .7].forEach(v => { c.beginPath(); c.arc(X + w * f, BY + bh * v, Math.max(2.5, w * .016), 0, 6.283); c.fill(); }));
+    return { cv, ox: pad + w / 2, oy: pad + top + h / 2 };
   },
   drop(s, name) {
     if (s.dropped >= Math.min(s.total, 200)) return;
     s.dropped++;
     const [fx, fy, fw, fh] = s.from || [1080, 60, 400, 90];
-    const kind = ["box", "box", "lid", "lid", "hat", "tall", "wide"][Math.floor(Math.random() * 7)];
-    let w = rand(110, 190), h = rand(90, 160);
-    if (kind === "tall") { w = rand(90, 130); h = rand(160, 230); }
-    if (kind === "wide") { w = rand(190, 260); h = rand(80, 120); }
-    if (kind === "hat") { w = h = rand(120, 170); }
-    if (name) w = Math.max(w, Math.min(300, name.length * 15 + 50));
+    let w = rand(130, 200), h = w * rand(.68, .8);
     w = Math.round(w * s.scale); h = Math.round(h * s.scale);
-    const [c1, c2] = GIFT_COLORS[Math.floor(Math.random() * GIFT_COLORS.length)];
-    let rb = RIBBONS[Math.floor(Math.random() * RIBBONS.length)]; if (rb === c1) rb = "#ffffff";
-    const deco = ["stars", "stars", "dots", "stripes", "big", "big"][Math.floor(Math.random() * 6)];
-    const spr = this.paint({ w, h, kind: kind === "tall" || kind === "wide" ? "box" : kind, c1, c2, rb, deco, name });
+    const [c1] = GIFT_COLORS[Math.floor(Math.random() * GIFT_COLORS.length)];
+    const wood = CHEST_WOODS[Math.floor(Math.random() * CHEST_WOODS.length)], trim = Math.random() < .7 ? ["#e8b33a", "#fff1a8"] : ["#b9c2cc", "#ffffff"];
+    const look = { w, h, wood, trim, glow: c1 }, spr = this.paint(look, false), sprOpen = this.paint(look, true);
+    const rb = trim[0];
     // how it will come to rest: upright, leaning at an angle, or tipped over on its side
-    const r = Math.random(), ra = r < .25 ? (Math.random() < .5 ? 1 : -1) * Math.PI / 2 : r < .7 ? (Math.random() < .5 ? 1 : -1) * rand(.1, .38) : rand(-.05, .05);
+    const r = Math.random(), ra = r < .08 ? (Math.random() < .5 ? 1 : -1) * Math.PI / 2 : r < .45 ? (Math.random() < .5 ? 1 : -1) * rand(.08, .3) : rand(-.04, .04);
     const cx = fx + rand(0, fw), cy = fy + fh * .4, tx = this.spot(Math.max(w, h)) + Math.max(w, h) / 2;
     const T = rand(55, 85);
-    const b = { spr, w, h, cx, cy, tx, vx: (tx - cx) / T, vy: rand(-9, -3), a: rand(-.3, .3), va: rand(-.09, .09), ra, state: "fly",
+    const b = { spr, sprOpen, w, h, cx, cy, tx, vx: (tx - cx) / T, vy: rand(-9, -3), a: rand(-.3, .3), va: rand(-.09, .09), ra, state: "fly",
       bounced: false, name: name || "🎁", c1, rb, s, grow: 0, alpha: 1 };
     this.reserve(b, +1);
     this.boxes.push(b);
@@ -1611,7 +1610,7 @@ const Gifts = {
     const [bw] = this.fp(b, a), l = Math.max(0, Math.floor((b.cx - bw * .28) / 16)), r = Math.min(this.H.length - 1, Math.floor((b.cx + bw * .28) / 16));
     let m = 0; for (let i = l; i <= r; i++) m = Math.max(m, this.H[i]); return m;
   },
-  ZONE: { x0: 260, x1: 2300, bottom: 580 },          // where the name fireworks appear: keep presents out
+  ZONE: { x0: 40, x1: 2520, bottom: 880 },          // where the name fireworks appear: keep presents out
   rest(b) {
     this.reserve(b, -1);
     const [bw, bh] = this.fp(b, b.ra), sink = Math.abs(Math.sin(2 * b.ra)) * Math.min(b.w, b.h) * .12;   // leaning boxes tuck their corner in
@@ -1644,38 +1643,76 @@ const Gifts = {
   openNext() {
     const ready = this.boxes.filter(b => b.s.ready && !b.opened && b.state === "rest");
     const waiting = this.boxes.some(b => b.s.ready && !b.opened);
-    if (!ready.length) { if (waiting || this.boxes.some(b => !b.opened && b.state !== "rest")) setTimeout(() => this.openNext(), 400); else this.opening = false; return; }
-    if (Queue.busy) { setTimeout(() => this.openNext(), 700); return; }
+    if (!ready.length) { if (waiting || this.boxes.some(b => !b.opened && b.state !== "rest")) setTimeout(() => this.openNext(), 300); else this.opening = false; return; }
+    if (Queue.busy) { setTimeout(() => this.openNext(), 600); return; }
     const b = ready[Math.floor(Math.random() * ready.length)];
-    this.open(b);
+    const spot = this.skySpot(b.name);
+    if (!spot) { setTimeout(() => this.openNext(), 150); return; }      // the sky is full: wait for a name to fade
+    this.open(b, spot);
     const left = this.boxes.filter(x => !x.opened).length;
-    setTimeout(() => this.openNext(), left > 80 ? 1500 : left > 40 ? 2000 : left > 15 ? 2600 : 3300);
+    setTimeout(() => this.openNext(), left > 80 ? 140 : left > 30 ? 200 : 280);
   },
-  open(b) {
+  /* names go to random free places in the sky, never on top of each other (or the line at the top) */
+  sky: [], NAME_SIZE: 118,
+  skySpot(name) {
+    const now = performance.now(); this.sky = this.sky.filter(r => r.until > now);
+    const c = this.mc || (this.mc = document.createElement("canvas").getContext("2d")); c.font = `900 ${this.NAME_SIZE}px ${FONT}`;
+    const w = Math.min(900, c.measureText(name).width) + 70, h = this.NAME_SIZE * 1.45;
+    for (let i = 0; i < 70; i++) {
+      const x = rand(w / 2 + 40, 2520 - w / 2), y = rand(190 + h / 2, 860 - h / 2);
+      if (!this.sky.some(r => x - w / 2 < r.x1 + 24 && x + w / 2 > r.x0 - 24 && y - h / 2 < r.y1 + 24 && y + h / 2 > r.y0 - 24)) return { x, y, x0: x - w / 2, x1: x + w / 2, y0: y - h / 2, y1: y + h / 2 };
+    }
+    return null;
+  },
+  /* gems that pop out of an opened chest: Zelda-style rupees (a long six-sided gem with a lighter face) */
+  gems: [],
+  RUPEES: [["#46e06a", "#178a34", "#b9ffc8"], ["#4aa8ff", "#1b4fc4", "#cfe6ff"], ["#ff4a5c", "#a3122b", "#ffc7cd"], ["#b66bff", "#5a22b8", "#e6d0ff"], ["#ffd84a", "#b07d0b", "#fff4c2"], ["#e8edf2", "#8a96a3", "#ffffff"]],
+  drawGem(ctx, g, now) {
+    const a = now - g.born, k = Math.min(1, a / 1500), fade = a > 1150 ? Math.max(0, 1 - (a - 1150) / 350) : 1;
+    if (fade <= 0) return false;
+    const [c0, c1, c2] = g.col, s = g.r, flip = Math.cos(g.spin * a / 100);
+    ctx.save(); ctx.globalAlpha = fade; ctx.translate(g.x, g.y); ctx.rotate(g.rot); ctx.scale(Math.max(.15, Math.abs(flip)), 1);
+    ctx.shadowColor = c0; ctx.shadowBlur = 14;
+    const hex = (m) => { ctx.beginPath(); ctx.moveTo(0, -s * 1.6 * m); ctx.lineTo(s * m, -s * .8 * m); ctx.lineTo(s * m, s * .8 * m); ctx.lineTo(0, s * 1.6 * m); ctx.lineTo(-s * m, s * .8 * m); ctx.lineTo(-s * m, -s * .8 * m); ctx.closePath(); };
+    hex(1); ctx.fillStyle = c1; ctx.fill(); ctx.shadowBlur = 0; ctx.lineWidth = 2; ctx.strokeStyle = "rgba(0,0,0,.45)"; ctx.stroke();
+    hex(.55); ctx.fillStyle = flip > 0 ? c0 : c2; ctx.fill();
+    ctx.fillStyle = "rgba(255,255,255,.7)"; ctx.beginPath(); ctx.moveTo(-s * .45, -s * .55); ctx.lineTo(0, -s * .9); ctx.lineTo(0, -s * .3); ctx.closePath(); ctx.fill();
+    ctx.restore();
+    return true;
+  },
+  chestSound() {   // a creak and a jingle (used when no sound file is added for chests)
+    if (!Sound.ctx) return; const t = Sound.ctx.currentTime;
+    Sound.tone(t, .16, .04, 210, 140, "sawtooth"); Sound.burst(t, .12, .03, "bandpass", 500, 900);
+    [1568, 2093, 2637].forEach((f, i) => Sound.tone(t + .1 + i * .06, .35, .035, f, f * 1.01));
+  },
+  open(b, spot) {
     b.opened = true;
-    const c = bright(b.c1), cx = b.cx, cy = b.cy;
-    P.push({ type: "homing", x: cx, y: cy, sx: cx, sy: cy, tx: 1280, ty: 330, t: 0, dur: 950, curve: rand(-160, 160), c,
+    const s = b.s; s.opens = (s.opens || 0) + 1;
+    if (s.opens % 2 === 1) { if (MySounds.urls.chest) MySounds.play("chest"); else this.chestSound(); }   // every couple of chests
+    const c = bright(b.c1), cx = b.cx, cy = b.cy, topY = cy - b.h * .3;
+    const life = 700 + 2000 + 800 + 400;
+    this.sky.push({ x0: spot.x0, x1: spot.x1, y0: spot.y0, y1: spot.y1, until: performance.now() + life });
+    P.push({ type: "homing", x: cx, y: topY, sx: cx, sy: topY, tx: spot.x, ty: spot.y, t: 0, dur: 700, curve: rand(-140, 140), c,
       onPop: (x, y) => {
-        burst(x, y, c, 70);
-        const glow = css(c);
-        const top = el("div", "gift-line"); top.style.top = "130px"; top.style.setProperty("--gc", css(bright(b.s.color || "#f472b6")));
-        top.append(el("b", null, b.s.gifter), " Gifted");
-        const bot = el("div", "gift-line", "a Subscription!"); bot.style.top = "470px"; bot.style.setProperty("--gc", glow); bot.style.animationDelay = ".35s";
-        layer.append(top, bot);
-        const foAt = performance.now() + 2300;   // the name and both lines fade out together
-        setTimeout(() => [top, bot].forEach(n => { n.style.animationDelay = "0s"; n.classList.add("out"); setTimeout(() => n.remove(), 900); }), 2300);
-        const pts = textPoints(b.name, 1280, 335, 1800, 950, { size: 190 });
-        pts.forEach(([tx, ty]) => P.push({ type: "form", sx: x, sy: y, tx, ty, x, y, age: -rand(0, 120), dur: rand(600, 900),
-          hold: 1e9, foAt, curl: rand(-70, 70), ph: rand(0, 6.28), c: Math.random() < .82 ? c : [255, 255, 255] }));
+        burst(x, y, c, 46);
+        const foAt = performance.now() + 2000;
+        const pts = textPoints(b.name, spot.x, spot.y, 900, 750, { size: this.NAME_SIZE });
+        pts.forEach(([tx, ty]) => P.push({ type: "form", sx: x, sy: y, tx, ty, x, y, age: -rand(0, 100), dur: rand(450, 700),
+          hold: 1e9, foAt, curl: rand(-60, 60), ph: rand(0, 6.28), c: Math.random() < .82 ? c : [255, 255, 255] }));
       } });
-    for (let j = 0; j < 30; j++) P.push({ type: "spark", x: cx, y: cy, vx: rand(-7, 7), vy: rand(-10, -2), life: 0, max: rand(600, 1100),
-      c: [hexRgb(b.c1), hexRgb(b.rb), [255, 255, 255]][j % 3], s: rand(2.5, 4.5), drag: .96, g: .2 });
+    // rupees pop out
+    const sc = Math.max(.6, s.scale);
+    for (let j = 0, n = 3 + Math.floor(Math.random() * 4); j < n; j++)
+      this.gems.push({ x: cx + rand(-b.w * .25, b.w * .25), y: topY, vx: rand(-4.5, 4.5), vy: rand(-15, -9), r: rand(15, 23) * sc, rot: rand(-.4, .4), vr: rand(-.05, .05),
+        spin: rand(.6, 1.4), col: this.RUPEES[Math.floor(Math.random() * this.RUPEES.length)], born: performance.now() });
+    for (let j = 0; j < 18; j++) P.push({ type: "spark", x: cx, y: topY, vx: rand(-6, 6), vy: rand(-9, -2), life: 0, max: rand(500, 900),
+      c: [[255, 220, 120], hexRgb(b.c1), [255, 255, 255]][j % 3], s: rand(2, 4), drag: .96, g: .2 });
     kick();
     b.state = "gone"; b.goneAt = performance.now();
     this.restack();
-    const s = b.s;
-    if (!s.finale && s.dropped >= Math.min(s.total, 200) && !this.boxes.some(x => x.s === s && !x.opened)) {
-      s.finale = true; setTimeout(() => this.finale(s), 950 + 2300 + 1300);   // after the last name has faded
+    if (!this.boxes.some(x => x.s === s && !x.opened) && s.dropped >= Math.min(s.total, 200)) {
+      setTimeout(() => this.headOut(s), 2400);
+      if (!s.finale) { s.finale = true; setTimeout(() => this.finale(s), 700 + 2000 + 1300); }   // after the last name has faded
     }
   },
   /* grand finale: "Thank you!" and the gifter's name in fireworks; after 3 s the letters become a
@@ -1720,10 +1757,11 @@ const Gifts = {
     fireworks([255, 72, 150], 5, 2500, 150, 900); fireworks(gc, 5, 2500, 1660, 2410); fireworks([94, 231, 255], 3, 2500, 900, 1660);
   },
   draw(ctx, b) {
-    const sc = (.25 + .75 * (1 - Math.pow(1 - b.grow, 3))) * (b.state === "gone" ? 1 + (1 - b.alpha) * .3 : 1);
+    const sc = (.25 + .75 * (1 - Math.pow(1 - b.grow, 3))) * (b.state === "gone" ? 1 + (1 - b.alpha) * .12 : 1);
     ctx.globalAlpha = b.alpha;
     ctx.setTransform(sc, 0, 0, sc, b.cx, b.cy); ctx.rotate(b.a);
-    ctx.drawImage(b.spr.cv, -b.spr.ox, -b.spr.oy);
+    const sp = b.state === "gone" && b.sprOpen ? b.sprOpen : b.spr;
+    ctx.drawImage(sp.cv, -sp.ox, -sp.oy);
   },
   loop(t) {
     const k = Math.min(3, (t - this.last) / 16.67); this.last = t;
@@ -1747,7 +1785,7 @@ const Gifts = {
         b.a = b.a0 + (b.ra - b.a0) * ee; b.cy = b.cy0 + (b.restCy - b.cy0) * ee;
         if (e >= 1) { b.state = "rest"; if (b.z == null) b.z = this.zc = (this.zc || 0) + 1; }   // newest arrival goes on top
       } else if (b.state === "gone") {
-        const e = (now - b.goneAt) / 350; b.alpha = Math.max(0, 1 - e);
+        const e = (now - b.goneAt) / 900; b.alpha = Math.max(0, Math.min(1, (1 - e) * 2.2));
         if (e >= 1) { this.boxes.splice(i, 1); continue; }
       }
     }
@@ -1771,9 +1809,11 @@ const Gifts = {
       this.boxes.filter(b => b.state === "rest" && !b.baked).sort(order).forEach(b => { b.grow = 1; this.draw(bk, b); b.baked = true; });
       this.boxes.filter(b => b.state === "fly" || b.state === "settle").forEach(b => this.draw(gc, b));
     }
-    this.boxes.filter(b => b.state === "gone").forEach(b => this.draw(gc, b));    // an opening present bursts on top
+    this.boxes.filter(b => b.state === "gone").forEach(b => this.draw(gc, b));    // an opening chest on top
+    gc.setTransform(1, 0, 0, 1, 0, 0); gc.globalAlpha = 1;
+    this.gems = this.gems.filter(g => { g.vy += .45 * k; g.x += g.vx * k; g.y += g.vy * k; g.rot += g.vr * k; return this.drawGem(gc, g, now); });
     gc.setTransform(1, 0, 0, 1, 0, 0); gc.globalAlpha = 1; bk.setTransform(1, 0, 0, 1, 0, 0); bk.globalAlpha = 1;
-    if (this.boxes.length) requestAnimationFrame(tt => this.loop(tt)); else { this.running = false; gc.clearRect(0, 0, 2560, 1440); bk.clearRect(0, 0, 2560, 1440); }
+    if (this.boxes.length || this.gems.length) requestAnimationFrame(tt => this.loop(tt)); else { this.running = false; gc.clearRect(0, 0, 2560, 1440); bk.clearRect(0, 0, 2560, 1440); }
   }
 };
 
@@ -1796,7 +1836,7 @@ const MySounds = {
     try { await this.tx("readwrite", st => st.delete(type)); } catch (e) {} this.mark(); },
   play(type) { const u = this.urls[type]; if (!u) return; try { const a = new Audio(u); a.volume = 1; a.play().catch(() => {}); } catch (e) {} },
   mark() { document.querySelectorAll("#testbar .snd").forEach(b => { const has = !!this.urls[b.dataset.snd];
-    b.classList.toggle("has", has); b.textContent = has ? "♪" : "+"; b.title = has ? "Sound: " + this.names[b.dataset.snd] : "Add a sound for this alert"; }); }
+    b.classList.toggle("has", has); b.textContent = (b.dataset.label || "") + (has ? "♪" : "+"); b.title = has ? "Sound: " + this.names[b.dataset.snd] : b.dataset.snd === "chest" ? "Add a sound for chests opening" : "Add a sound for this alert"; }); }
 };
 MySounds.load();
 function edgeGlow(c1, c2) { const e = el("div", "edge"); e.style.setProperty("--ec", c1); e.style.setProperty("--ec2", c2); $("#stage").append(e); setTimeout(() => e.remove(), 5400); }
@@ -3667,7 +3707,7 @@ window.KZRelay = function (topic, onMessage, servers) {
 (() => {
   const qs = new URLSearchParams(location.search), key = qs.get("ctl");
   if (!key || !window.WebSocket) return;
-  const PAGE = "html3", VERSION = "979dba7";
+  const PAGE = "html3", VERSION = "b0decd0";
   let said = false;
   const relay = KZRelay("kzctl/" + key, c => {
     if (!c || c.from === "overlay" || (c.to && c.to !== "all" && c.to !== PAGE)) return;
