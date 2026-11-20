@@ -2721,7 +2721,7 @@ const Eagle = {
     Sound.init(); MySounds.play("eagle");
     const rtl = Math.random() < .5, w = el("div", "eagle" + (rtl ? " rtl" : "")), dir = el("div", "dir"), roll = el("div", "roll");
     // the GPT Image eagle from the app's Art screen, if it has been sent; otherwise the drawn one
-    const AG = ChefArt.sprites.eagle_glide, AF = ChefArt.sprites.eagle_flap, art = AG && AF;
+    const AG = ChefArt.sprites.eagle_glide, AF = ChefArt.sprites.eagle_flap, AR = ChefArt.sprites.eagle_roll, art = AG && AF;
     let cv = null, cg = null;
     if (art) { cv = document.createElement("canvas"); cv.width = 1120; cv.height = 1400; cv.className = "eagleArt"; cg = cv.getContext("2d"); cg.imageSmoothingQuality = "high"; roll.append(cv); }
     else roll.innerHTML = EAGLE_SVG;
@@ -2747,7 +2747,9 @@ const Eagle = {
       let ph = GLIDE, bank = 0;
       for (const [s, n] of flaps) if (t >= s && t < s + n * BEAT) { ph = GLIDE + (t - s) / BEAT * Math.PI * 2; break; }
       const gl = Math.sin(t / 900) * 3;                       // the slight flex of a gliding wing
-      if (art) {
+      const rp = (t - rollAt) / rollDur, artRoll = art && AR && rp > 0 && rp < 1;
+      if (artRoll) drawArt(AR, Math.min(AR.frames - 1, Math.floor(rp * AR.frames)));      // the barrel roll animation from the app
+      else if (art) {
         let burst = null; for (const [s, n] of flaps) if (t >= s && t < s + n * BEAT) { burst = s; break; }
         if (burst != null) drawArt(AF, Math.floor((t - burst) / (AF.ms || 65)) % AF.frames); else drawArt(AG, 0);
       } else {
@@ -2759,8 +2761,9 @@ const Eagle = {
       // the barrel roll: a full turn around the flight line (squash through, show the other side, come back)
       const rr = (t - rollAt) / rollDur;
       let rollT = "";
-      if (rr > 0 && rr < 1) { const a = rr * Math.PI * 2, c = Math.cos(a); rollT = ` translateY(${-Math.sin(rr * Math.PI) * 60}px) scaleY(${c < 0 ? Math.min(-.05, c) : Math.max(.05, c)}) rotate(${Math.sin(a) * 8}deg)`; bank = 0; }
-      roll.style.transform = rollT; roll.style.filter = rr > 0 && rr < 1 && Math.cos(rr * Math.PI * 2) < 0 ? `brightness(${1 - Math.cos(rr * Math.PI * 2) * -.18})` : "";
+      if (artRoll) rollT = ` translateY(${-Math.sin(rr * Math.PI) * 60}px)`;          // the art does the rolling itself
+      else if (rr > 0 && rr < 1) { const a = rr * Math.PI * 2, c = Math.cos(a); rollT = ` translateY(${-Math.sin(rr * Math.PI) * 60}px) scaleY(${c < 0 ? Math.min(-.05, c) : Math.max(.05, c)}) rotate(${Math.sin(a) * 8}deg)`; bank = 0; }
+      roll.style.transform = rollT; roll.style.filter = !artRoll && rr > 0 && rr < 1 && Math.cos(rr * Math.PI * 2) < 0 ? `brightness(${1 - Math.cos(rr * Math.PI * 2) * -.18})` : "";
       w.style.transform = `translate(${x}px, ${y - body}px) rotate(${(rtl ? -1 : 1) * Math.cos(k * Math.PI * 2) * 4}deg)`;
       requestAnimationFrame(frame);
     };
@@ -2785,7 +2788,7 @@ const ChefArt = {
   use(name, a) { const img = new Image(); img.onload = () => { this.sprites[name] = Object.assign({ img }, a); if (name === "tower" && Lurk.up) Lurk.paint(); }; img.src = a.url; },
   async load() {
     try { const db = await this.open();
-      ["tower", "tank_drive", "soldier_run", "soldier_throw", "grenade", "explosion", "eagle_glide", "eagle_flap", "plane", "title", "chef_parachute", "chef_chop", "chef_jump", "chef_fly", "chef_truck"].forEach(n => { const r = db.transaction("a").objectStore("a").get(n); r.onsuccess = () => { if (r.result) this.use(n, r.result); }; });
+      ["tower", "eagle_roll", "tank_drive", "soldier_run", "soldier_throw", "grenade", "explosion", "eagle_glide", "eagle_flap", "plane", "title", "chef_parachute", "chef_chop", "chef_jump", "chef_fly", "chef_truck"].forEach(n => { const r = db.transaction("a").objectStore("a").get(n); r.onsuccess = () => { if (r.result) this.use(n, r.result); }; });
     } catch (e) {}
   },
   // a piece of art arriving from the app (sent in parts)
@@ -3868,7 +3871,7 @@ window.KZRelay = function (topic, onMessage, servers) {
 (() => {
   const qs = new URLSearchParams(location.search), key = qs.get("ctl");
   if (!key || !window.WebSocket) return;
-  const PAGE = "html3", VERSION = "d73f076";
+  const PAGE = "html3", VERSION = "e4cc8a3";
   let said = false;
   const relay = KZRelay("kzctl/" + key, c => {
     if (!c || c.from === "overlay" || (c.to && c.to !== "all" && c.to !== PAGE)) return;
