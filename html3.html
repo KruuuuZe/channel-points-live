@@ -2865,7 +2865,7 @@ const ChefArt = {
   use(name, a) { const img = new Image(); img.onload = () => { this.sprites[name] = Object.assign({ img }, a); if (name === "tower" && Lurk.up) Lurk.paint(); }; img.src = a.url; },
   async load() {
     try { const db = await this.open();
-      ["sm_hat", "sm_face", "sm_nose", "sm_arm", "cf_ref", "cf_x_talk", "cf_x_wide", "cf_x_look_l", "cf_x_look_r", "cf_x_smile", "cf_x_grin", "cf_x_oo", "cf_x_blink", "cf_v_smile_talk", "cf_v_smile_l", "cf_v_smile_r", "cf_v_grin_talk", "cf_v_grin_l", "cf_v_grin_r", "cf_v_oo_talk", "cf_v_oo_l", "cf_v_oo_r", "cf_v_closed_talk", "cf_e_smirk", "cf_v_smirk_talk", "cf_v_smirk_l", "cf_v_smirk_r", "cf_e_wink", "cf_v_wink_talk", "cf_e_laugh", "cf_v_laugh_talk", "cf_e_shocked", "cf_v_shocked_talk", "cf_v_shocked_l", "cf_v_shocked_r", "cf_e_sleepy", "cf_v_sleepy_talk", "cf_v_sleepy_l", "cf_v_sleepy_r", "cf_e_sideeye", "cf_v_sideeye_talk", "cf_v_sideeye_l", "cf_v_sideeye_r", "cf_e_sad", "cf_v_sad_talk", "cf_v_sad_l", "cf_v_sad_r", "cf_e_tongue", "cf_v_tongue_talk", "cf_v_tongue_l", "cf_v_tongue_r", "cf_e_puffed", "cf_v_puffed_talk", "cf_v_puffed_l", "cf_v_puffed_r", "cf_e_determined", "cf_v_determined_talk", "cf_v_determined_l", "cf_v_determined_r", "cf_e_evil", "cf_v_evil_talk", "cf_v_evil_l", "cf_v_evil_r", "cf_e_smug", "cf_v_smug_talk", "cf_v_smug_l", "cf_v_smug_r", "cf_e_confused", "cf_v_confused_talk", "cf_v_confused_l", "cf_v_confused_r", "cf_e_disgusted", "cf_v_disgusted_talk", "cf_v_disgusted_l", "cf_v_disgusted_r", "cf_e_nervous", "cf_v_nervous_talk", "cf_v_nervous_l", "cf_v_nervous_r", "cf_e_kissy", "cf_v_kissy_talk", "cf_v_kissy_l", "cf_v_kissy_r", "cf_e_bored", "cf_v_bored_talk", "cf_v_bored_l", "cf_v_bored_r", "cf_e_excited", "cf_v_excited_talk", "cf_v_excited_l", "cf_v_excited_r", "cf_e_thinking", "cf_v_thinking_talk", "cf_v_thinking_l", "cf_v_thinking_r", "cf_e_scared", "cf_v_scared_talk", "cf_v_scared_l", "cf_v_scared_r", "jinx_flip", "jinx_spin", "jinx_fire", "jinx_launch", "artillery", "golden_banana", "golden_mango", "tower", "eagle_roll", "tank_drive", "soldier_run", "soldier_throw", "grenade", "explosion", "eagle_glide", "eagle_flap", "plane", "title", "chef_parachute", "chef_chop", "chef_jump", "chef_fly", "chef_truck"].forEach(n => { const r = db.transaction("a").objectStore("a").get(n); r.onsuccess = () => { if (r.result) this.use(n, r.result); }; });
+      ["sm_hat", "sm_face", "sm_nose", "sm_arm", "sm_ball", "sm_ball_melt", "sm_puddle", "cf_ref", "cf_x_talk", "cf_x_wide", "cf_x_look_l", "cf_x_look_r", "cf_x_smile", "cf_x_grin", "cf_x_oo", "cf_x_blink", "cf_v_smile_talk", "cf_v_smile_l", "cf_v_smile_r", "cf_v_grin_talk", "cf_v_grin_l", "cf_v_grin_r", "cf_v_oo_talk", "cf_v_oo_l", "cf_v_oo_r", "cf_v_closed_talk", "cf_e_smirk", "cf_v_smirk_talk", "cf_v_smirk_l", "cf_v_smirk_r", "cf_e_wink", "cf_v_wink_talk", "cf_e_laugh", "cf_v_laugh_talk", "cf_e_shocked", "cf_v_shocked_talk", "cf_v_shocked_l", "cf_v_shocked_r", "cf_e_sleepy", "cf_v_sleepy_talk", "cf_v_sleepy_l", "cf_v_sleepy_r", "cf_e_sideeye", "cf_v_sideeye_talk", "cf_v_sideeye_l", "cf_v_sideeye_r", "cf_e_sad", "cf_v_sad_talk", "cf_v_sad_l", "cf_v_sad_r", "cf_e_tongue", "cf_v_tongue_talk", "cf_v_tongue_l", "cf_v_tongue_r", "cf_e_puffed", "cf_v_puffed_talk", "cf_v_puffed_l", "cf_v_puffed_r", "cf_e_determined", "cf_v_determined_talk", "cf_v_determined_l", "cf_v_determined_r", "cf_e_evil", "cf_v_evil_talk", "cf_v_evil_l", "cf_v_evil_r", "cf_e_smug", "cf_v_smug_talk", "cf_v_smug_l", "cf_v_smug_r", "cf_e_confused", "cf_v_confused_talk", "cf_v_confused_l", "cf_v_confused_r", "cf_e_disgusted", "cf_v_disgusted_talk", "cf_v_disgusted_l", "cf_v_disgusted_r", "cf_e_nervous", "cf_v_nervous_talk", "cf_v_nervous_l", "cf_v_nervous_r", "cf_e_kissy", "cf_v_kissy_talk", "cf_v_kissy_l", "cf_v_kissy_r", "cf_e_bored", "cf_v_bored_talk", "cf_v_bored_l", "cf_v_bored_r", "cf_e_excited", "cf_v_excited_talk", "cf_v_excited_l", "cf_v_excited_r", "cf_e_thinking", "cf_v_thinking_talk", "cf_v_thinking_l", "cf_v_thinking_r", "cf_e_scared", "cf_v_scared_talk", "cf_v_scared_l", "cf_v_scared_r", "jinx_flip", "jinx_spin", "jinx_fire", "jinx_launch", "artillery", "golden_banana", "golden_mango", "tower", "eagle_roll", "tank_drive", "soldier_run", "soldier_throw", "grenade", "explosion", "eagle_glide", "eagle_flap", "plane", "title", "chef_parachute", "chef_chop", "chef_jump", "chef_fly", "chef_truck"].forEach(n => { const r = db.transaction("a").objectStore("a").get(n); r.onsuccess = () => { if (r.result) this.use(n, r.result); }; });
     } catch (e) {}
   },
   // a piece of art arriving from the app (sent in parts)
@@ -3806,54 +3806,119 @@ const Face = {
 /* ================= Snowman (from !snow) =================
    The snow piles up into a mound under the cloud, the mound rolls up into three snowballs, and then a hat, coal
    face, stick arms and carrot nose pop on (art from the Art screen's SNOWMAN ART, or drawn if it isn't made yet),
-   with the !snow person's name on top of the hat. It stands for a while, then melts away. */
+   with the !snow person's name on top of the hat. It stands for a while, then slowly melts and falls apart piece by
+   piece: the hat tips off, the arms droop and drop, the head rolls off, the middle ball tips over, the carrot falls,
+   and everything slumps into slush and puddles before fading away. */
 const Snowman = {
-  PILE: 9000, FORMED: 12500, ACC: 12800, STAY: 45000, MELT: 3000,
+  PILE: 9000, FORMED: 12500, ACC: 12800, STAY: 45000, MELT: 18000,
   e: k => 1 - Math.pow(1 - Math.max(0, Math.min(1, k)), 3),
   back: k => { k = Math.max(0, Math.min(1, k)); const c = 1.7; return 1 + (c + 1) * Math.pow(k - 1, 3) + c * Math.pow(k - 1, 2); },
+  cl: k => Math.max(0, Math.min(1, k)),
   // how high the snow is at x (where the flakes land)
   surface(m, x, t, H) { const T = t - m.at, h = 170 * this.e(T / this.PILE), d = Math.abs(x - m.x) / 160; return H - 6 - (d < 1 ? h * Math.cos(d * Math.PI / 2) : 0); },
-  ball(g, cx, cy, r) { if (r < 1) return; const gr = g.createRadialGradient(cx - r * .35, cy - r * .4, r * .1, cx, cy, r);
-    gr.addColorStop(0, "#ffffff"); gr.addColorStop(.7, "#eef3fb"); gr.addColorStop(1, "#c9d6ea"); g.fillStyle = gr; g.beginPath(); g.arc(cx, cy, r, 0, 6.283); g.fill(); },
   pop(A, at) { const k = (A - at) / 350; return k <= 0 ? 0 : k >= 1 ? 1 : this.back(k); },
-  pic(g, sp, cx, cy, w, sc, flip, rot) { const h = w * sp.h / sp.w; g.save(); g.translate(cx, cy); if (rot) g.rotate(rot); g.scale((flip ? -1 : 1) * sc, sc); g.drawImage(sp.img, 0, 0, sp.w, sp.h, -w / 2, -h / 2, w, h); g.restore(); return h; },
+  // a picture centred on the current origin
+  pic(g, sp, w, flip) { const h = w * sp.h / sp.w; g.save(); if (flip) g.scale(-1, 1); g.drawImage(sp.img, 0, 0, sp.w, sp.h, -w / 2, -h / 2, w, h); g.restore(); return h; },
+  /* one snowball of radius r, centred on the origin, melted by f (0 = round, 1 = slush): the snowball art (or a drawn
+     one) fades into the half-melted art as it melts */
+  ball(g, S, r, f) {
+    if (r < 1) return;
+    const melted = S.sm_ball_melt ? this.cl((f - .12) / .45) : 0;
+    if (melted < 1) { g.save(); g.globalAlpha *= 1 - melted;
+      if (S.sm_ball) this.pic(g, S.sm_ball, r * 2.12);
+      else { const gr = g.createRadialGradient(-r * .35, -r * .4, r * .1, 0, 0, r); gr.addColorStop(0, "#ffffff"); gr.addColorStop(.7, "#eef3fb"); gr.addColorStop(1, "#c9d6ea"); g.fillStyle = gr; g.beginPath(); g.arc(0, 0, r, 0, 6.283); g.fill(); }
+      g.restore(); }
+    if (melted > 0) { g.save(); g.globalAlpha *= melted; const w = r * 2.3, h = w * S.sm_ball_melt.h / S.sm_ball_melt.w;
+      g.drawImage(S.sm_ball_melt.img, 0, 0, S.sm_ball_melt.w, S.sm_ball_melt.h, -w / 2, r - h, w, h); g.restore(); }
+  },
+  puddle(g, S, x, y, w, a) { if (a <= 0 || w < 2) return; g.save(); g.globalAlpha *= a;
+    if (S.sm_puddle) { const h = w * S.sm_puddle.h / S.sm_puddle.w; g.drawImage(S.sm_puddle.img, 0, 0, S.sm_puddle.w, S.sm_puddle.h, x - w / 2, y - h * .6, w, h); }
+    else { g.fillStyle = "rgba(200,220,245,.55)"; g.beginPath(); g.ellipse(x, y, w / 2, Math.max(4, w * .07), 0, 0, 6.283); g.fill(); g.fillStyle = "rgba(255,255,255,.35)"; g.beginPath(); g.ellipse(x - w * .12, y - 2, w * .18, Math.max(2, w * .025), 0, 0, 6.283); g.fill(); }
+    g.restore(); },
+  /* places a part: centre (x, y) with rotation, squashed down onto the ground line `by` as it melts (sx wider, sy flatter) */
+  place(g, x, by, r, rot, f, fn) { const sx = 1 + .35 * f, sy = 1 - .72 * f; g.save(); g.translate(x, by); g.scale(sx, sy); g.translate(0, -r); g.rotate(rot); fn(); g.restore(); },
+  arm(g, S, sc, flip) { if (S.sm_arm) { g.save(); g.scale(sc, sc); this.pic(g, S.sm_arm, 150, flip); g.restore(); return; }
+    g.save(); g.scale((flip ? -1 : 1) * sc, sc); g.strokeStyle = "#5b3a1e"; g.lineWidth = 7; g.lineCap = "round"; g.beginPath(); g.moveTo(-60, 25); g.lineTo(60, -25); g.moveTo(30, -12); g.lineTo(48, -44); g.moveTo(40, -16); g.lineTo(72, -14); g.stroke(); g.restore(); },
+  hat(g, S, sc) { if (S.sm_hat) { g.save(); g.scale(sc, sc); const h = this.pic(g, S.sm_hat, 120); g.restore(); return h * sc; }
+    g.save(); g.scale(sc, sc); g.fillStyle = "#16141c"; g.fillRect(-60, 35, 120, 14); g.fillRect(-38, -45, 76, 82); g.fillStyle = "#b91c1c"; g.fillRect(-38, 18, 76, 14); g.restore(); return 98 * sc; },
+  face(g, S, sc) { if (S.sm_face) { g.save(); g.scale(sc, sc); this.pic(g, S.sm_face, 78); g.restore(); return; }
+    g.fillStyle = "#1b1b1f"; [[-16, -14], [16, -14]].forEach(([u, v]) => { g.beginPath(); g.arc(u, v, 6 * sc, 0, 6.283); g.fill(); });
+    for (let i = 0; i < 5; i++) { g.beginPath(); g.arc((i - 2) * 9, 14 - Math.abs(i - 2) * 3, 3.5 * sc, 0, 6.283); g.fill(); } },
+  nose(g, S, sc) { if (S.sm_nose) { g.save(); g.scale(sc, sc); this.pic(g, S.sm_nose, 56); g.restore(); return; }
+    g.save(); g.scale(sc, sc); g.fillStyle = "#f97316"; g.beginPath(); g.moveTo(-24, -6); g.lineTo(20, 2); g.lineTo(-24, 7); g.closePath(); g.fill(); g.restore(); },
+  buttons(g, sc) { g.fillStyle = "#1b1b1f"; [-28, 0, 28].forEach(v => { g.beginPath(); g.arc(0, v, 7 * sc, 0, 6.283); g.fill(); }); },
+  /* a part falling from (x0, y0) to (x1, y1) over k (0..1): a small hop, then gravity */
+  fall(k, x0, y0, x1, y1) { k = this.cl(k); return [x0 + (x1 - x0) * (1 - Math.pow(1 - k, 1.6)), y0 + (y1 - y0) * k * k - Math.sin(k * Math.PI) * 50]; },
   draw(g, m, t, S, H) {
     const T = t - m.at, END = this.ACC + this.STAY; if (T > END + this.MELT) return false;
-    const melt = T > END ? (T - END) / this.MELT : 0, X = m.x, G = H - 6;
-    g.save(); g.globalAlpha = 1 - melt; g.translate(X, G); g.scale(1 + melt * .4, 1 - melt * .8); g.translate(-X, -G);
+    const X = m.x, G = H - 6, M = T > END ? T - END : -1;           // M: how far into melting (ms), -1 while it stands
+    if (m.dir === undefined) { m.dir = Math.random() < .5 ? -1 : 1; m.hatDir = Math.random() < .5 ? -1 : 1; }
+    const dh = m.dir, all = M < 0 ? 1 : 1 - this.cl((M - this.MELT + 3500) / 3500);   // everything fades at the very end
+    g.save(); g.globalAlpha = all;
     // the mound of snow, which shrinks away as the snowballs grow out of it
-    const k = Math.max(0, Math.min(1, (T - this.PILE) / (this.FORMED - this.PILE)));
+    const k = this.cl((T - this.PILE) / (this.FORMED - this.PILE));
     const ph = 170 * this.e(T / this.PILE) * (1 - k * .85);
-    if (ph > 1) { g.fillStyle = "#f4f8ff"; g.beginPath(); g.moveTo(X - 175, G + 6); for (let i = 0; i <= 24; i++) { const u = -1 + i / 12; g.lineTo(X + u * 170, G - ph * Math.cos(u * Math.PI / 2) + Math.sin(i * 1.7 + m.at) * 3); } g.lineTo(X + 175, G + 6); g.closePath(); g.fill();
+    if (ph > 1 && M < 0) { g.fillStyle = "#f4f8ff"; g.beginPath(); g.moveTo(X - 175, G + 6); for (let i = 0; i <= 24; i++) { const u = -1 + i / 12; g.lineTo(X + u * 170, G - ph * Math.cos(u * Math.PI / 2) + Math.sin(i * 1.7 + m.at) * 3); } g.lineTo(X + 175, G + 6); g.closePath(); g.fill();
       g.fillStyle = "rgba(190,205,230,.45)"; g.beginPath(); g.ellipse(X + 30, G - ph * .25, 120, ph * .2, 0, 0, 6.283); g.fill(); }
-    // the three snowballs
+    // the three snowballs (sizes grow in while forming)
     const rb = 95 * this.back(k * 3), rm = 70 * this.back(k * 3 - 1), rh = 50 * this.back(k * 3 - 2);
     const by = G - 82, my = by - 95 - 70 + 24, hy = my - 70 - 50 + 16;
-    this.ball(g, X, by, rb); this.ball(g, X, my, rm); this.ball(g, X, hy, rh);
-    // the pieces pop on one after another
-    const A = T - this.ACC;
-    if (A > 0) {
-      const sa = this.pop(A, 0), sf = this.pop(A, 500), sn = this.pop(A, 1000), sh = this.pop(A, 1500), sname = Math.max(0, Math.min(1, (A - 2100) / 400));
-      [-1, 1].forEach(d => { if (!sa) return;                            // stick arms
-        if (S.sm_arm) this.pic(g, S.sm_arm, X + d * (rm + 50), my - 18, 150, sa, d < 0, d * -.25);
-        else { g.save(); g.translate(X + d * rm * .8, my - 6); g.scale(d * sa, sa); g.strokeStyle = "#5b3a1e"; g.lineWidth = 7; g.lineCap = "round"; g.beginPath(); g.moveTo(0, 0); g.lineTo(120, -50); g.moveTo(90, -38); g.lineTo(108, -70); g.moveTo(100, -42); g.lineTo(132, -40); g.stroke(); g.restore(); } });
-      if (sf) { if (S.sm_face) this.pic(g, S.sm_face, X, hy + 4, 78, sf);   // coal eyes and smile, plus coal buttons
-        else { g.fillStyle = "#1b1b1f"; [[-16, -12], [16, -12]].forEach(([u, v]) => { g.beginPath(); g.arc(X + u, hy + v, 6 * sf, 0, 6.283); g.fill(); });
-          for (let i = 0; i < 5; i++) { const u = (i - 2) * 9, v = 18 + Math.abs(i - 2) * -3; g.beginPath(); g.arc(X + u, hy + v, 3.5 * sf, 0, 6.283); g.fill(); } }
-        g.fillStyle = "#1b1b1f"; [-28, 0, 28].forEach(v => { g.beginPath(); g.arc(X, my + v, 7 * sf, 0, 6.283); g.fill(); }); }
-      if (sn) { if (S.sm_nose) this.pic(g, S.sm_nose, X + 24, hy + 4, 56, sn);  // carrot nose
-        else { g.save(); g.translate(X, hy + 3); g.scale(sn, sn); g.fillStyle = "#f97316"; g.beginPath(); g.moveTo(0, -6); g.lineTo(42, 2); g.lineTo(0, 7); g.closePath(); g.fill(); g.restore(); } }
-      let hatTop = hy - rh - 6;
-      if (sh) { if (S.sm_hat) { const hh = this.pic(g, S.sm_hat, X, hy - rh - 14, 120, sh); hatTop = hy - rh + 8 - hh * sh; }   // the hat
-        else { g.save(); g.translate(X, hy - rh + 6); g.scale(sh, sh); g.fillStyle = "#16141c"; g.fillRect(-60, -10, 120, 14); g.fillRect(-38, -86, 76, 80); g.fillStyle = "#b91c1c"; g.fillRect(-38, -26, 76, 14); g.restore(); hatTop = hy - rh + 6 - 90 * sh; } }
-      if (sname > 0) { const fs = Math.max(26, Math.min(44, 520 / Math.max(6, m.name.length)));
-        g.save(); g.globalAlpha *= sname; g.font = `900 ${fs}px ${FONT}`; g.textAlign = "center"; g.textBaseline = "bottom";
-        g.lineWidth = 7; g.strokeStyle = "rgba(10,8,20,.85)"; g.strokeText(m.name, X, hatTop - 8 - (1 - sname) * 12);
-        g.shadowColor = m.color; g.shadowBlur = 14; g.fillStyle = m.color; g.fillText(m.name, X, hatTop - 8 - (1 - sname) * 12); g.restore(); }
-      // a little sparkle as each piece pops on
-      [0, 500, 1000, 1500].forEach(at => { const q = (A - at) / 450; if (q > 0 && q < 1) { g.save(); g.globalAlpha = (1 - q) * .8; g.strokeStyle = "#fff"; g.lineWidth = 3;
-        const cy = at === 0 ? my : at === 1500 ? hy - rh - 40 : hy; for (let i = 0; i < 8; i++) { const a = i * Math.PI / 4, r1 = 30 + q * 70, r2 = r1 + 18; g.beginPath(); g.moveTo(X + Math.cos(a) * r1, cy + Math.sin(a) * r1); g.lineTo(X + Math.cos(a) * r2, cy + Math.sin(a) * r2); g.stroke(); } g.restore(); } });
+    const A = T - this.ACC;                                          // time since the pieces started popping on
+    const sa = A > 0 ? this.pop(A, 0) : 0, sf = A > 0 ? this.pop(A, 500) : 0, sn = A > 0 ? this.pop(A, 1000) : 0, sh = A > 0 ? this.pop(A, 1500) : 0;
+    /* ---- melting, piece by piece (M in ms):
+       0-1.4s the hat tips off and falls · 0.6-2.2s the arms droop, then drop to the ground · 3-4.6s the head rolls off
+       one side · 5.4-7s the middle ball tips off the other side · 7.5s the carrot falls off · all of it slowly
+       slumps into slush and puddles, then fades out */
+    const mt = (a, d) => M < 0 ? 0 : this.cl((M - a) / d);
+    const fB = mt(1500, 11000), fH = mt(3800, 9000), fM = mt(4800, 9500);
+    const kHead = mt(3000, 1600), kMid = mt(5400, 1600), kHat = mt(0, 1400), kArmD = mt(600, 1600), kArmF = mt(2200, 700), kNose = mt(7500, 900);
+    // puddles under everything as it melts
+    if (M >= 0) {
+      this.puddle(g, S, X, G, rb * 2 * (.7 + 1.1 * fB), this.cl(fB * 2));
+      if (kHead >= 1) this.puddle(g, S, X + dh * 210, G, rh * 2 * (.6 + 1.2 * fH), this.cl(fH * 2));
+      if (kMid >= 1) this.puddle(g, S, X - dh * 220, G, rm * 2 * (.6 + 1.2 * fM), this.cl(fM * 2));
     }
+    // bottom ball (with its own melting)
+    this.place(g, X, by + rb, rb, 0, fB, () => this.ball(g, S, rb, fB));
+    // middle ball: on top of the bottom one, then tipping off and rolling to the ground on the far side
+    { const sink = rb * 2 * (1 - (1 - .72 * fB)) ;                    // it settles down as the bottom ball slumps
+      const [x, yc] = kMid > 0 ? this.fall(kMid, X, my + sink, X - dh * 220, G - rm) : [X, my + sink];
+      const rot = -dh * 2.6 * this.cl(kMid), f = kMid >= 1 ? fM : fM * .3;
+      this.place(g, x, yc + rm, rm, rot, f, () => { this.ball(g, S, rm, f); if (sf) { g.save(); g.globalAlpha *= 1 - this.cl(f * 1.6); this.buttons(g, sf); g.restore(); } }); }
+    // head: with its face (and the carrot until it drops), rolling off one side
+    let headX = X, headY = hy;
+    { const sink = rb * 2 * .72 * fB + (kMid > 0 ? 0 : rm * 2 * .72 * fM * .3);
+      const [x, yc] = kHead > 0 ? this.fall(kHead, X, hy + sink, X + dh * 210, G - rh) : [X, hy + sink];
+      headX = x; headY = yc; const rot = dh * 3.4 * this.cl(kHead), f = kHead >= 1 ? fH : fH * .3;
+      this.place(g, x, yc + rh, rh, rot, f, () => { this.ball(g, S, rh, f);
+        if (sf) { g.save(); g.globalAlpha *= 1 - this.cl((f - .4) * 2); g.translate(0, 4); this.face(g, S, sf); g.restore(); }
+        if (sn && kNose <= 0) { g.save(); g.translate(22, 4); this.nose(g, S, sn); g.restore(); } }); }
+    // the carrot, once it has fallen off the head
+    if (kNose > 0) { const [x, y] = this.fall(kNose, headX + 22 * dh, headY + 4, headX + dh * 70, G - 10);
+      g.save(); g.translate(x, y); g.rotate(dh * (.4 + 1.2 * kNose)); this.nose(g, S, 1); g.restore(); }
+    // stick arms: standing out from the middle ball, then drooping, then dropping to the ground
+    if (sa) [-1, 1].forEach(d => {
+      const droop = this.e(kArmD) * 1.15, base = [X + d * (rm + 50), my - 18];
+      let [x, y] = base; let rot = d * (-.25 + droop);
+      if (kArmF > 0) { [x, y] = this.fall(kArmF, base[0] + d * 10, base[1] + 40, X + d * (rb + 95), G - 8); rot = d * (.9 - .9 * kArmF + .12); }
+      g.save(); g.translate(x, y); g.rotate(rot); this.arm(g, S, sa, d < 0); g.restore(); });
+    // the hat (and the name on it): pops on top of the head, then tips off and tumbles to the ground
+    if (sh) { const hx0 = X, hy0 = hy - rh - 22;
+      const [x, y] = kHat > 0 ? this.fall(kHat, hx0, hy0, X + m.hatDir * (rb + 270), G - 34) : [hx0, hy0];
+      const rot = m.hatDir * 1.75 * this.e(kHat);
+      g.save(); g.translate(x, y); g.rotate(rot); const hh = this.hat(g, S, sh);
+      const sname = M < 0 ? this.cl((A - 2100) / 400) : 1 - this.cl(M / 900);
+      if (sname > 0) { const fs = Math.max(26, Math.min(44, 520 / Math.max(6, m.name.length))), ny = -hh / 2 - 8 - (1 - sname) * 12;
+        g.save(); g.globalAlpha *= sname; g.font = `900 ${fs}px ${FONT}`; g.textAlign = "center"; g.textBaseline = "bottom";
+        g.lineWidth = 7; g.strokeStyle = "rgba(10,8,20,.85)"; g.strokeText(m.name, 0, ny);
+        g.shadowColor = m.color; g.shadowBlur = 14; g.fillStyle = m.color; g.fillText(m.name, 0, ny); g.restore(); }
+      g.restore(); }
+    // a little sparkle as each piece pops on
+    if (A > 0 && M < 0) [0, 500, 1000, 1500].forEach(at => { const q = (A - at) / 450; if (q > 0 && q < 1) { g.save(); g.globalAlpha = (1 - q) * .8; g.strokeStyle = "#fff"; g.lineWidth = 3;
+      const cy = at === 0 ? my : at === 1500 ? hy - rh - 40 : hy; for (let i = 0; i < 8; i++) { const a = i * Math.PI / 4, r1 = 30 + q * 70, r2 = r1 + 18; g.beginPath(); g.moveTo(X + Math.cos(a) * r1, cy + Math.sin(a) * r1); g.lineTo(X + Math.cos(a) * r2, cy + Math.sin(a) * r2); g.stroke(); } g.restore(); } });
+    // drips while melting
+    if (M > 1500 && M < this.MELT - 4000 && Math.random() < .25) (m.drips = m.drips || []).push({ x: X + rand(-rb, rb) * .8, y: by - rand(0, 60), v: 0 });
+    if (m.drips) m.drips = m.drips.filter(d => { d.v += .35; d.y += d.v; if (d.y > G) return false; g.fillStyle = "rgba(200,225,255,.8)"; g.beginPath(); g.ellipse(d.x, d.y, 2.5, 4.5, 0, 0, 6.283); g.fill(); return true; });
     g.restore(); return true;
   }
 };
@@ -4710,7 +4775,7 @@ window.KZRelay = function (topic, onMessage, servers) {
 (() => {
   const qs = new URLSearchParams(location.search), key = qs.get("ctl");
   if (!key || !window.WebSocket) return;
-  const PAGE = "html3", VERSION = "b562f7a";
+  const PAGE = "html3", VERSION = "503dc1c";
   let said = false;
   const relay = KZRelay("kzctl/" + key, c => {
     if (!c || c.from === "overlay" || (c.to && c.to !== "all" && c.to !== PAGE)) return;
