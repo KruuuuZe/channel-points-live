@@ -3601,7 +3601,7 @@ const Face = {
   /* the expression is picked by hand (from the app's Control screen); only the eyes looking around and the mouth
      moving when you talk happen on their own */
   EXPR: {"neutral": {"base": "cf_ref", "talk": "cf_x_talk", "wide": "cf_x_wide", "l": "cf_x_look_l", "r": "cf_x_look_r", "d": "cf_x_look_d"}, "smile": {"base": "cf_x_smile", "talk": "cf_v_smile_talk", "l": "cf_v_smile_l", "r": "cf_v_smile_r", "d": "cf_v_smile_d"}, "grin": {"base": "cf_x_grin", "talk": "cf_v_grin_talk", "l": "cf_v_grin_l", "r": "cf_v_grin_r", "d": "cf_v_grin_d"}, "oo": {"base": "cf_x_oo", "talk": "cf_v_oo_talk", "l": "cf_v_oo_l", "r": "cf_v_oo_r", "d": "cf_v_oo_d"}, "closed": {"base": "cf_x_blink", "talk": "cf_v_closed_talk"}, "smirk": {"base": "cf_e_smirk", "talk": "cf_v_smirk_talk", "l": "cf_v_smirk_l", "r": "cf_v_smirk_r", "d": "cf_v_smirk_d"}, "wink": {"base": "cf_e_wink", "talk": "cf_v_wink_talk"}, "laugh": {"base": "cf_e_laugh", "talk": "cf_v_laugh_talk"}, "shocked": {"base": "cf_e_shocked", "talk": "cf_v_shocked_talk", "l": "cf_v_shocked_l", "r": "cf_v_shocked_r", "d": "cf_v_shocked_d"}, "sleepy": {"base": "cf_e_sleepy", "talk": "cf_v_sleepy_talk", "l": "cf_v_sleepy_l", "r": "cf_v_sleepy_r", "d": "cf_v_sleepy_d"}, "sideeye": {"base": "cf_e_sideeye", "talk": "cf_v_sideeye_talk", "l": "cf_v_sideeye_l", "r": "cf_v_sideeye_r", "d": "cf_v_sideeye_d"}, "sad": {"base": "cf_e_sad", "talk": "cf_v_sad_talk", "l": "cf_v_sad_l", "r": "cf_v_sad_r", "d": "cf_v_sad_d"}, "tongue": {"base": "cf_e_tongue", "talk": "cf_v_tongue_talk", "l": "cf_v_tongue_l", "r": "cf_v_tongue_r", "d": "cf_v_tongue_d"}, "puffed": {"base": "cf_e_puffed", "talk": "cf_v_puffed_talk", "l": "cf_v_puffed_l", "r": "cf_v_puffed_r", "d": "cf_v_puffed_d"}, "determined": {"base": "cf_e_determined", "talk": "cf_v_determined_talk", "l": "cf_v_determined_l", "r": "cf_v_determined_r", "d": "cf_v_determined_d"}, "evil": {"base": "cf_e_evil", "talk": "cf_v_evil_talk", "l": "cf_v_evil_l", "r": "cf_v_evil_r", "d": "cf_v_evil_d"}, "smug": {"base": "cf_e_smug", "talk": "cf_v_smug_talk", "l": "cf_v_smug_l", "r": "cf_v_smug_r", "d": "cf_v_smug_d"}, "confused": {"base": "cf_e_confused", "talk": "cf_v_confused_talk", "l": "cf_v_confused_l", "r": "cf_v_confused_r", "d": "cf_v_confused_d"}, "disgusted": {"base": "cf_e_disgusted", "talk": "cf_v_disgusted_talk", "l": "cf_v_disgusted_l", "r": "cf_v_disgusted_r", "d": "cf_v_disgusted_d"}, "nervous": {"base": "cf_e_nervous", "talk": "cf_v_nervous_talk", "l": "cf_v_nervous_l", "r": "cf_v_nervous_r", "d": "cf_v_nervous_d"}, "kissy": {"base": "cf_e_kissy", "talk": "cf_v_kissy_talk", "l": "cf_v_kissy_l", "r": "cf_v_kissy_r", "d": "cf_v_kissy_d"}, "bored": {"base": "cf_e_bored", "talk": "cf_v_bored_talk", "l": "cf_v_bored_l", "r": "cf_v_bored_r", "d": "cf_v_bored_d"}, "excited": {"base": "cf_e_excited", "talk": "cf_v_excited_talk", "l": "cf_v_excited_l", "r": "cf_v_excited_r", "d": "cf_v_excited_d"}, "thinking": {"base": "cf_e_thinking", "talk": "cf_v_thinking_talk", "l": "cf_v_thinking_l", "r": "cf_v_thinking_r", "d": "cf_v_thinking_d"}, "scared": {"base": "cf_e_scared", "talk": "cf_v_scared_talk", "l": "cf_v_scared_l", "r": "cf_v_scared_r", "d": "cf_v_scared_d"}},
-  mood: "neutral",                                      // always starts neutral; only changes when you pick another face
+  mood: (() => { try { localStorage.removeItem("kz_face_mood"); } catch {} return "neutral"; })(),   // always starts neutral (the old remembered face is cleared)
   neutralTalk: (() => { try { return localStorage.getItem("kz_face_ntalk") || "cf_x_talk"; } catch { return "cf_x_talk"; } })(),
   setNeutralTalk(n) { if (!/^cf_/.test(n || "")) return; this.neutralTalk = n; try { localStorage.setItem("kz_face_ntalk", n); } catch {} },
   setMood(m) { if (!this.EXPR[m]) return; this.mood = m; const sel = $("#facemood"); if (sel) sel.value = m; },
@@ -3695,6 +3695,7 @@ const Face = {
       const lv = Voice.sample(), st = this.expression(t, lv), E = this.E;
       // ---- entrance: when it comes out, it bursts out of the bottom-right corner as a poof of smoke and forms up
       if (this.on && this.a < .06 && t - enterAt > 2500) {
+        if (!this.leaving) this.setMood("neutral");                       // every time it comes out: the neutral face
         enterAt = t; px = fromX = toX = CORNER[0]; py = fromY = toY = CORNER[1]; moveAt = 0; hoverUntil = t + 2600; this.a = .02;
         poof(px, py, t);
       }
@@ -4949,7 +4950,7 @@ window.KZRelay = function (topic, onMessage, servers) {
 (() => {
   const qs = new URLSearchParams(location.search), key = qs.get("ctl");
   if (!key || !window.WebSocket) return;
-  const PAGE = "html3", VERSION = "159bfd3";
+  const PAGE = "html3", VERSION = "cbee28d";
   let said = false;
   const relay = KZRelay("kzctl/" + key, c => {
     if (!c || c.from === "overlay" || (c.to && c.to !== "all" && c.to !== PAGE)) return;
