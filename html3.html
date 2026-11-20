@@ -3734,8 +3734,8 @@ const Face = {
         if (k >= 1) { hoverUntil = t + (route.length ? (snowTo !== null || goingHome ? 60 : 250) : rand(20000, 60000)); moveAt = 0; } }
       const dir = moving ? Math.sign(toX - fromX) : 0;
       this.pos = [px, py];
-      // where the eyes look on a sound spike: down while it's along the top, straight ahead at the bottom
-      this.lookTo = py > H / 2 ? [0, 0] : [0, 1];
+      // the eyes look straight ahead (at the top and at the bottom)
+      this.lookTo = [0, 0];
       const sq = 1 + E.jaw * .12, x = px + Math.sin(t / 2300) * 18, y = py + Math.sin(t / 900) * 12 + Math.sin(t / 2700) * 9;
       // ---- snowflakes falling from the cloud, and the snowmen at the bottom
       // each flake has its own size (bigger ones are "closer": brighter and a bit faster), its own gentle sway, and the
@@ -4844,7 +4844,7 @@ window.KZRelay = function (topic, onMessage, servers) {
 (() => {
   const qs = new URLSearchParams(location.search), key = qs.get("ctl");
   if (!key || !window.WebSocket) return;
-  const PAGE = "html3", VERSION = "5704313";
+  const PAGE = "html3", VERSION = "bf103d6";
   let said = false;
   const relay = KZRelay("kzctl/" + key, c => {
     if (!c || c.from === "overlay" || (c.to && c.to !== "all" && c.to !== PAGE)) return;
