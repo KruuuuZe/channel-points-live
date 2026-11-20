@@ -3589,6 +3589,7 @@ const Face = {
      talking picture and looking-left/right pictures. The eyes pick the looking picture, and the talking picture fades
      in over it as your mouth opens (for the neutral face, a wide-open one when you're loud). */
   ART_W: 600, ART_H: 600, ART_EYE_Y: .42,
+  MOUTH: { x: .5, y: .655, rx: .2, ry: .13 },          // where the mouth is in the cloud face pictures (fractions of the picture)
   SC: .5,                                               // overall size of the cloud on screen
   drawArtCloud(lg, AS, t) {
     const E = this.E, has = n => n && !!AS[n], X = this.EXPR[this.mood] || this.EXPR.neutral, N = this.EXPR.neutral;
@@ -3604,8 +3605,16 @@ const Face = {
     const k = Math.min(1, (t - (this.xAt || 0)) / 140);
     if (this.xPrev && k < 1) draw(this.xPrev, 1 - k);
     draw(this.xNow, k);
+    // the talking picture only shows around the mouth (soft-edged), so your eyes stay exactly as they are
     const ta = Math.max(0, Math.min(1, (E.jaw - .12) / .18));
-    if (talk) draw(talk, ta);
+    if (talk && ta > .01) { const sp = AS[talk], w = this.ART_W, h = w * sp.h / sp.w;
+      const mc = this.mouthCv || (this.mouthCv = document.createElement("canvas")); if (mc.width !== w || mc.height !== Math.round(h)) { mc.width = w; mc.height = Math.round(h); }
+      const m = mc.getContext("2d"), M = this.MOUTH; m.globalCompositeOperation = "source-over"; m.clearRect(0, 0, mc.width, mc.height);
+      m.drawImage(sp.img, 0, 0, sp.w, sp.h, 0, 0, w, h);
+      m.globalCompositeOperation = "destination-in"; m.save(); m.translate(w * M.x, h * M.y); m.scale(1, M.ry / M.rx);
+      const gr = m.createRadialGradient(0, 0, 0, 0, 0, w * M.rx); gr.addColorStop(0, "#000"); gr.addColorStop(.7, "#000"); gr.addColorStop(1, "rgba(0,0,0,0)");
+      m.fillStyle = gr; m.fillRect(-w, -w, w * 2, w * 2); m.restore();
+      lg.globalAlpha = ta; lg.drawImage(mc, -w / 2, -h / 2 - 30, w, h); }
     lg.globalAlpha = 1;
   },
   // the cloud: a classic puffy cloud (flat-ish bottom, big bumps on top), each puff breathing a little
@@ -4789,7 +4798,7 @@ window.KZRelay = function (topic, onMessage, servers) {
 (() => {
   const qs = new URLSearchParams(location.search), key = qs.get("ctl");
   if (!key || !window.WebSocket) return;
-  const PAGE = "html3", VERSION = "b070e9f";
+  const PAGE = "html3", VERSION = "7d9f3bd";
   let said = false;
   const relay = KZRelay("kzctl/" + key, c => {
     if (!c || c.from === "overlay" || (c.to && c.to !== "all" && c.to !== PAGE)) return;
