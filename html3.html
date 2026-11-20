@@ -3631,7 +3631,7 @@ const Face = {
     // Every so often it goes down to the bottom, but only down the left or right edge (never through the middle),
     // stays there a while, then goes back up the same edge.
     const SC = this.SC, MX = 195, TOP = [205, 228], LOW = H - 180, CORNER = [W - 430, H - 260];
-    let route = [], snowing = null;                      // waypoints still to glide through; the snowman being snowed
+    let route = [], snowing = null, snowTo = null;                      // waypoints still to glide through; the snowman being snowed
 
     let [px, py] = CORNER, fromX = px, fromY = py, toX = px, toY = py, moveAt = 0, moveDur = 1, hoverUntil = 0, last = t0, enterAt = -1e9, wasLow = false;
     let nextBolt = rand(6000, 14000), nextRain = rand(12000, 25000), rainUntil = 0, nextGlow = 0;
@@ -3646,17 +3646,18 @@ const Face = {
           this.puffs.push({ x: px + rand(-60, 60) * SC, y: py + rand(-40, 60) * SC, vx: Math.cos(a) * sp * .7, vy: Math.sin(a) * sp * .55, r: rand(30, 70) * .65, born: t, life: rand(1400, 2600) }); }
       }
       const ek = Math.min(1, (t - enterAt) / 1300), es = .2 + .8 * (1 - Math.pow(1 - ek, 3));   // grows out of the poof
-      // ---- snow: when someone typed !snow, the cloud stops somewhere along the top with room for a snowman and snows
-      if (this.snowQ.length && !snowing && moveAt <= hoverUntil && !route.length) {
-        if (py > H / 2) hoverUntil = Math.min(hoverUntil, t);                // at the bottom: head back up first
-        else {
-          const free = sx => this.snowmen.every(m => Math.abs(m.x - sx) > 340), here = Math.max(270, Math.min(W - 270, px));
-          if (free(here)) { const q = this.snowQ.shift(); snowing = { x: here, at: t, name: q.name, color: q.color }; this.snowmen.push(snowing); hoverUntil = Infinity; }
-          else { let best = null; for (let i = 0; i < 60; i++) { const c = rand(270, W - 270); if (free(c) && (best === null || Math.abs(c - px) < Math.abs(best - px))) best = c; }
-            if (best !== null) { route = [[best, rand(...TOP)]]; hoverUntil = Math.min(hoverUntil, t); } }
-        }
+      // ---- snow: when someone types !snow the cloud drops what it's doing and heads straight for a random free spot
+      // along the top (up its edge first if it's at the bottom); once it's there it starts snowing
+      if (this.snowQ.length && !snowing && snowTo === null) {
+        const free = sx => this.snowmen.every(m => Math.abs(m.x - sx) > 340);
+        let tx = null; for (let i = 0; i < 80 && tx === null; i++) { const c = rand(280, W - 280); if (free(c)) tx = c; }
+        if (tx !== null) { snowTo = tx; route = py > H / 2 ? [[px, rand(...TOP)], [tx, rand(...TOP)]] : [[tx, rand(...TOP)]]; moveAt = 0; hoverUntil = t; }
       }
-      if (snowing && t - snowing.at > Snowman.FORMED) {                      // the snowman is formed: stop snowing and move on
+      if (snowTo !== null && !route.length && moveAt <= hoverUntil && Math.abs(px - snowTo) < 2) {
+        const q = this.snowQ.shift(); snowTo = null;
+        snowing = { x: px, at: 1e15, start: t, name: q.name, color: q.color }; this.snowmen.push(snowing); hoverUntil = Infinity;   // `at` is set when the first flake lands
+      }
+      if (snowing && snowing.at < 1e14 && t - snowing.at > Snowman.FORMED) {                      // the snowman is formed: stop snowing and move on
         const from = snowing.x; snowing = null; let nx = rand(MX, W - MX); if (Math.abs(nx - from) < 600) nx = from < W / 2 ? rand(from + 600, W - MX) : rand(MX, from - 600);
         route = [[Math.max(MX, Math.min(W - MX, nx)), rand(...TOP)]]; hoverUntil = t + 700;
       }
@@ -3669,22 +3670,27 @@ const Face = {
           else { let nx = rand(MX, W - MX); if (Math.abs(nx - px) < 300) nx = px + (nx < px ? -1 : 1) * 500; route = [[Math.max(MX, Math.min(W - MX, nx)), rand(...TOP)]]; }
         }
         fromX = px; fromY = py; [toX, toY] = route.shift(); wasLow = toY > H / 2;
-        moveAt = t; moveDur = Math.max(1800, Math.min(9000, Math.hypot(toX - fromX, toY - fromY) / .14));
+        moveAt = t; moveDur = snowTo !== null ? Math.max(1200, Math.hypot(toX - fromX, toY - fromY) / .34) : Math.max(1800, Math.min(9000, Math.hypot(toX - fromX, toY - fromY) / .14));   // hurries when someone typed !snow
       }
       let moving = 0;
       if (moveAt > hoverUntil) { const k = Math.min(1, (t - moveAt) / moveDur), e = k < .5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2;
         px = fromX + (toX - fromX) * e; py = fromY + (toY - fromY) * e; moving = k < 1 ? 1 : 0;
-        if (k >= 1) { hoverUntil = t + (route.length ? 250 : wasLow ? rand(4000, 8000) : rand(4000, 11000)); moveAt = 0; } }
+        if (k >= 1) { hoverUntil = t + (route.length ? (snowTo !== null ? 60 : 250) : wasLow ? rand(4000, 8000) : rand(4000, 11000)); moveAt = 0; } }
       const dir = moving ? Math.sign(toX - fromX) : 0;
       this.pos = [px, py];
       this.centerDir = Math.abs(1280 - px) < 220 ? 0 : Math.sign(1280 - px);   // which way the middle of the screen is
       const sq = 1 + E.jaw * .12, x = px + Math.sin(t / 2300) * 18, y = py + Math.sin(t / 900) * 12 + Math.sin(t / 2700) * 9;
       // ---- snowflakes falling from the cloud, and the snowmen at the bottom
-      if (snowing && this.on) for (let i = 0; i < 4; i++) this.flakes.push({ x: x + rand(-95, 95), y: y + 45, vy: rand(2.4, 4.2), ph: rand(0, 6.3), r: rand(2.5, 6), to: snowing });
+      // each flake has its own size (bigger ones are "closer": brighter and a bit faster), its own gentle sway, and the
+      // snow spreads out a little as it falls, like real snowfall
+      if (snowing && this.on) for (let i = 0; i < 3; i++) { const r = Math.pow(Math.random(), 1.6) * 4.5 + 1.4;
+        this.flakes.push({ x: x + rand(-115, 115), y: y + rand(30, 55), vy: .9 + r * .38 + rand(-.15, .15), vx: rand(-.25, .25), ph: rand(0, 6.3), sw: rand(.25, .8), fq: rand(600, 1300), r, al: .45 + r * .1, to: snowing }); }
       this.snowmen = this.snowmen.filter(m => Snowman.draw(g, m, t, ChefArt.sprites, H));
       g.fillStyle = "#fff";
-      this.flakes = this.flakes.filter(f => { f.y += f.vy * dt / 16; f.x += Math.sin(t / 380 + f.ph) * .7 + (f.to.x - f.x) * .0035;
-        if (f.y > Snowman.surface(f.to, f.x, t, H)) return false; g.globalAlpha = .9; g.beginPath(); g.arc(f.x, f.y, f.r, 0, 6.283); g.fill(); return true; });
+      this.flakes = this.flakes.filter(f => { const s = dt / 16; f.y += f.vy * s; f.x += (f.vx + Math.sin(t / f.fq + f.ph) * f.sw) * s;
+        if (f.y > Snowman.surface(f.to, f.x, t, H)) { if (f.to.at > t) f.to.at = t; return false; }     // the first flake to land starts the pile
+        g.globalAlpha = f.al * .35; g.beginPath(); g.arc(f.x, f.y, f.r * 1.8, 0, 6.283); g.fill();     // soft edge
+        g.globalAlpha = f.al; g.beginPath(); g.arc(f.x, f.y, f.r, 0, 6.283); g.fill(); return true; });
       g.globalAlpha = 1;
       // ---- the cloud body, with the logo's green and purple glowing inside and soft lightning flickers
       lg.setTransform(1, 0, 0, 1, 0, 0); lg.clearRect(0, 0, LW, LH); lg.translate(LW / 2, LH / 2 + 30); lg.scale(sq, 1 / Math.sqrt(sq));
@@ -3854,7 +3860,7 @@ const Snowman = {
   /* a part falling from (x0, y0) to (x1, y1) over k (0..1): a small hop, then gravity */
   fall(k, x0, y0, x1, y1) { k = this.cl(k); return [x0 + (x1 - x0) * (1 - Math.pow(1 - k, 1.6)), y0 + (y1 - y0) * k * k - Math.sin(k * Math.PI) * 50]; },
   draw(g, m, t, S, H) {
-    const T = t - m.at, END = this.ACC + this.STAY; if (T > END + this.MELT) return false;
+    const T = t - m.at, END = this.ACC + this.STAY; if (T > END + this.MELT) return false; if (T < 0) return true;
     const X = m.x, G = H - 6, M = T > END ? T - END : -1;           // M: how far into melting (ms), -1 while it stands
     if (m.dir === undefined) { m.dir = Math.random() < .5 ? -1 : 1; m.hatDir = Math.random() < .5 ? -1 : 1; }
     const dh = m.dir, all = M < 0 ? 1 : 1 - this.cl((M - this.MELT + 3500) / 3500);   // everything fades at the very end
@@ -4780,7 +4786,7 @@ window.KZRelay = function (topic, onMessage, servers) {
 (() => {
   const qs = new URLSearchParams(location.search), key = qs.get("ctl");
   if (!key || !window.WebSocket) return;
-  const PAGE = "html3", VERSION = "7de6535";
+  const PAGE = "html3", VERSION = "8c34a06";
   let said = false;
   const relay = KZRelay("kzctl/" + key, c => {
     if (!c || c.from === "overlay" || (c.to && c.to !== "all" && c.to !== PAGE)) return;
