@@ -3286,13 +3286,20 @@ const Jinx = {
         const k = Math.min(1, (t - FIRE0) / WRITE), upto = Math.floor(k * pts.length);
         if (t < FIRE0 + WRITE) startRoar(); else stopRoar();
         for (let i = 0; i < upto; i++) if (!pts[i].lit) pts[i].lit = t;
-        const tgt = pts[Math.min(pts.length - 1, upto)], nozzle = [hx + 40, hy - HH * .52];
-        const want = Math.atan2(tgt.y - nozzle[1], tgt.x - nozzle[0]); aim += (want - aim) * .25;
-        const flip = Math.cos(aim) < 0, rot = flip ? aim + Math.PI : aim;
+        const tgt = pts[Math.min(pts.length - 1, upto)], body = [hx, hy - HH / 2];
+        const want = Math.atan2(tgt.y - body[1], tgt.x - body[0]); aim += (want - aim) * .25;
+        const flip = Math.cos(aim) < 0, rot = Math.max(-1.1, Math.min(1.1, flip ? aim + Math.PI : aim)) * .55;
         const spr = S.jinx_fire;
-        pose("jinx_fire", fr(spr, t), hx, hy, Math.max(-1.1, Math.min(1.1, rot)) * .55, flip);
+        pose("jinx_fire", fr(spr, t), hx, hy, rot, flip);
+        // the nozzle tip, moved and turned exactly like the picture (marked in the Art screen, or the stand-in's barrel)
+        let lx, ly;
+        if (spr) { const w = HH * spr.w / spr.h, nz = spr.nozzle || [.95, .48]; lx = (nz[0] - .5) * w; ly = (nz[1] - .5) * HH; }
+        else { const sc = HH / 330; lx = 114 * sc; ly = -47 * sc; }
+        if (flip) lx = -lx;
+        const nozzle = [body[0] + lx * Math.cos(rot) - ly * Math.sin(rot), body[1] + lx * Math.sin(rot) + ly * Math.cos(rot)];
         if (t < FIRE0 + WRITE) {        // the stream: flames from the nozzle to where it's writing
-          for (let j = 0; j < 14; j++) { const e = Math.random(), x = nozzle[0] + (tgt.x - nozzle[0]) * e + rand(-18, 18) * e, y = nozzle[1] + (tgt.y - nozzle[1]) * e + rand(-18, 18) * e - Math.sin(e * Math.PI) * 60;
+          for (let j = 0; j < 4; j++) flames.push({ x: nozzle[0] + rand(-6, 6), y: nozzle[1] + rand(-6, 6), vx: Math.cos(want) * rand(1, 4), vy: Math.sin(want) * rand(1, 4), born: t, life: rand(90, 160), r: rand(12, 20) });   // the flash right at the tip
+          for (let j = 0; j < 14; j++) { const e = Math.pow(Math.random(), .8), x = nozzle[0] + (tgt.x - nozzle[0]) * e + rand(-18, 18) * e, y = nozzle[1] + (tgt.y - nozzle[1]) * e + rand(-18, 18) * e - Math.sin(e * Math.PI) * 60;
             flames.push({ x, y, vx: rand(-1, 1), vy: rand(-1.5, 0), born: t, life: rand(160, 320), r: rand(14, 28) * (.6 + e) }); }
         }
       } else {
@@ -4182,7 +4189,7 @@ window.KZRelay = function (topic, onMessage, servers) {
 (() => {
   const qs = new URLSearchParams(location.search), key = qs.get("ctl");
   if (!key || !window.WebSocket) return;
-  const PAGE = "html3", VERSION = "1bfa752";
+  const PAGE = "html3", VERSION = "0c3c163";
   let said = false;
   const relay = KZRelay("kzctl/" + key, c => {
     if (!c || c.from === "overlay" || (c.to && c.to !== "all" && c.to !== PAGE)) return;
