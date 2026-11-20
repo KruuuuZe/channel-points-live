@@ -336,6 +336,7 @@ body.fit #stage{background:radial-gradient(1200px 700px at 30% 20%,#1a103322,tra
 #jinxcv{position:absolute;inset:0;width:2560px;height:1440px;pointer-events:none;z-index:7}
 /* ---------- smoke screen (bottom-right corner) ---------- */
 #smokecv{position:absolute;inset:0;width:2560px;height:1440px;pointer-events:none;z-index:8}
+#facecv{position:absolute;inset:0;width:2560px;height:1440px;pointer-events:none;z-index:8}
 /* ---------- Kazul123: artillery from every side ---------- */
 #kazcv{position:absolute;inset:0;width:2560px;height:1440px;pointer-events:none;z-index:7}
 /* ---------- Silverhand (canvas + a red shade over the whole screen) ---------- */
@@ -422,6 +423,7 @@ body.fit #stage{background:radial-gradient(1200px 700px at 30% 20%,#1a103322,tra
   <canvas id="kazcv" width="2560" height="1440"></canvas>
   <canvas id="jinxcv" width="2560" height="1440"></canvas>
   <canvas id="smokecv" width="2560" height="1440"></canvas>
+  <canvas id="facecv" width="2560" height="1440"></canvas>
   <canvas id="tankcv" width="2560" height="1440"></canvas>
   <div id="pane"></div>
   <canvas id="holes" width="2560" height="1440"></canvas>
@@ -3388,13 +3390,14 @@ const Smoke = {
     gr.addColorStop(.6, "rgba(255,255,255,.75)"); gr.addColorStop(.78, "rgba(255,255,255,.38)"); gr.addColorStop(.9, "rgba(255,255,255,.12)"); gr.addColorStop(1, "rgba(255,255,255,0)");
     g.fillStyle = gr; g.fillRect(0, 0, 256, 256); return c;
   },
+  textures() { if (this.puff) return; this.puff = this.makePuff(); this.base = this.tinted("#7c8087"); this.mid = this.tinted("#9a9ea5"); this.hi = this.tinted("#c4c7cc");
+    this.lime = this.tinted("#a3e635"); this.purple = this.tinted("#9333ea"); this.light = this.tinted("#e4e7eb"); this.shade = this.tinted("#a7acb4"); },
   tinted(col) { const c = document.createElement("canvas"); c.width = c.height = 256; const g = c.getContext("2d"); g.drawImage(this.puff, 0, 0); g.globalCompositeOperation = "source-in"; g.fillStyle = col; g.fillRect(0, 0, 256, 256); return c; },
   run() {
     // a toggle: the first press rolls it in and it stays; the next press makes it dissipate
     if (this.on) { if (this.offAt == null) this.offAt = Math.max(this.RISE, performance.now() - this.t0); return; }
     this.on = true; this.offAt = null; Sound.init(); MySounds.play("smoke");
-    if (!this.puff) { this.puff = this.makePuff(); this.base = this.tinted("#7c8087"); this.mid = this.tinted("#9a9ea5"); this.hi = this.tinted("#c4c7cc");
-      this.lime = this.tinted("#a3e635"); this.purple = this.tinted("#9333ea"); }
+    this.textures();
     if (Sound.ctx) { const c = Sound.ctx.currentTime; Sound.tone(c, .12, .08, 180, 90); Sound.burst(c + .05, 3.5, .05, "highpass", 1800, 900); }   // pop and hiss
     const cv = $("#smokecv"), g = cv.getContext("2d"), W = 2560, H = 1440, S = this.SIZE, SW = this.WIDE;
     this.t0 = performance.now();
@@ -3448,10 +3451,8 @@ const Smoke = {
           g.beginPath(); f.bolt.forEach(([x, y], j) => j ? g.lineTo(x, y) : g.moveTo(x, y)); g.stroke(); g.shadowBlur = 0; }
       }
       g.globalCompositeOperation = "source-over";
-      const fs = Face.drawSmoke(g, t, W - SW / 2 + 20, H - S / 2 - 30, Math.min(fade, rise));    // the face, made of darker smoke
       main.save(); main.filter = "blur(12px)"; main.drawImage(layer, OX, OY); main.restore();
-      if (fs) Face.drawEyes(main, fs);
-      if (fade > 0) requestAnimationFrame(frame); else { main.clearRect(0, 0, W, H); this.on = false; this.offAt = null; Face.on = false; Face.a = 0; }
+      if (fade > 0) requestAnimationFrame(frame); else { main.clearRect(0, 0, W, H); this.on = false; this.offAt = null; }
     };
     requestAnimationFrame(frame);
   }
@@ -3549,49 +3550,86 @@ const Voice = {
   }
 };
 const Face = {
-  on: false, a: 0, gaze: [0, 0], gazeTo: [0, 0], nextLook: 0, blinkAt: 2000, open: 0, wide: .5, puffs: [],
+  on: false, a: 0, run: false, puffs: [], gaze: [0, 0], gazeTo: [0, 0], nextLook: 0, blinkAt: 2500, open: 0, wide: .5, mood: 0, moodTo: 0, nextMood: 0, p: 0,
   toggle() {
-    if (!this.on) { this.on = true; if (!Voice.obsOk && !Voice.an) Voice.startMic(); if (!Smoke.on || Smoke.offAt != null) { if (Smoke.on) Smoke.offAt = null; else Smoke.run(); } }
-    else this.on = false;
+    if (!this.on) { this.on = true; if (!Voice.obsOk && !Voice.an) Voice.startMic(); if (!this.run) this.start(); }
+    else this.on = false;                                        // fades away (and finishes blowing its smoke)
   },
-  // dark smoky features inside the cloud layer (they get the same soft blur as the smoke)
-  drawSmoke(g, t, fx, fy, vis) {
-    this.a += ((this.on ? 1 : 0) - this.a) * .04; if (this.a < .01) return null;
-    const A = this.a * vis, lv = Voice.sample();
-    this.open += (lv - this.open) * .45; this.wide += (Voice.shape - this.wide) * .2;
-    // eyes look around now and then, quick like real eyes, and blink every few seconds
-    if (t > this.nextLook) { this.nextLook = t + rand(900, 3200); this.gazeTo = Math.random() < .35 ? [0, 0] : [rand(-1, 1), rand(-.6, .6)]; }
-    this.gaze[0] += (this.gazeTo[0] - this.gaze[0]) * .2; this.gaze[1] += (this.gazeTo[1] - this.gaze[1]) * .2;
-    if (t > this.blinkAt + 160) this.blinkAt = t + rand(2500, 6000);
-    const blink = t > this.blinkAt ? Math.sin(Math.min(1, (t - this.blinkAt) / 160) * Math.PI) : 0;
-    const EY = fy - 50, EX = 105, sock = (x) => { g.beginPath(); g.ellipse(x, EY, 58, 40 * (1 - blink * .9) + 4, 0, 0, 6.283); g.fill(); };
-    g.globalAlpha = A; g.fillStyle = "rgba(38,38,46,.8)"; sock(fx - EX); sock(fx + EX);
-    // brows: darker wisps that lift a little when talking
-    g.strokeStyle = "rgba(45,45,54,.6)"; g.lineWidth = 16; g.lineCap = "round";
-    [-1, 1].forEach(d => { g.beginPath(); g.moveTo(fx + d * (EX - 55), EY - 58 - lv * 14); g.quadraticCurveTo(fx + d * EX, EY - 82 - lv * 18, fx + d * (EX + 55), EY - 62 - lv * 10); g.stroke(); });
-    // the mouth: closed is a soft line; talking opens it (wider for "ee", rounder for "oo")
-    const mo = Math.max(0, this.open), my = fy + 95, rx = 70 + this.wide * 45 - mo * 18, ry = 6 + mo * 62;
-    g.fillStyle = "rgba(30,30,38,.85)"; g.beginPath(); g.ellipse(fx, my, rx, ry, 0, 0, 6.283); g.fill();
-    // little puffs of smoke all over the cloud while talking (and out of the mouth)
-    if (mo > .18 && Math.random() < mo * .9) {
-      const fromMouth = Math.random() < .4;
-      this.puffs.push({ x: fromMouth ? fx + rand(-rx, rx) : fx + rand(-420, 420), y: fromMouth ? my + rand(-10, 10) : fy + rand(-200, 220), vx: rand(-.6, .6), vy: rand(-1.4, -.4), r: rand(18, 38), born: t, life: rand(600, 1100) });
-    }
-    for (let i = this.puffs.length - 1; i >= 0; i--) { const p = this.puffs[i], k = (t - p.born) / p.life; if (k >= 1) { this.puffs.splice(i, 1); continue; }
-      p.x += p.vx; p.y += p.vy; const r = p.r * (.5 + k); g.globalAlpha = A * .55 * Math.sin(k * Math.PI); g.drawImage(Smoke.hi, p.x - r, p.y - r, r * 2, r * 2); }
-    g.globalAlpha = 1;
-    return { fx, EY, EX, A, blink };
-  },
-  // the eyes themselves: soft glints that follow the gaze (drawn after the blur so they stay a little crisp)
-  drawEyes(m, f) {
-    if (f.blink > .6) return;
-    m.save(); m.filter = "blur(3px)"; m.globalAlpha = f.A * (1 - f.blink);
-    [-1, 1].forEach(d => {
-      const x = f.fx + d * f.EX + this.gaze[0] * 20, y = f.EY + this.gaze[1] * 12;
-      const gr = m.createRadialGradient(x, y, 0, x, y, 22); gr.addColorStop(0, "rgba(240,255,220,.95)"); gr.addColorStop(.45, "rgba(190,240,140,.6)"); gr.addColorStop(1, "rgba(168,85,247,0)");
-      m.fillStyle = gr; m.beginPath(); m.arc(x, y, 22, 0, 6.283); m.fill();
-    });
-    m.restore();
+  // the cloud: a classic puffy cloud (flat-ish bottom, big bumps on top), each puff breathing a little
+  BLOBS: [[-215, 55, 72], [-140, 62, 82], [-55, 66, 86], [40, 66, 86], [125, 62, 80], [205, 55, 70],
+          [-175, 5, 86], [-85, -5, 104], [20, -10, 112], [120, -2, 98], [195, 10, 76], [-120, -70, 82], [-20, -95, 98], [95, -75, 86]],
+  start() {
+    this.run = true; Smoke.textures(); Sound.init();
+    const cv = $("#facecv"), g = cv.getContext("2d"), W = 2560, H = 1440, t0 = performance.now();
+    const LW = 760, LH = 520, layer = document.createElement("canvas"); layer.width = LW; layer.height = LH; const lg = layer.getContext("2d");
+    // path around the edge of the screen (clockwise), the cloud's centre stays this far in from the edges
+    const MX = 330, MY = 230, w = W - 2 * MX, h = H - 2 * MY, per = 2 * (w + h);
+    const along = d => { d = ((d % per) + per) % per;
+      if (d < w) return [MX + d, MY]; d -= w; if (d < h) return [W - MX, MY + d]; d -= h; if (d < w) return [W - MX - d, H - MY]; d -= w; return [MX, H - MY - d]; };
+    this.p = per * .62;                                          // starts along the bottom
+    let last = t0;
+    const frame = now => {
+      const t = now - t0, dt = Math.min(50, now - last); last = now; g.clearRect(0, 0, W, H);
+      this.a += ((this.on ? 1 : 0) - this.a) * .05;
+      const lv = Voice.sample(); this.open += (lv - this.open) * .5; this.wide += (Voice.shape - this.wide) * .2;
+      // drifting: slower while it's talking, so the smoke has time to pour out
+      this.p += dt * (.05 - .03 * lv);
+      const [px, py] = along(this.p), [nx] = along(this.p + 40), dir = nx > px + 1 ? 1 : nx < px - 1 ? -1 : 0;
+      const bob = Math.sin(t / 1100) * 16, sq = 1 + this.open * .14, x = px, y = py + bob;
+      // expressions: looks where it's going or glances around; moods: raised brows, a suspicious squint, wide surprise
+      if (t > this.nextLook) { this.nextLook = t + rand(700, 2600); const r = Math.random(); this.gazeTo = r < .4 ? [dir * .8, rand(-.2, .3)] : r < .55 ? [0, 0] : [rand(-1, 1), rand(-.7, .7)]; }
+      if (t > this.nextMood) { this.nextMood = t + rand(2000, 5000); this.moodTo = [0, 0, 1, -1, 2][Math.floor(Math.random() * 5)]; }
+      this.gaze[0] += (this.gazeTo[0] - this.gaze[0]) * .22; this.gaze[1] += (this.gazeTo[1] - this.gaze[1]) * .22;
+      if (t > this.blinkAt + 150) this.blinkAt = t + rand(2200, 5500);
+      const blink = t > this.blinkAt ? Math.sin(Math.min(1, (t - this.blinkAt) / 150) * Math.PI) : 0;
+      // ---- the cloud body (drawn soft into its own layer, then blurred a little so it's fluffy)
+      lg.setTransform(1, 0, 0, 1, 0, 0); lg.clearRect(0, 0, LW, LH); lg.translate(LW / 2, LH / 2 + 30); lg.scale(sq, 1 / Math.sqrt(sq));
+      this.BLOBS.forEach(([bx, by, br], i) => { const r = br * (1 + .04 * Math.sin(t / 700 + i * 1.7)) * 1.25; lg.drawImage(Smoke.shade, bx - r, by + 14 - r, r * 2, r * 2); });   // underside shade
+      this.BLOBS.forEach(([bx, by, br], i) => { const r = br * (1 + .04 * Math.sin(t / 700 + i * 1.7)) * 1.18; lg.drawImage(i % 4 ? Smoke.light : Smoke.hi, bx - r, by - r, r * 2, r * 2); });
+      lg.globalAlpha = .12; lg.drawImage(Smoke.lime, -230, -60, 200, 160); lg.drawImage(Smoke.purple, 40, -40, 220, 170); lg.globalAlpha = 1;
+      g.globalAlpha = this.a; g.save(); g.filter = "blur(5px)"; g.drawImage(layer, x - LW / 2, y - LH / 2 - 30); g.restore();
+      // ---- the face
+      g.save(); g.translate(x, y + 10); g.scale(sq, 1 / Math.sqrt(sq)); g.filter = "blur(1.2px)";
+      const mood = (this.mood += (this.moodTo - this.mood) * .05), loud = this.open;
+      [-1, 1].forEach(d => {
+        // narrow almond eyes; they open up when it gets loud, squint in a suspicious mood
+        const ex = d * 78, ey = -28, ew = 46, eh = Math.max(2, (13 + loud * 16 + (mood > 1.5 ? 8 : 0) - (Math.abs(mood + 1) < .5 ? 6 : 0)) * (1 - blink * .92));
+        g.beginPath(); g.moveTo(ex - ew, ey); g.quadraticCurveTo(ex, ey - eh * 1.7, ex + ew, ey); g.quadraticCurveTo(ex, ey + eh * 1.3, ex - ew, ey); g.closePath();
+        g.fillStyle = "rgba(34,32,44,.88)"; g.fill();
+        if (blink < .6) { g.save(); g.clip(); const gx = ex + this.gaze[0] * 22, gy = ey + this.gaze[1] * 8;
+          const gr = g.createRadialGradient(gx, gy, 0, gx, gy, 14); gr.addColorStop(0, "rgba(245,255,225,1)"); gr.addColorStop(.5, "rgba(190,240,140,.85)"); gr.addColorStop(1, "rgba(150,90,240,0)");
+          g.fillStyle = gr; g.beginPath(); g.arc(gx, gy, 14, 0, 6.283); g.fill(); g.restore(); }
+        // brows: arch up when talking or surprised, one cocked in the "raised" mood, down and in for the squint
+        const lift = loud * 26 + (mood > 1.5 ? 18 : 0) + (Math.abs(mood - 1) < .5 && d > 0 ? 22 : 0) - (Math.abs(mood + 1) < .5 ? 8 : 0);
+        const tilt = Math.abs(mood + 1) < .5 ? d * 10 : -d * loud * 6;
+        g.strokeStyle = "rgba(60,58,72,.75)"; g.lineWidth = 11; g.lineCap = "round"; g.beginPath();
+        g.moveTo(ex - d * 44, ey - 34 - lift + tilt); g.quadraticCurveTo(ex, ey - 52 - lift * 1.1, ex + d * 44, ey - 36 - lift - tilt); g.stroke();
+      });
+      // mouth: a little smirk when quiet; opens big (wide for "ee", round for "oo"), with a tongue when it's really going
+      const mo = this.open, my = 58, rx = 34 + this.wide * 36 + mo * 10, ry = 4 + mo * 52;
+      if (mo < .06) { g.strokeStyle = "rgba(40,38,50,.8)"; g.lineWidth = 8; g.beginPath(); g.moveTo(-34, my - 2); g.quadraticCurveTo(0, my + 12 + mood * 3, 36, my - 6); g.stroke(); }
+      else { g.fillStyle = "rgba(30,26,38,.92)"; g.beginPath(); g.ellipse(0, my, rx, ry, 0, 0, 6.283); g.fill();
+        if (mo > .35) { g.save(); g.beginPath(); g.ellipse(0, my, rx, ry, 0, 0, 6.283); g.clip(); g.fillStyle = "#e0607a"; g.beginPath(); g.ellipse(0, my + ry * .75, rx * .6, ry * .45, 0, 0, 6.283); g.fill(); g.restore(); } }
+      g.restore();
+      // ---- the comical part: smoke pours out when it talks. A jet out of the mouth, and puffs bursting from all over the cloud
+      if (this.on && mo > .1) {
+        const fwd = dir || (this.gaze[0] >= 0 ? 1 : -1), n = Math.floor(mo * 22 + Math.random() * 3);
+        for (let i = 0; i < n && this.puffs.length < 900; i++) {
+          if (Math.random() < .55) { const sp = 8 + mo * 30, a = (fwd > 0 ? 0 : Math.PI) + rand(-.5, .5) + .25;      // out of the mouth
+            this.puffs.push({ x: x + rand(-20, 20) * sq, y: y + 10 + my, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp * .6, r: rand(30, 70) * (.7 + mo), born: t, life: rand(1600, 3000) }); }
+          else { const a = rand(0, 6.283), sp = rand(3, 9) * (.5 + mo);                                                 // bursting off every side
+            this.puffs.push({ x: x + Math.cos(a) * 200, y: y + Math.sin(a) * 110, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - 1, r: rand(30, 70) * (.6 + mo), born: t, life: rand(1600, 3000) }); }
+        }
+      }
+      for (let i = this.puffs.length - 1; i >= 0; i--) {
+        const p = this.puffs[i], k = (t - p.born) / p.life; if (k >= 1) { this.puffs.splice(i, 1); continue; }
+        p.x += p.vx * dt / 16; p.y += p.vy * dt / 16; p.vx *= .965; p.vy = p.vy * .965 - .05;
+        const r = p.r * (1 + k * 1.8); g.globalAlpha = .7 * (1 - k) * Math.min(1, k * 8); g.drawImage(i % 3 ? Smoke.light : Smoke.hi, p.x - r, p.y - r, r * 2, r * 2);
+      }
+      g.globalAlpha = 1;
+      if (this.a > .01 || this.puffs.length || this.on) requestAnimationFrame(frame); else { g.clearRect(0, 0, W, H); this.run = false; }
+    };
+    requestAnimationFrame(frame);
   }
 };
 
@@ -4438,7 +4476,7 @@ window.KZRelay = function (topic, onMessage, servers) {
 (() => {
   const qs = new URLSearchParams(location.search), key = qs.get("ctl");
   if (!key || !window.WebSocket) return;
-  const PAGE = "html3", VERSION = "c6aa4fd";
+  const PAGE = "html3", VERSION = "9c15940";
   let said = false;
   const relay = KZRelay("kzctl/" + key, c => {
     if (!c || c.from === "overlay" || (c.to && c.to !== "all" && c.to !== PAGE)) return;
