@@ -2865,7 +2865,7 @@ const ChefArt = {
   use(name, a) { const img = new Image(); img.onload = () => { this.sprites[name] = Object.assign({ img }, a); if (name === "tower" && Lurk.up) Lurk.paint(); }; img.src = a.url; },
   async load() {
     try { const db = await this.open();
-      ["sm_hat", "sm_face", "sm_nose", "sm_arm", "sm_ball", "sm_ball_melt", "sm_puddle", "cf_ref", "cf_x_talk", "cf_x_wide", "cf_x_look_l", "cf_x_look_r", "cf_x_smile", "cf_x_grin", "cf_x_oo", "cf_x_blink", "cf_v_smile_talk", "cf_v_smile_l", "cf_v_smile_r", "cf_v_grin_talk", "cf_v_grin_l", "cf_v_grin_r", "cf_v_oo_talk", "cf_v_oo_l", "cf_v_oo_r", "cf_v_closed_talk", "cf_e_smirk", "cf_v_smirk_talk", "cf_v_smirk_l", "cf_v_smirk_r", "cf_e_wink", "cf_v_wink_talk", "cf_e_laugh", "cf_v_laugh_talk", "cf_e_shocked", "cf_v_shocked_talk", "cf_v_shocked_l", "cf_v_shocked_r", "cf_e_sleepy", "cf_v_sleepy_talk", "cf_v_sleepy_l", "cf_v_sleepy_r", "cf_e_sideeye", "cf_v_sideeye_talk", "cf_v_sideeye_l", "cf_v_sideeye_r", "cf_e_sad", "cf_v_sad_talk", "cf_v_sad_l", "cf_v_sad_r", "cf_e_tongue", "cf_v_tongue_talk", "cf_v_tongue_l", "cf_v_tongue_r", "cf_e_puffed", "cf_v_puffed_talk", "cf_v_puffed_l", "cf_v_puffed_r", "cf_e_determined", "cf_v_determined_talk", "cf_v_determined_l", "cf_v_determined_r", "cf_e_evil", "cf_v_evil_talk", "cf_v_evil_l", "cf_v_evil_r", "cf_e_smug", "cf_v_smug_talk", "cf_v_smug_l", "cf_v_smug_r", "cf_e_confused", "cf_v_confused_talk", "cf_v_confused_l", "cf_v_confused_r", "cf_e_disgusted", "cf_v_disgusted_talk", "cf_v_disgusted_l", "cf_v_disgusted_r", "cf_e_nervous", "cf_v_nervous_talk", "cf_v_nervous_l", "cf_v_nervous_r", "cf_e_kissy", "cf_v_kissy_talk", "cf_v_kissy_l", "cf_v_kissy_r", "cf_e_bored", "cf_v_bored_talk", "cf_v_bored_l", "cf_v_bored_r", "cf_e_excited", "cf_v_excited_talk", "cf_v_excited_l", "cf_v_excited_r", "cf_e_thinking", "cf_v_thinking_talk", "cf_v_thinking_l", "cf_v_thinking_r", "cf_e_scared", "cf_v_scared_talk", "cf_v_scared_l", "cf_v_scared_r", "jinx_flip", "jinx_spin", "jinx_fire", "jinx_launch", "artillery", "golden_banana", "golden_mango", "tower", "eagle_roll", "tank_drive", "soldier_run", "soldier_throw", "grenade", "explosion", "eagle_glide", "eagle_flap", "plane", "title", "chef_parachute", "chef_chop", "chef_jump", "chef_fly", "chef_truck"].forEach(n => { const r = db.transaction("a").objectStore("a").get(n); r.onsuccess = () => { if (r.result) this.use(n, r.result); }; });
+      ["sm_hat", "sm_face", "sm_nose", "sm_arm", "sm_ball", "sm_ball_melt", "sm_puddle", "cf_ref", "cf_x_talk", "cf_x_wide", "cf_x_look_l", "cf_x_look_r", "cf_x_smile", "cf_x_grin", "cf_x_oo", "cf_x_blink", "cf_v_smile_talk", "cf_v_smile_l", "cf_v_smile_r", "cf_v_grin_talk", "cf_v_grin_l", "cf_v_grin_r", "cf_v_oo_talk", "cf_v_oo_l", "cf_v_oo_r", "cf_v_closed_talk", "cf_e_smirk", "cf_v_smirk_talk", "cf_v_smirk_l", "cf_v_smirk_r", "cf_e_wink", "cf_v_wink_talk", "cf_e_laugh", "cf_v_laugh_talk", "cf_e_shocked", "cf_v_shocked_talk", "cf_v_shocked_l", "cf_v_shocked_r", "cf_e_sleepy", "cf_v_sleepy_talk", "cf_v_sleepy_l", "cf_v_sleepy_r", "cf_e_sideeye", "cf_v_sideeye_talk", "cf_v_sideeye_l", "cf_v_sideeye_r", "cf_e_sad", "cf_v_sad_talk", "cf_v_sad_l", "cf_v_sad_r", "cf_e_tongue", "cf_v_tongue_talk", "cf_v_tongue_l", "cf_v_tongue_r", "cf_e_puffed", "cf_v_puffed_talk", "cf_v_puffed_l", "cf_v_puffed_r", "cf_e_determined", "cf_v_determined_talk", "cf_v_determined_l", "cf_v_determined_r", "cf_e_evil", "cf_v_evil_talk", "cf_v_evil_l", "cf_v_evil_r", "cf_e_smug", "cf_v_smug_talk", "cf_v_smug_l", "cf_v_smug_r", "cf_e_confused", "cf_v_confused_talk", "cf_v_confused_l", "cf_v_confused_r", "cf_e_disgusted", "cf_v_disgusted_talk", "cf_v_disgusted_l", "cf_v_disgusted_r", "cf_e_nervous", "cf_v_nervous_talk", "cf_v_nervous_l", "cf_v_nervous_r", "cf_e_kissy", "cf_v_kissy_talk", "cf_v_kissy_l", "cf_v_kissy_r", "cf_e_bored", "cf_v_bored_talk", "cf_v_bored_l", "cf_v_bored_r", "cf_e_excited", "cf_v_excited_talk", "cf_v_excited_l", "cf_v_excited_r", "cf_e_thinking", "cf_v_thinking_talk", "cf_v_thinking_l", "cf_v_thinking_r", "cf_e_scared", "cf_v_scared_talk", "cf_v_scared_l", "cf_v_scared_r", "jinx_flip", "jinx_spin", "jinx_fire", "jinx_launch", "artillery", "golden_banana", "golden_mango", "tower", "eagle_roll", "tank_drive", "soldier_run", "soldier_throw", "grenade", "explosion", "eagle_glide", "eagle_flap", "plane", "title", "chef_parachute", "chef_chop", "chef_jump", "chef_fly", "chef_truck", "cf_x_look_d", "cf_v_smile_d", "cf_v_grin_d", "cf_v_oo_d", "cf_v_smirk_d", "cf_v_shocked_d", "cf_v_sleepy_d", "cf_v_sideeye_d", "cf_v_sad_d", "cf_v_tongue_d", "cf_v_puffed_d", "cf_v_determined_d", "cf_v_evil_d", "cf_v_smug_d", "cf_v_confused_d", "cf_v_disgusted_d", "cf_v_nervous_d", "cf_v_kissy_d", "cf_v_bored_d", "cf_v_excited_d", "cf_v_thinking_d", "cf_v_scared_d"].forEach(n => { const r = db.transaction("a").objectStore("a").get(n); r.onsuccess = () => { if (r.result) this.use(n, r.result); }; });
     } catch (e) {}
   },
   // a piece of art arriving from the app (sent in parts)
@@ -3567,7 +3567,7 @@ const Face = {
   },
   /* the expression is picked by hand (from the app's Control screen); only the eyes looking around and the mouth
      moving when you talk happen on their own */
-  EXPR: {"neutral": {"base": "cf_ref", "talk": "cf_x_talk", "wide": "cf_x_wide", "l": "cf_x_look_l", "r": "cf_x_look_r"}, "smile": {"base": "cf_x_smile", "talk": "cf_v_smile_talk", "l": "cf_v_smile_l", "r": "cf_v_smile_r"}, "grin": {"base": "cf_x_grin", "talk": "cf_v_grin_talk", "l": "cf_v_grin_l", "r": "cf_v_grin_r"}, "oo": {"base": "cf_x_oo", "talk": "cf_v_oo_talk", "l": "cf_v_oo_l", "r": "cf_v_oo_r"}, "closed": {"base": "cf_x_blink", "talk": "cf_v_closed_talk"}, "smirk": {"base": "cf_e_smirk", "talk": "cf_v_smirk_talk", "l": "cf_v_smirk_l", "r": "cf_v_smirk_r"}, "wink": {"base": "cf_e_wink", "talk": "cf_v_wink_talk"}, "laugh": {"base": "cf_e_laugh", "talk": "cf_v_laugh_talk"}, "shocked": {"base": "cf_e_shocked", "talk": "cf_v_shocked_talk", "l": "cf_v_shocked_l", "r": "cf_v_shocked_r"}, "sleepy": {"base": "cf_e_sleepy", "talk": "cf_v_sleepy_talk", "l": "cf_v_sleepy_l", "r": "cf_v_sleepy_r"}, "sideeye": {"base": "cf_e_sideeye", "talk": "cf_v_sideeye_talk", "l": "cf_v_sideeye_l", "r": "cf_v_sideeye_r"}, "sad": {"base": "cf_e_sad", "talk": "cf_v_sad_talk", "l": "cf_v_sad_l", "r": "cf_v_sad_r"}, "tongue": {"base": "cf_e_tongue", "talk": "cf_v_tongue_talk", "l": "cf_v_tongue_l", "r": "cf_v_tongue_r"}, "puffed": {"base": "cf_e_puffed", "talk": "cf_v_puffed_talk", "l": "cf_v_puffed_l", "r": "cf_v_puffed_r"}, "determined": {"base": "cf_e_determined", "talk": "cf_v_determined_talk", "l": "cf_v_determined_l", "r": "cf_v_determined_r"}, "evil": {"base": "cf_e_evil", "talk": "cf_v_evil_talk", "l": "cf_v_evil_l", "r": "cf_v_evil_r"}, "smug": {"base": "cf_e_smug", "talk": "cf_v_smug_talk", "l": "cf_v_smug_l", "r": "cf_v_smug_r"}, "confused": {"base": "cf_e_confused", "talk": "cf_v_confused_talk", "l": "cf_v_confused_l", "r": "cf_v_confused_r"}, "disgusted": {"base": "cf_e_disgusted", "talk": "cf_v_disgusted_talk", "l": "cf_v_disgusted_l", "r": "cf_v_disgusted_r"}, "nervous": {"base": "cf_e_nervous", "talk": "cf_v_nervous_talk", "l": "cf_v_nervous_l", "r": "cf_v_nervous_r"}, "kissy": {"base": "cf_e_kissy", "talk": "cf_v_kissy_talk", "l": "cf_v_kissy_l", "r": "cf_v_kissy_r"}, "bored": {"base": "cf_e_bored", "talk": "cf_v_bored_talk", "l": "cf_v_bored_l", "r": "cf_v_bored_r"}, "excited": {"base": "cf_e_excited", "talk": "cf_v_excited_talk", "l": "cf_v_excited_l", "r": "cf_v_excited_r"}, "thinking": {"base": "cf_e_thinking", "talk": "cf_v_thinking_talk", "l": "cf_v_thinking_l", "r": "cf_v_thinking_r"}, "scared": {"base": "cf_e_scared", "talk": "cf_v_scared_talk", "l": "cf_v_scared_l", "r": "cf_v_scared_r"}},
+  EXPR: {"neutral": {"base": "cf_ref", "talk": "cf_x_talk", "wide": "cf_x_wide", "l": "cf_x_look_l", "r": "cf_x_look_r", "d": "cf_x_look_d"}, "smile": {"base": "cf_x_smile", "talk": "cf_v_smile_talk", "l": "cf_v_smile_l", "r": "cf_v_smile_r", "d": "cf_v_smile_d"}, "grin": {"base": "cf_x_grin", "talk": "cf_v_grin_talk", "l": "cf_v_grin_l", "r": "cf_v_grin_r", "d": "cf_v_grin_d"}, "oo": {"base": "cf_x_oo", "talk": "cf_v_oo_talk", "l": "cf_v_oo_l", "r": "cf_v_oo_r", "d": "cf_v_oo_d"}, "closed": {"base": "cf_x_blink", "talk": "cf_v_closed_talk"}, "smirk": {"base": "cf_e_smirk", "talk": "cf_v_smirk_talk", "l": "cf_v_smirk_l", "r": "cf_v_smirk_r", "d": "cf_v_smirk_d"}, "wink": {"base": "cf_e_wink", "talk": "cf_v_wink_talk"}, "laugh": {"base": "cf_e_laugh", "talk": "cf_v_laugh_talk"}, "shocked": {"base": "cf_e_shocked", "talk": "cf_v_shocked_talk", "l": "cf_v_shocked_l", "r": "cf_v_shocked_r", "d": "cf_v_shocked_d"}, "sleepy": {"base": "cf_e_sleepy", "talk": "cf_v_sleepy_talk", "l": "cf_v_sleepy_l", "r": "cf_v_sleepy_r", "d": "cf_v_sleepy_d"}, "sideeye": {"base": "cf_e_sideeye", "talk": "cf_v_sideeye_talk", "l": "cf_v_sideeye_l", "r": "cf_v_sideeye_r", "d": "cf_v_sideeye_d"}, "sad": {"base": "cf_e_sad", "talk": "cf_v_sad_talk", "l": "cf_v_sad_l", "r": "cf_v_sad_r", "d": "cf_v_sad_d"}, "tongue": {"base": "cf_e_tongue", "talk": "cf_v_tongue_talk", "l": "cf_v_tongue_l", "r": "cf_v_tongue_r", "d": "cf_v_tongue_d"}, "puffed": {"base": "cf_e_puffed", "talk": "cf_v_puffed_talk", "l": "cf_v_puffed_l", "r": "cf_v_puffed_r", "d": "cf_v_puffed_d"}, "determined": {"base": "cf_e_determined", "talk": "cf_v_determined_talk", "l": "cf_v_determined_l", "r": "cf_v_determined_r", "d": "cf_v_determined_d"}, "evil": {"base": "cf_e_evil", "talk": "cf_v_evil_talk", "l": "cf_v_evil_l", "r": "cf_v_evil_r", "d": "cf_v_evil_d"}, "smug": {"base": "cf_e_smug", "talk": "cf_v_smug_talk", "l": "cf_v_smug_l", "r": "cf_v_smug_r", "d": "cf_v_smug_d"}, "confused": {"base": "cf_e_confused", "talk": "cf_v_confused_talk", "l": "cf_v_confused_l", "r": "cf_v_confused_r", "d": "cf_v_confused_d"}, "disgusted": {"base": "cf_e_disgusted", "talk": "cf_v_disgusted_talk", "l": "cf_v_disgusted_l", "r": "cf_v_disgusted_r", "d": "cf_v_disgusted_d"}, "nervous": {"base": "cf_e_nervous", "talk": "cf_v_nervous_talk", "l": "cf_v_nervous_l", "r": "cf_v_nervous_r", "d": "cf_v_nervous_d"}, "kissy": {"base": "cf_e_kissy", "talk": "cf_v_kissy_talk", "l": "cf_v_kissy_l", "r": "cf_v_kissy_r", "d": "cf_v_kissy_d"}, "bored": {"base": "cf_e_bored", "talk": "cf_v_bored_talk", "l": "cf_v_bored_l", "r": "cf_v_bored_r", "d": "cf_v_bored_d"}, "excited": {"base": "cf_e_excited", "talk": "cf_v_excited_talk", "l": "cf_v_excited_l", "r": "cf_v_excited_r", "d": "cf_v_excited_d"}, "thinking": {"base": "cf_e_thinking", "talk": "cf_v_thinking_talk", "l": "cf_v_thinking_l", "r": "cf_v_thinking_r", "d": "cf_v_thinking_d"}, "scared": {"base": "cf_e_scared", "talk": "cf_v_scared_talk", "l": "cf_v_scared_l", "r": "cf_v_scared_r", "d": "cf_v_scared_d"}},
   mood: (() => { try { return localStorage.getItem("kz_face_mood") || "neutral"; } catch { return "neutral"; } })(),
   neutralTalk: (() => { try { return localStorage.getItem("kz_face_ntalk") || "cf_x_talk"; } catch { return "cf_x_talk"; } })(),
   setNeutralTalk(n) { if (!/^cf_/.test(n || "")) return; this.neutralTalk = n; try { localStorage.setItem("kz_face_ntalk", n); } catch {} },
@@ -3583,7 +3583,7 @@ const Face = {
   chatSnow(name, color) { if (!this.on || this.snowQ.length >= 4) return; this.snowQ.push({ name, color: color || "#ffffff" }); },
   chatRain() { if (!this.on) return; this.rainTill = Math.max(this.rainTill, performance.now() + rand(5000, 15000)); },
   /* a sound spike on the video capture device: the eyes look toward the middle of the screen for a while */
-  attendUntil: 0, centerDir: 0,
+  attendUntil: 0, lookTo: [0, 0],
   attend() { const now = performance.now(); if (now < this.attendUntil - 1500) return; this.attendUntil = now + rand(4000, 7000); },
   /* the cloud made in the Art screen: for each expression (picked by hand) a whole cloud-face picture, plus its own
      talking picture and looking-left/right pictures. The eyes pick the looking picture, and the talking picture fades
@@ -3594,8 +3594,8 @@ const Face = {
     const E = this.E, has = n => n && !!AS[n], X = this.EXPR[this.mood] || this.EXPR.neutral, N = this.EXPR.neutral;
     const base = has(X.base) ? X.base : "cf_ref";
     let eyes = base;
-    if (base === X.base) { if (E.lx < -.45 && has(X.l)) eyes = X.l; else if (E.lx > .45 && has(X.r)) eyes = X.r; }
-    else if (E.lx < -.45 && has(N.l)) eyes = N.l; else if (E.lx > .45 && has(N.r)) eyes = N.r;
+    const L = base === X.base ? X : N;                                     // looking pictures of this expression (or the neutral ones)
+    if (E.ly > .45 && has(L.d)) eyes = L.d; else if (E.lx < -.45 && has(L.l)) eyes = L.l; else if (E.lx > .45 && has(L.r)) eyes = L.r;
     const nTalk = has(this.neutralTalk) ? this.neutralTalk : N.talk;      // the neutral face's talking picture is picked in the app
     const talk = X === N || base !== X.base ? (has(nTalk) ? nTalk : null) : has(X.talk) ? X.talk : null;
     if (eyes !== this.xNow) { this.xPrev = this.xNow; this.xNow = eyes; this.xAt = t; }
@@ -3617,7 +3617,7 @@ const Face = {
     // no camera tracking: the mouth follows your voice, and the eyes look straight ahead, except right after a sudden
     // loud sound on Video Capture Device 2, when they look toward the middle of the screen for a while
     const E = this.E, k = .35, att = performance.now() < this.attendUntil;
-    const want = { jaw: lv, smile: 0, frown: 0, browUp: lv * .5, bdL: 0, bdR: 0, bouL: 0, bouR: 0, blinkL: 0, blinkR: 0, squint: 0, wide: lv * .3, lx: att ? this.centerDir : 0, ly: 0, pucker: 0 };
+    const want = { jaw: lv, smile: 0, frown: 0, browUp: lv * .5, bdL: 0, bdR: 0, bouL: 0, bouR: 0, blinkL: 0, blinkR: 0, squint: 0, wide: lv * .3, lx: att ? this.lookTo[0] : 0, ly: att ? this.lookTo[1] : 0, pucker: 0 };
     if (!ChefArt.sprites.cf_ref) { const b = this.autoBlink(t); want.blinkL = want.blinkR = b; }     // the drawn stand-in face still blinks
     for (const key in E) E[key] += ((want[key] || 0) - E[key]) * (key.startsWith("blink") ? .6 : k);
     return { cam: false, present: false };
@@ -3649,7 +3649,7 @@ const Face = {
       // ---- snow: when someone types !snow the cloud drops what it's doing and heads straight for a random free spot
       // along the top (up its edge first if it's at the bottom); once it's there it starts snowing
       if (this.snowQ.length && !snowing && snowTo === null) {
-        const free = sx => this.snowmen.every(m => Math.abs(m.x - sx) > 340);
+        const free = sx => this.snowmen.every(m => Math.abs(m.x - sx) > 220);
         let tx = null; for (let i = 0; i < 80 && tx === null; i++) { const c = rand(280, W - 280); if (free(c)) tx = c; }
         if (tx !== null) { snowTo = tx; route = py > H / 2 ? [[px, rand(...TOP)], [tx, rand(...TOP)]] : [[tx, rand(...TOP)]]; moveAt = 0; hoverUntil = t; }
       }
@@ -3678,7 +3678,9 @@ const Face = {
         if (k >= 1) { hoverUntil = t + (route.length ? (snowTo !== null ? 60 : 250) : wasLow ? rand(4000, 8000) : rand(4000, 11000)); moveAt = 0; } }
       const dir = moving ? Math.sign(toX - fromX) : 0;
       this.pos = [px, py];
-      this.centerDir = Math.abs(1280 - px) < 220 ? 0 : Math.sign(1280 - px);   // which way the middle of the screen is
+      // where "toward the middle of the screen" is from here: from the left or right part of the screen, sideways;
+      // from the top middle, down; from the bottom, straight ahead
+      { const side = px < W * .25 ? 1 : px > W * .75 ? -1 : 0; this.lookTo = py > H / 2 ? [0, 0] : side ? [side, 0] : [0, 1]; }
       const sq = 1 + E.jaw * .12, x = px + Math.sin(t / 2300) * 18, y = py + Math.sin(t / 900) * 12 + Math.sin(t / 2700) * 9;
       // ---- snowflakes falling from the cloud, and the snowmen at the bottom
       // each flake has its own size (bigger ones are "closer": brighter and a bit faster), its own gentle sway, and the
@@ -3821,7 +3823,8 @@ const Snowman = {
   back: k => { k = Math.max(0, Math.min(1, k)); const c = 1.7; return 1 + (c + 1) * Math.pow(k - 1, 3) + c * Math.pow(k - 1, 2); },
   cl: k => Math.max(0, Math.min(1, k)),
   // how high the snow is at x (where the flakes land)
-  surface(m, x, t, H) { const T = t - m.at, h = 170 * this.e(T / this.PILE), d = Math.abs(x - m.x) / 160; return H - 6 - (d < 1 ? h * Math.cos(d * Math.PI / 2) : 0); },
+  SC: .5,                                               // overall size of the snowman
+  surface(m, x, t, H) { const T = t - m.at, h = 170 * this.SC * this.e(T / this.PILE), d = Math.abs(x - m.x) / (160 * this.SC); return H - 6 - (d < 1 ? h * Math.cos(d * Math.PI / 2) : 0); },
   pop(A, at) { const k = (A - at) / 350; return k <= 0 ? 0 : k >= 1 ? 1 : this.back(k); },
   // a picture centred on the current origin
   pic(g, sp, w, flip) { const h = w * sp.h / sp.w; g.save(); if (flip) g.scale(-1, 1); g.drawImage(sp.img, 0, 0, sp.w, sp.h, -w / 2, -h / 2, w, h); g.restore(); return h; },
@@ -3864,7 +3867,7 @@ const Snowman = {
     const X = m.x, G = H - 6, M = T > END ? T - END : -1;           // M: how far into melting (ms), -1 while it stands
     if (m.dir === undefined) { m.dir = Math.random() < .5 ? -1 : 1; m.hatDir = Math.random() < .5 ? -1 : 1; }
     const dh = m.dir, all = M < 0 ? 1 : 1 - this.cl((M - this.MELT + 3500) / 3500);   // everything fades at the very end
-    g.save(); g.globalAlpha = all;
+    g.save(); g.globalAlpha = all; g.translate(X, G); g.scale(this.SC, this.SC); g.translate(-X, -G);   // drawn at full size, shrunk around its base
     // the mound of snow, which shrinks away as the snowballs grow out of it
     const k = this.cl((T - this.PILE) / (this.FORMED - this.PILE));
     const ph = 170 * this.e(T / this.PILE) * (1 - k * .85);
@@ -3919,7 +3922,7 @@ const Snowman = {
       const rot = m.hatDir * 1.75 * this.e(kHat);
       g.save(); g.translate(x, y); g.rotate(rot); const hh = this.hat(g, S, sh);
       const sname = M < 0 ? this.cl((A - 2100) / 400) : 1 - this.cl(M / 900);
-      if (sname > 0) { const fs = Math.max(26, Math.min(44, 520 / Math.max(6, m.name.length))), ny = -hh / 2 - 8 - (1 - sname) * 12;
+      if (sname > 0) { const fs = Math.max(26, Math.min(44, 520 / Math.max(6, m.name.length))) * 1.5, ny = -hh / 2 - 8 - (1 - sname) * 12;
         g.save(); g.globalAlpha *= sname; g.font = `900 ${fs}px ${FONT}`; g.textAlign = "center"; g.textBaseline = "bottom";
         g.lineWidth = 7; g.strokeStyle = "rgba(10,8,20,.85)"; g.strokeText(m.name, 0, ny);
         g.shadowColor = m.color; g.shadowBlur = 14; g.fillStyle = m.color; g.fillText(m.name, 0, ny); g.restore(); }
@@ -4786,7 +4789,7 @@ window.KZRelay = function (topic, onMessage, servers) {
 (() => {
   const qs = new URLSearchParams(location.search), key = qs.get("ctl");
   if (!key || !window.WebSocket) return;
-  const PAGE = "html3", VERSION = "8c34a06";
+  const PAGE = "html3", VERSION = "350e3c7";
   let said = false;
   const relay = KZRelay("kzctl/" + key, c => {
     if (!c || c.from === "overlay" || (c.to && c.to !== "all" && c.to !== PAGE)) return;
