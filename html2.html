@@ -731,20 +731,20 @@ window.KZRelay = function (topic, onMessage, servers) {
 (() => {
   const qs = new URLSearchParams(location.search), key = qs.get("ctl");
   if (!key || !window.WebSocket) return;
-  const PAGE = "html2", VERSION = "537ffcd";
+  const PAGE = "html2", VERSION = "21a3117";
   let said = false;
   const relay = KZRelay("kzctl/" + key, c => {
     if (!c || c.from === "overlay" || (c.to && c.to !== "all" && c.to !== PAGE)) return;
     if (c.t && Date.now() - c.t > 60000) return;                     // ignore anything stale
     const ack = () => relay.send({ from: "overlay", page: PAGE, version: VERSION, cmd: "ack", ack: c._id });
-    if (c.cmd === "ping") relay.send({ from: "overlay", page: PAGE, version: VERSION, cmd: "hello" });
+    if (c.cmd === "ping") relay.send({ from: "overlay", page: PAGE, version: VERSION, cmd: "hello", tw: window.twitchStatus || null });
     else if (c.cmd === "reload") {                                  // load the newest version (a fresh address skips any cached copy)
       ack(); setTimeout(() => { const u = new URL(location.href); u.searchParams.set("_v", Date.now()); location.replace(u.toString()); }, 300);
     } else if (typeof window.onRemote === "function") { try { window.onRemote(c); ack(); } catch (x) { console.error(x); } }
   });
   // lets the page answer the app itself (e.g. "the art arrived and is saved")
   window.remoteSend = o => relay.send(Object.assign({ from: "overlay", page: PAGE, version: VERSION }, o));
-  relay.onUp = () => { if (!said) { said = true; relay.send({ from: "overlay", page: PAGE, version: VERSION, cmd: "hello" }); } };
+  relay.onUp = () => { if (!said) { said = true; relay.send({ from: "overlay", page: PAGE, version: VERSION, cmd: "hello", tw: window.twitchStatus || null }); } };
 })();
 </script>
 </body>

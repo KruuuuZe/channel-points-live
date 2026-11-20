@@ -3336,6 +3336,9 @@ const Kazul = {
 const Personal = {
   REWARD: /^\s*play my effect/i,
   redeem(ev) {
+    this.last = (ev.user_name || ev.user_login) + ": " + ((ev.reward && ev.reward.title) || "?");
+    window.twitchStatus = Object.assign(window.twitchStatus || {}, { lastRedeem: this.last });
+    if (window.remoteSend) window.remoteSend({ cmd: "hello", tw: window.twitchStatus });
     const title = (ev.reward && ev.reward.title) || "";
     if (!this.REWARD.test(title)) return;
     const k = (ev.user_login || "").toLowerCase();
@@ -3684,15 +3687,17 @@ const Live = {
       try {
         const r = await this.helix("eventsub/subscriptions", { method: "POST",
           body: JSON.stringify({ type, version, condition, transport: { method: "websocket", session_id: sessionId } }) });
+        if (type.includes("redemption") && (r.ok || r.status === 409)) window.twitchStatus = Object.assign(window.twitchStatus || {}, { redeem: "ok" });
         if (!r.ok && r.status !== 409) {
           let msg = ""; try { msg = (await r.json()).message || ""; } catch (x) {}
           if (r.status === 429 || /maximum subscriptions/i.test(msg)) full.push(sub);
-          else if (type.includes("redemption")) toast("To play effects from the “Play my Effect” channel point reward, this overlay needs one more Twitch permission: open overlay.html, go to the Connect tab, log in again and approve, then put the new token in your OBS links (the app's Control screen makes them).", true, 30000);
+          else if (type.includes("redemption")) { window.twitchStatus = Object.assign(window.twitchStatus || {}, { redeem: "Twitch says: " + (msg || r.status) }); toast("To play effects from the “Play my Effect” channel point reward, this overlay needs one more Twitch permission: open overlay.html, go to the Connect tab, log in again and approve, then put the new token in your OBS links (the app's Control screen makes them).", true, 30000); }
           else { failed.push(type.replace("channel.", "")); if (!why) why = msg; }
         }
       } catch (e) { failed.push(type.replace("channel.", "")); }
     }
     if (sessionId !== this.sid) return;                                  // a newer connection took over
+    if (window.remoteSend) window.remoteSend({ cmd: "hello", tw: window.twitchStatus || null });   // tell the app what we're listening for
     if (full.length) {
       if (!retry) await this.cleanStale();
       this.retryT = setTimeout(() => this.subscribe(sessionId, full), 30000);
@@ -4051,20 +4056,20 @@ window.KZRelay = function (topic, onMessage, servers) {
 (() => {
   const qs = new URLSearchParams(location.search), key = qs.get("ctl");
   if (!key || !window.WebSocket) return;
-  const PAGE = "html3", VERSION = "537ffcd";
+  const PAGE = "html3", VERSION = "21a3117";
   let said = false;
   const relay = KZRelay("kzctl/" + key, c => {
     if (!c || c.from === "overlay" || (c.to && c.to !== "all" && c.to !== PAGE)) return;
     if (c.t && Date.now() - c.t > 60000) return;                     // ignore anything stale
     const ack = () => relay.send({ from: "overlay", page: PAGE, version: VERSION, cmd: "ack", ack: c._id });
-    if (c.cmd === "ping") relay.send({ from: "overlay", page: PAGE, version: VERSION, cmd: "hello" });
+    if (c.cmd === "ping") relay.send({ from: "overlay", page: PAGE, version: VERSION, cmd: "hello", tw: window.twitchStatus || null });
     else if (c.cmd === "reload") {                                  // load the newest version (a fresh address skips any cached copy)
       ack(); setTimeout(() => { const u = new URL(location.href); u.searchParams.set("_v", Date.now()); location.replace(u.toString()); }, 300);
     } else if (typeof window.onRemote === "function") { try { window.onRemote(c); ack(); } catch (x) { console.error(x); } }
   });
   // lets the page answer the app itself (e.g. "the art arrived and is saved")
   window.remoteSend = o => relay.send(Object.assign({ from: "overlay", page: PAGE, version: VERSION }, o));
-  relay.onUp = () => { if (!said) { said = true; relay.send({ from: "overlay", page: PAGE, version: VERSION, cmd: "hello" }); } };
+  relay.onUp = () => { if (!said) { said = true; relay.send({ from: "overlay", page: PAGE, version: VERSION, cmd: "hello", tw: window.twitchStatus || null }); } };
 })();
 </script>
 </body>
