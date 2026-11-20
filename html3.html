@@ -234,7 +234,7 @@ body.fit #stage{background:radial-gradient(1200px 700px at 30% 20%,#1a103322,tra
 #testbar button{font-weight:800}
 #testbar .b-sub{background:#6d28d9;border-color:transparent} #testbar .b-gift{background:#db2777;border-color:transparent} #testbar .b-fol{background:#4d8a1f;border-color:transparent}
 #testbar .b-bit{background:#7c3aed;border-color:transparent} #testbar .b-str{background:#c2410c;border-color:transparent}
-#testbar .b-raid{background:#0e7490;border-color:transparent} #testbar .b-kaz{background:linear-gradient(135deg,#4d5233,#b45309);border-color:transparent} #testbar .b-tank{background:linear-gradient(135deg,#7f1d1d,#475569);border-color:transparent} #testbar .b-chef{background:linear-gradient(135deg,#db2777,#38bdf8);border-color:transparent} #testbar .b-eagle{background:linear-gradient(135deg,#3b2a1a,#d97706);border-color:transparent} #testbar .b-fish{background:linear-gradient(135deg,#15803d,#0ea5e9);border-color:transparent} #testbar .b-penguin{background:linear-gradient(135deg,#0f172a,#38bdf8);border-color:transparent} #testbar .b-turkey{background:linear-gradient(135deg,#7c2d12,#ea580c);border-color:transparent} #testbar .b-banana{background:linear-gradient(135deg,#15803d,#facc15);border-color:transparent;color:#1a1400} #testbar .b-mango{background:linear-gradient(135deg,#15803d,#f59e0b);border-color:transparent} #testbar .b-bolt{background:linear-gradient(135deg,#65a30d,#7c3aed);border-color:transparent} #testbar .b-scrap{background:#7c4a1e;border-color:#e2b26b88}
+#testbar .b-raid{background:#0e7490;border-color:transparent} #testbar .b-jinx{background:linear-gradient(135deg,#3b82f6,#a855f7 55%,#f97316);border-color:transparent} #testbar .b-kaz{background:linear-gradient(135deg,#4d5233,#b45309);border-color:transparent} #testbar .b-tank{background:linear-gradient(135deg,#7f1d1d,#475569);border-color:transparent} #testbar .b-chef{background:linear-gradient(135deg,#db2777,#38bdf8);border-color:transparent} #testbar .b-eagle{background:linear-gradient(135deg,#3b2a1a,#d97706);border-color:transparent} #testbar .b-fish{background:linear-gradient(135deg,#15803d,#0ea5e9);border-color:transparent} #testbar .b-penguin{background:linear-gradient(135deg,#0f172a,#38bdf8);border-color:transparent} #testbar .b-turkey{background:linear-gradient(135deg,#7c2d12,#ea580c);border-color:transparent} #testbar .b-banana{background:linear-gradient(135deg,#15803d,#facc15);border-color:transparent;color:#1a1400} #testbar .b-mango{background:linear-gradient(135deg,#15803d,#f59e0b);border-color:transparent} #testbar .b-bolt{background:linear-gradient(135deg,#65a30d,#7c3aed);border-color:transparent} #testbar .b-scrap{background:#7c4a1e;border-color:#e2b26b88}
 #testbar .b-lurk{background:#334155;border-color:#a3e63588} #testbar .b-chat{background:#1f2937}
 
 /* sound slots: a + next to each test button to give that alert its own sound file */
@@ -332,6 +332,8 @@ body.fit #stage{background:radial-gradient(1200px 700px at 30% 20%,#1a103322,tra
 
 /* ---------- ATT3NCHUN: drawn on its own canvas with the real fish artwork ---------- */
 #fishcv{position:absolute;inset:0;width:2560px;height:1440px;pointer-events:none;z-index:6}
+/* ---------- PartisanHeroJINX: flips, a tornado spin, and his name written in flamethrower fire ---------- */
+#jinxcv{position:absolute;inset:0;width:2560px;height:1440px;pointer-events:none;z-index:7}
 /* ---------- Kazul123: artillery from every side ---------- */
 #kazcv{position:absolute;inset:0;width:2560px;height:1440px;pointer-events:none;z-index:7}
 /* ---------- Silverhand (canvas + a red shade over the whole screen) ---------- */
@@ -416,6 +418,7 @@ body.fit #stage{background:radial-gradient(1200px 700px at 30% 20%,#1a103322,tra
   <canvas id="chefcv" width="2560" height="1440"></canvas>
   <div id="redtint"></div>
   <canvas id="kazcv" width="2560" height="1440"></canvas>
+  <canvas id="jinxcv" width="2560" height="1440"></canvas>
   <canvas id="tankcv" width="2560" height="1440"></canvas>
   <div id="pane"></div>
   <canvas id="holes" width="2560" height="1440"></canvas>
@@ -534,6 +537,7 @@ body.fit #stage{background:radial-gradient(1200px 700px at 30% 20%,#1a103322,tra
   <button class="b-chef" data-t="chef">👨‍🍳 anime_chef</button><button class="snd" data-snd="anime_chef" title="Add a sound for this effect">🔊+</button>
   <button class="b-tank" data-t="tank">💥 Silverhand</button><button class="snd" data-snd="tank" title="Add a sound for this effect">🔊+</button>
   <button class="b-kaz" data-t="kazul">💣 Kazul123</button><button class="snd" data-snd="kazul" title="Add a sound for this effect">🔊+</button>
+  <button class="b-jinx" data-t="jinx">🔥 JINX</button><button class="snd" data-snd="jinx" title="Add a sound for this effect">🔊+</button>
   <button class="b-chat" data-t="chat">Chat</button><button class="snd" data-snd="chat" title="Add a sound for this alert">🔊+</button>
 </div>
 
@@ -2836,7 +2840,7 @@ const ChefArt = {
   use(name, a) { const img = new Image(); img.onload = () => { this.sprites[name] = Object.assign({ img }, a); if (name === "tower" && Lurk.up) Lurk.paint(); }; img.src = a.url; },
   async load() {
     try { const db = await this.open();
-      ["artillery", "golden_banana", "tower", "eagle_roll", "tank_drive", "soldier_run", "soldier_throw", "grenade", "explosion", "eagle_glide", "eagle_flap", "plane", "title", "chef_parachute", "chef_chop", "chef_jump", "chef_fly", "chef_truck"].forEach(n => { const r = db.transaction("a").objectStore("a").get(n); r.onsuccess = () => { if (r.result) this.use(n, r.result); }; });
+      ["jinx_flip", "jinx_spin", "jinx_fire", "jinx_launch", "artillery", "golden_banana", "tower", "eagle_roll", "tank_drive", "soldier_run", "soldier_throw", "grenade", "explosion", "eagle_glide", "eagle_flap", "plane", "title", "chef_parachute", "chef_chop", "chef_jump", "chef_fly", "chef_truck"].forEach(n => { const r = db.transaction("a").objectStore("a").get(n); r.onsuccess = () => { if (r.result) this.use(n, r.result); }; });
     } catch (e) {}
   },
   // a piece of art arriving from the app (sent in parts)
@@ -3220,6 +3224,126 @@ const Tank = {
   }
 };
 
+/* ================= PartisanHeroJINX =================
+   His character backflips in from the left to the bottom-middle of the screen, jumps up into a 360 tornado spin,
+   lands, and sweeps his flamethrower across the sky so the flames write PartisanHeroJINX. The fiery name burns for
+   a moment and dies away into smoke, then he blasts straight up off the top of the screen on a jet of fire.
+   His art (flipping, spinning, firing, blasting off) is made in the app's Art screen from his picture. */
+const Jinx = {
+  busy: false, NAME: "PartisanHeroJINX", H: 330,
+  run() {
+    if (this.busy) { this.again = true; return; }
+    this.busy = true; Sound.init(); MySounds.play("jinx");
+    const cv = $("#jinxcv"), g = cv.getContext("2d"), t0 = performance.now(), W = 2560, Hs = 1440, S = ChefArt.sprites, HH = this.H;
+    g.imageSmoothingEnabled = true; g.imageSmoothingQuality = "high";
+    const GROUND = Hs - 20, CX = 1280, FLIPS = 3, FLIP = 720, IN = FLIPS * FLIP, SPIN0 = IN + 250, SPIN = 1300, FIRE0 = SPIN0 + SPIN + 300,
+          WRITE = 3200, HOLD = 1300, DIE = 1100, LAUNCH = FIRE0 + WRITE + HOLD + 300, LD = 1000, END = LAUNCH + LD + 1400;
+    const pts = textPoints(this.NAME, CX, 470, 2300, 1100, { size: 210 }).sort((a, b) => a[0] - b[0]).map(([x, y]) => ({ x, y, lit: 0, ph: rand(0, 6.28), r: rand(9, 14) }));
+    const flames = [], smoke = []; let sfx = {}, roar = null, aim = 0;
+    const once = (k, fn) => { if (!sfx[k]) { sfx[k] = 1; fn(); } };
+    const fr = (spr, t) => spr ? Math.floor(t / (spr.ms || 90)) % spr.frames : 0;
+    // draw a pose with its feet at (x, y): sprite frame, or the drawn stand-in
+    const pose = (name, f, x, y, rot = 0, flip = false, prog = 0) => {
+      const spr = S[name];
+      g.save(); g.translate(x, y - HH / 2); g.rotate(rot); if (flip) g.scale(-1, 1);
+      if (spr) { const w = HH * spr.w / spr.h; g.drawImage(spr.img, f * spr.w, 0, spr.w, spr.h, -w / 2, -HH / 2, w, HH); }
+      else this.standIn(g, name, prog);
+      g.restore();
+    };
+    const whoosh = (d = .4, v = .05) => { if (Sound.ctx) Sound.burst(Sound.ctx.currentTime, d, v, "bandpass", 500, 1800); };
+    const startRoar = () => { if (!Sound.ctx || roar) return; const c = Sound.ctx, n = c.createBufferSource(); n.buffer = Sound.noise; n.loop = true;
+      const f = c.createBiquadFilter(); f.type = "lowpass"; f.frequency.value = 900; const gn = c.createGain(); gn.gain.value = 0; gn.gain.linearRampToValueAtTime(.12, c.currentTime + .2);
+      n.connect(f).connect(gn).connect(Sound.out); n.start(); roar = { n, gn }; };
+    const stopRoar = () => { if (!roar) return; const c = Sound.ctx; roar.gn.gain.cancelScheduledValues(c.currentTime); roar.gn.gain.setValueAtTime(roar.gn.gain.value, c.currentTime); roar.gn.gain.linearRampToValueAtTime(0, c.currentTime + .3); roar.n.stop(c.currentTime + .35); roar = null; };
+    const fireCol = k => k < .33 ? [255, 245, 190] : k < .66 ? [255, 160, 40] : [230, 60, 20];
+    const flameDot = (x, y, r, a, k) => { const c = fireCol(k); const gr = g.createRadialGradient(x, y, 0, x, y, r); gr.addColorStop(0, `rgba(${c[0]},${c[1]},${c[2]},${a})`); gr.addColorStop(1, `rgba(${c[0]},${c[1]},${c[2]},0)`); g.fillStyle = gr; g.fillRect(x - r, y - r, r * 2, r * 2); };
+    const frame = now => {
+      const t = now - t0; g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, W, Hs);
+      let hx = CX, hy = GROUND;                                       // where he is (feet)
+      // ---- 1) backflips in from the left to the bottom middle
+      if (t < IN) {
+        const i = Math.floor(t / FLIP), k = (t % FLIP) / FLIP, x0 = -200 + i * ((CX + 200) / FLIPS), x1 = -200 + (i + 1) * ((CX + 200) / FLIPS);
+        hx = x0 + (x1 - x0) * k; hy = GROUND - Math.sin(k * Math.PI) * 260;
+        once("flip" + i, () => whoosh(.35, .045));
+        const spr = S.jinx_flip;
+        if (spr) pose("jinx_flip", Math.min(spr.frames - 1, Math.floor(k * spr.frames)), hx, hy);
+        else pose("jinx_flip", 0, hx, hy, -k * Math.PI * 2);          // a backflip: one full turn per hop
+      }
+      // ---- 2) a jump up into a 360 tornado spin, with a ring of fire around him
+      else if (t < FIRE0) {
+        const k = Math.max(0, Math.min(1, (t - SPIN0) / SPIN)); hy = GROUND - Math.sin(k * Math.PI) * 420;
+        if (t >= SPIN0) {
+          once("spin", () => { whoosh(1.2, .07); if (Sound.ctx) Sound.tone(Sound.ctx.currentTime, 1.2, .04, 200, 700, "triangle"); });
+          const spr = S.jinx_spin;
+          if (spr) pose("jinx_spin", Math.floor(k * spr.frames * 2) % spr.frames, hx, hy);
+          else { g.save(); g.translate(hx, hy - HH / 2); g.scale(Math.cos(k * Math.PI * 4), 1); g.translate(-hx, -(hy - HH / 2)); pose("jinx_fire", 0, hx, hy); g.restore(); }
+          if (k < 1) for (let j = 0; j < 3; j++) { const a = k * Math.PI * 8 + j * 2.1, r = 150 + 40 * Math.sin(k * 9 + j);
+            flames.push({ x: hx + Math.cos(a) * r, y: hy - HH / 2 + Math.sin(a) * r * .35 + rand(-30, 30) - (k * 120), vx: -Math.sin(a) * 3, vy: rand(-2, -.5), born: t, life: rand(350, 600), r: rand(18, 30) }); }
+        } else pose("jinx_fire", 0, hx, hy);
+      }
+      // ---- 3) the flamethrower writes his name in the sky
+      else if (t < LAUNCH) {
+        const k = Math.min(1, (t - FIRE0) / WRITE), upto = Math.floor(k * pts.length);
+        if (t < FIRE0 + WRITE) startRoar(); else stopRoar();
+        for (let i = 0; i < upto; i++) if (!pts[i].lit) pts[i].lit = t;
+        const tgt = pts[Math.min(pts.length - 1, upto)], nozzle = [hx + 40, hy - HH * .52];
+        const want = Math.atan2(tgt.y - nozzle[1], tgt.x - nozzle[0]); aim += (want - aim) * .25;
+        const flip = Math.cos(aim) < 0, rot = flip ? aim + Math.PI : aim;
+        const spr = S.jinx_fire;
+        pose("jinx_fire", fr(spr, t), hx, hy, Math.max(-1.1, Math.min(1.1, rot)) * .55, flip);
+        if (t < FIRE0 + WRITE) {        // the stream: flames from the nozzle to where it's writing
+          for (let j = 0; j < 14; j++) { const e = Math.random(), x = nozzle[0] + (tgt.x - nozzle[0]) * e + rand(-18, 18) * e, y = nozzle[1] + (tgt.y - nozzle[1]) * e + rand(-18, 18) * e - Math.sin(e * Math.PI) * 60;
+            flames.push({ x, y, vx: rand(-1, 1), vy: rand(-1.5, 0), born: t, life: rand(160, 320), r: rand(14, 28) * (.6 + e) }); }
+        }
+      } else {
+        // ---- 4) blast off straight up on a jet of fire
+        stopRoar();
+        const k = Math.min(1, (t - LAUNCH) / LD); hy = GROUND - (GROUND + HH + 200) * k * k;
+        once("launch", () => { if (Sound.ctx) { const c = Sound.ctx.currentTime; Sound.burst(c, 1.2, .2, "lowpass", 1500, 200); Sound.tone(c, 1, .08, 120, 500, "sawtooth"); } });
+        if (k < 1) {
+          const spr = S.jinx_launch; pose(spr ? "jinx_launch" : "jinx_fire", fr(spr, t), hx, hy, 0);
+          for (let j = 0; j < 6; j++) flames.push({ x: hx + rand(-20, 20), y: hy + rand(-10, 20), vx: rand(-1, 1), vy: rand(2, 6), born: t, life: rand(250, 450), r: rand(20, 36) });
+        }
+      }
+      // ---- the burning name: each spot catches fire when the stream reaches it, flickers, then dies into smoke
+      g.globalCompositeOperation = "lighter";
+      const dieAt = FIRE0 + WRITE + HOLD;
+      for (const p of pts) {
+        if (!p.lit) continue;
+        const a = t - p.lit, fade = t > dieAt ? Math.max(0, 1 - (t - dieAt) / DIE) : 1; if (fade <= 0) continue;
+        const fl = .75 + .25 * Math.sin(t / 60 + p.ph), up = t > dieAt ? (t - dieAt) * .03 : 0;
+        flameDot(p.x + Math.sin(t / 90 + p.ph) * 1.5, p.y - up - fl * 3, p.r * (a < 200 ? .5 + a / 400 : 1) * fl * 1.6, .55 * fade, (Math.sin(t / 130 + p.ph) + 1) / 2 * .7);
+        if (Math.random() < .015 * fade) flames.push({ x: p.x, y: p.y - 10, vx: rand(-.3, .3), vy: rand(-1.6, -.6), born: t, life: rand(400, 700), r: rand(6, 10) });
+        if (t > dieAt && Math.random() < .02 * fade) smoke.push({ x: p.x, y: p.y, vy: rand(-1.2, -.4), born: t, r: rand(14, 24) });
+      }
+      for (let i = flames.length - 1; i >= 0; i--) { const f = flames[i], a = t - f.born; if (a > f.life) { flames.splice(i, 1); continue; }
+        f.x += f.vx; f.y += f.vy; const k = a / f.life; flameDot(f.x, f.y, f.r * (1 - k * .4), .5 * (1 - k), k); }
+      g.globalCompositeOperation = "source-over";
+      for (let i = smoke.length - 1; i >= 0; i--) { const p = smoke[i], a = t - p.born; if (a > 1500) { smoke.splice(i, 1); continue; }
+        p.y += p.vy; g.globalAlpha = .28 * (1 - a / 1500); g.drawImage(PUFF, p.x - p.r, p.y - p.r, p.r * 2, p.r * 2); }
+      g.globalAlpha = 1;
+      if (t < END || flames.length) requestAnimationFrame(frame);
+      else { g.clearRect(0, 0, W, Hs); stopRoar(); this.busy = false; if (this.again) { this.again = false; this.run(); } }
+    };
+    requestAnimationFrame(frame);
+  },
+  /* a simple drawn stand-in until his art is made: blue skin, purple hair, helmet, olive fatigues, bat wings, flamethrower */
+  standIn(g, name, prog) {
+    const s = this.H / 330; g.scale(s, s); g.lineJoin = g.lineCap = "round"; const ink = "#14101e";
+    g.fillStyle = "#2a1f3a"; g.strokeStyle = ink; g.lineWidth = 4;
+    [-1, 1].forEach(d => { g.beginPath(); g.moveTo(0, -60); g.lineTo(d * 150, -150); g.lineTo(d * 130, -40); g.lineTo(d * 90, -70); g.lineTo(d * 60, -20); g.closePath(); g.fill(); g.stroke(); });   // wings
+    g.fillStyle = "#3f4a2c"; g.beginPath(); g.roundRect(-34, -90, 68, 110, 18); g.fill(); g.stroke();                   // fatigues
+    g.beginPath(); g.roundRect(-30, 14, 26, 120, 10); g.fill(); g.stroke(); g.beginPath(); g.roundRect(4, 14, 26, 120, 10); g.fill(); g.stroke();
+    g.fillStyle = "#3b82f6"; g.beginPath(); g.ellipse(-16, 140, 22, 10, 0, 0, 6.283); g.ellipse(18, 140, 22, 10, 0, 0, 6.283); g.fill();             // feet
+    g.beginPath(); g.arc(0, -120, 32, 0, 6.283); g.fill(); g.stroke();                                                                           // face
+    g.fillStyle = "#a855f7"; g.beginPath(); g.moveTo(-34, -118); g.lineTo(-44, -96); g.lineTo(-20, -108); g.lineTo(34, -112); g.lineTo(40, -94); g.lineTo(30, -130); g.closePath(); g.fill();
+    g.fillStyle = "#353b2a"; g.beginPath(); g.ellipse(0, -142, 40, 26, 0, Math.PI, 0); g.fill(); g.stroke(); g.fillRect(-42, -144, 84, 8);    // helmet
+    g.fillStyle = "#4b4f55"; g.beginPath(); g.roundRect(-10, -58, 120, 22, 6); g.fill(); g.stroke();                                         // flamethrower
+    g.fillStyle = "#2f3236"; g.beginPath(); g.arc(30, -32, 18, 0, 6.283); g.fill(); g.stroke();
+    g.fillStyle = "#555a52"; g.beginPath(); g.roundRect(-70, -100, 30, 80, 12); g.fill(); g.stroke();                                         // tank on his back
+  }
+};
+
 /* ================= Kazul123 =================
    Artillery guns roll in from every side of the screen (left, right, top and bottom), all aimed at the middle.
    One by one they fire, each shooting one letter of KAZUL123 into the center, where the letters slam into place.
@@ -3356,7 +3480,7 @@ const Personal = {
    - The lightning lap plays once an hour, at the top of the hour. */
 const AutoFx = {
   KEY: "autoFxDay",
-  FIRST_OF_DAY: { thenapalmer: () => Mango.run(), kapelan012: () => Banana.run(), att3nchun: () => Fishy.run(), anime_chef: () => Chef.run(), tassiethedevil: () => Tank.run(), kazul123: () => Kazul.run() },
+  FIRST_OF_DAY: { thenapalmer: () => Mango.run(), kapelan012: () => Banana.run(), att3nchun: () => Fishy.run(), anime_chef: () => Chef.run(), tassiethedevil: () => Tank.run(), kazul123: () => Kazul.run(), partisanherojinx: () => Jinx.run() },
   chat(login) {
     const k = (login || "").toLowerCase(), fx = this.FIRST_OF_DAY[k]; if (!fx) return;
     const d = new Date(), today = d.getFullYear() + "-" + (d.getMonth() + 1) + "-" + d.getDate();
@@ -3480,6 +3604,7 @@ window.onRemote = c => {
   else if (c.cmd === "effect" && c.name === "chef") Chef.run();
   else if (c.cmd === "effect" && c.name === "tank") Tank.run();
   else if (c.cmd === "effect" && c.name === "kazul") Kazul.run();
+  else if (c.cmd === "effect" && c.name === "jinx") Jinx.run();
   else if (c.cmd === "art") ChefArt.receive(c);
   else if (c.cmd === "scroop") {
     if (c.action === "spawn") { if (!Scrap.piles.some(p => p.state !== "none")) { clearTimeout(Scrap.timer); Scrap.timer = 0; Scrap.spawn(); } }
@@ -3590,6 +3715,7 @@ document.querySelectorAll("#testbar [data-t]").forEach(b => b.onclick = () => {
   else if (t === "chef") Chef.run();
   else if (t === "tank") Tank.run();
   else if (t === "kazul") Kazul.run();
+  else if (t === "jinx") Jinx.run();
   else if (t === "chat") Lurk.leave(name);
 });
 
@@ -4056,7 +4182,7 @@ window.KZRelay = function (topic, onMessage, servers) {
 (() => {
   const qs = new URLSearchParams(location.search), key = qs.get("ctl");
   if (!key || !window.WebSocket) return;
-  const PAGE = "html3", VERSION = "21a3117";
+  const PAGE = "html3", VERSION = "1bfa752";
   let said = false;
   const relay = KZRelay("kzctl/" + key, c => {
     if (!c || c.from === "overlay" || (c.to && c.to !== "all" && c.to !== PAGE)) return;
