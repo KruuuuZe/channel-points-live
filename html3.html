@@ -2783,7 +2783,7 @@ const ChefArt = {
   use(name, a) { const img = new Image(); img.onload = () => { this.sprites[name] = Object.assign({ img }, a); }; img.src = a.url; },
   async load() {
     try { const db = await this.open();
-      ["tank_drive", "soldier_run", "soldier_throw", "grenade", "explosion", "eagle_glide", "eagle_flap", "plane", "title", "chef_parachute", "chef_chop", "chef_jump", "chef_truck"].forEach(n => { const r = db.transaction("a").objectStore("a").get(n); r.onsuccess = () => { if (r.result) this.use(n, r.result); }; });
+      ["tank_drive", "soldier_run", "soldier_throw", "grenade", "explosion", "eagle_glide", "eagle_flap", "plane", "title", "chef_parachute", "chef_chop", "chef_jump", "chef_fly", "chef_truck"].forEach(n => { const r = db.transaction("a").objectStore("a").get(n); r.onsuccess = () => { if (r.result) this.use(n, r.result); }; });
     } catch (e) {}
   },
   // a piece of art arriving from the app (sent in parts)
@@ -2809,7 +2809,7 @@ const PUFF = (() => { const c = document.createElement("canvas"); c.width = c.he
 const Chef = {
   busy: false,
   // how tall each piece is drawn on the 2560x1440 stage
-  H: { chef_parachute: 520, chef_chop: 330, chef_jump: 300 }, TRUCK_W: 640,
+  H: { chef_parachute: 520, chef_chop: 330, chef_jump: 300, chef_fly: 230 }, TRUCK_W: 640,
   run() {
     if (this.busy) { this.again = true; return; }
     this.busy = true; Sound.init(); MySounds.play("anime_chef");
@@ -2893,7 +2893,13 @@ const Chef = {
         once("boing2", () => this.boing(.8));
         const k = Math.min(1, (t - J2) / J2D), x = RIGHTX + (LEFTX - RIGHTX) * ease(k);
         if (k >= 1) once("land2", () => { Sound.thump(); this.puff(goo, LEFTX, MIDY, t); });
-        draw("chef_jump", t, x, MIDY, true);
+        if (k > .1 && k < .93) {
+          // flying across like Superman: stretched out flat, fist forward, kept fully on screen
+          once("whoosh2", () => { if (Sound.ctx) Sound.burst(Sound.ctx.currentTime, 1.1, .05, "bandpass", 400, 1600); });
+          const fs = S.chef_fly, fw = fs ? fs.w * this.H.chef_fly / fs.h : 330, fx = Math.max(fw / 2 + 8, Math.min(W - fw / 2 - 8, x));
+          const lift = Math.sin((k - .1) / .83 * Math.PI) * 90 + Math.sin(t / 120) * 6;
+          draw("chef_fly", t, fx, MIDY - 60 - lift, true);
+        } else draw("chef_jump", t, x, MIDY, true);
       }
       // ---- the chef turns into a military logistics truck (a puff of smoke and sparkles), which drives off to the right
       if (t >= MORPH) {
@@ -2983,6 +2989,7 @@ const Chef = {
       body(0, Math.sin(t / 22) > 0 ? -.5 : .45); return;
     }
     if (name === "chef_jump") { g.translate(0, -30); body(.35, -.9); return; }
+    if (name === "chef_fly") { g.translate(-150, -110); g.rotate(Math.PI / 2); body(0, -1.57 + Math.sin(t / 90) * .05); return; }
   },
   standInTruck(g, t, TW) {
     const s = TW / 640; g.scale(s, s); g.lineJoin = "round"; g.strokeStyle = "#1c1f12"; g.lineWidth = 6;
@@ -3790,7 +3797,7 @@ window.KZRelay = function (topic, onMessage, servers) {
 (() => {
   const qs = new URLSearchParams(location.search), key = qs.get("ctl");
   if (!key || !window.WebSocket) return;
-  const PAGE = "html3", VERSION = "fb4ddfb";
+  const PAGE = "html3", VERSION = "2ff0612";
   let said = false;
   const relay = KZRelay("kzctl/" + key, c => {
     if (!c || c.from === "overlay" || (c.to && c.to !== "all" && c.to !== PAGE)) return;
