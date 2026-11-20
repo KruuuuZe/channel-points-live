@@ -234,7 +234,7 @@ body.fit #stage{background:radial-gradient(1200px 700px at 30% 20%,#1a103322,tra
 #testbar button{font-weight:800}
 #testbar .b-sub{background:#6d28d9;border-color:transparent} #testbar .b-gift{background:#db2777;border-color:transparent} #testbar .b-fol{background:#4d8a1f;border-color:transparent}
 #testbar .b-bit{background:#7c3aed;border-color:transparent} #testbar .b-str{background:#c2410c;border-color:transparent}
-#testbar .b-raid{background:#0e7490;border-color:transparent} #testbar .b-jinx{background:linear-gradient(135deg,#3b82f6,#a855f7 55%,#f97316);border-color:transparent} #testbar .b-kaz{background:linear-gradient(135deg,#4d5233,#b45309);border-color:transparent} #testbar .b-tank{background:linear-gradient(135deg,#7f1d1d,#475569);border-color:transparent} #testbar .b-chef{background:linear-gradient(135deg,#db2777,#38bdf8);border-color:transparent} #testbar .b-eagle{background:linear-gradient(135deg,#3b2a1a,#d97706);border-color:transparent} #testbar .b-fish{background:linear-gradient(135deg,#15803d,#0ea5e9);border-color:transparent} #testbar .b-penguin{background:linear-gradient(135deg,#0f172a,#38bdf8);border-color:transparent} #testbar .b-turkey{background:linear-gradient(135deg,#7c2d12,#ea580c);border-color:transparent} #testbar .b-banana{background:linear-gradient(135deg,#15803d,#facc15);border-color:transparent;color:#1a1400} #testbar .b-mango{background:linear-gradient(135deg,#15803d,#f59e0b);border-color:transparent} #testbar .b-bolt{background:linear-gradient(135deg,#65a30d,#7c3aed);border-color:transparent} #testbar .b-scrap{background:#7c4a1e;border-color:#e2b26b88}
+#testbar .b-raid{background:#0e7490;border-color:transparent} #testbar .b-smoke{background:linear-gradient(135deg,#4b5563,#9ca3af);border-color:transparent} #testbar .b-jinx{background:linear-gradient(135deg,#3b82f6,#a855f7 55%,#f97316);border-color:transparent} #testbar .b-kaz{background:linear-gradient(135deg,#4d5233,#b45309);border-color:transparent} #testbar .b-tank{background:linear-gradient(135deg,#7f1d1d,#475569);border-color:transparent} #testbar .b-chef{background:linear-gradient(135deg,#db2777,#38bdf8);border-color:transparent} #testbar .b-eagle{background:linear-gradient(135deg,#3b2a1a,#d97706);border-color:transparent} #testbar .b-fish{background:linear-gradient(135deg,#15803d,#0ea5e9);border-color:transparent} #testbar .b-penguin{background:linear-gradient(135deg,#0f172a,#38bdf8);border-color:transparent} #testbar .b-turkey{background:linear-gradient(135deg,#7c2d12,#ea580c);border-color:transparent} #testbar .b-banana{background:linear-gradient(135deg,#15803d,#facc15);border-color:transparent;color:#1a1400} #testbar .b-mango{background:linear-gradient(135deg,#15803d,#f59e0b);border-color:transparent} #testbar .b-bolt{background:linear-gradient(135deg,#65a30d,#7c3aed);border-color:transparent} #testbar .b-scrap{background:#7c4a1e;border-color:#e2b26b88}
 #testbar .b-lurk{background:#334155;border-color:#a3e63588} #testbar .b-chat{background:#1f2937}
 
 /* sound slots: a + next to each test button to give that alert its own sound file */
@@ -334,6 +334,8 @@ body.fit #stage{background:radial-gradient(1200px 700px at 30% 20%,#1a103322,tra
 #fishcv{position:absolute;inset:0;width:2560px;height:1440px;pointer-events:none;z-index:6}
 /* ---------- PartisanHeroJINX: flips, a tornado spin, and his name written in flamethrower fire ---------- */
 #jinxcv{position:absolute;inset:0;width:2560px;height:1440px;pointer-events:none;z-index:7}
+/* ---------- smoke screen (bottom-right corner) ---------- */
+#smokecv{position:absolute;inset:0;width:2560px;height:1440px;pointer-events:none;z-index:8}
 /* ---------- Kazul123: artillery from every side ---------- */
 #kazcv{position:absolute;inset:0;width:2560px;height:1440px;pointer-events:none;z-index:7}
 /* ---------- Silverhand (canvas + a red shade over the whole screen) ---------- */
@@ -419,6 +421,7 @@ body.fit #stage{background:radial-gradient(1200px 700px at 30% 20%,#1a103322,tra
   <div id="redtint"></div>
   <canvas id="kazcv" width="2560" height="1440"></canvas>
   <canvas id="jinxcv" width="2560" height="1440"></canvas>
+  <canvas id="smokecv" width="2560" height="1440"></canvas>
   <canvas id="tankcv" width="2560" height="1440"></canvas>
   <div id="pane"></div>
   <canvas id="holes" width="2560" height="1440"></canvas>
@@ -538,6 +541,7 @@ body.fit #stage{background:radial-gradient(1200px 700px at 30% 20%,#1a103322,tra
   <button class="b-tank" data-t="tank">💥 Silverhand</button><button class="snd" data-snd="tank" title="Add a sound for this effect">🔊+</button>
   <button class="b-kaz" data-t="kazul">💣 Kazul123</button><button class="snd" data-snd="kazul" title="Add a sound for this effect">🔊+</button>
   <button class="b-jinx" data-t="jinx">🔥 JINX</button><button class="snd" data-snd="jinx" title="Add a sound for this effect">🔊+</button>
+  <button class="b-smoke" data-t="smoke">💨 Smoke screen</button><button class="snd" data-snd="smoke" title="Add a sound for this effect">🔊+</button>
   <button class="b-chat" data-t="chat">Chat</button><button class="snd" data-snd="chat" title="Add a sound for this alert">🔊+</button>
 </div>
 
@@ -3351,6 +3355,54 @@ const Jinx = {
   }
 };
 
+/* ================= smoke screen =================
+   A thick smoke screen rolls up in the bottom-right corner (about 400 px in from the right side and up from the
+   bottom), completely covering that corner, keeps slowly rolling for 30 seconds, then thins out and drifts away.
+   Built from big overlapping smoke puffs that are solid in the middle, so every pixel in the corner is covered. */
+const Smoke = {
+  on: false, RISE: 5000, HOLD: 30000, FADE: 5000, SIZE: 400,
+  puff: null,
+  makePuff() {   // a smoke puff that is solid in the middle and soft at the edge
+    const c = document.createElement("canvas"); c.width = c.height = 256; const g = c.getContext("2d");
+    const gr = g.createRadialGradient(128, 128, 0, 128, 128, 128); gr.addColorStop(0, "rgba(255,255,255,1)"); gr.addColorStop(.55, "rgba(255,255,255,1)"); gr.addColorStop(.8, "rgba(255,255,255,.55)"); gr.addColorStop(1, "rgba(255,255,255,0)");
+    g.fillStyle = gr; g.fillRect(0, 0, 256, 256); return c;
+  },
+  tinted(col) { const c = document.createElement("canvas"); c.width = c.height = 256; const g = c.getContext("2d"); g.drawImage(this.puff, 0, 0); g.globalCompositeOperation = "source-in"; g.fillStyle = col; g.fillRect(0, 0, 256, 256); return c; },
+  run() {
+    if (this.on) { this.t0 = performance.now() - this.RISE; return; }      // already up: just keep it for another 30 s
+    this.on = true; Sound.init(); MySounds.play("smoke");
+    if (!this.puff) { this.puff = this.makePuff(); this.base = this.tinted("#7c8087"); this.mid = this.tinted("#9a9ea5"); this.hi = this.tinted("#c4c7cc"); }
+    if (Sound.ctx) { const c = Sound.ctx.currentTime; Sound.tone(c, .12, .08, 180, 90); Sound.burst(c + .05, 3.5, .05, "highpass", 1800, 900); }   // pop and hiss
+    const cv = $("#smokecv"), g = cv.getContext("2d"), W = 2560, H = 1440, S = this.SIZE;
+    this.t0 = performance.now();
+    // the solid body: a grid of big puffs over the corner (and a bit past its edges), each rolling slowly in its own small circle
+    const body = [];
+    for (let y = 0; y <= S + 60; y += 85) for (let x = 0; x <= S + 60; x += 85)
+      body.push({ x: W - x, y: H - y, r: rand(110, 150), ph: rand(0, 6.28), sp: rand(.25, .5), rad: rand(10, 22), row: y / S, tex: Math.random() < .5 ? this.base : this.mid });
+    // lighter curls on top, rolling across the surface
+    const curls = []; for (let i = 0; i < 26; i++) curls.push({ x: W - rand(0, S + 40), y: H - rand(0, S + 40), r: rand(50, 95), ph: rand(0, 6.28), sp: rand(.2, .45), drift: rand(-.012, .012), row: Math.random() });
+    const frame = now => {
+      const t = now - this.t0; g.clearRect(W - S - 400, H - S - 520, S + 400, S + 520);
+      const rise = Math.min(1, t / this.RISE), er = 1 - Math.pow(1 - rise, 3), fadeT = t - this.RISE - this.HOLD, fade = fadeT > 0 ? Math.max(0, 1 - fadeT / this.FADE) : 1;
+      const lift = fadeT > 0 ? fadeT * .05 : 0;                 // dissipating: it drifts up as it thins
+      for (const p of body) {
+        const k = Math.max(0, Math.min(1, er * 1.25 - p.row * .25)), a = t / 1000 * p.sp + p.ph;
+        const x = p.x + Math.cos(a) * p.rad, y = p.y + (1 - k) * (S + 260) + Math.sin(a) * p.rad * .6 - lift * (.5 + p.row), r = p.r * (1 + lift / 600);
+        g.globalAlpha = fade * (fadeT > 0 ? 1 - p.row * .3 * (1 - fade) : 1); g.drawImage(p.tex, x - r, y - r, r * 2, r * 2);
+      }
+      for (const c of curls) {
+        const k = Math.max(0, Math.min(1, er * 1.25 - c.row * .25)), a = t / 1000 * c.sp + c.ph;
+        c.x += c.drift * 16; if (c.x < W - S - 40) c.drift = Math.abs(c.drift); if (c.x > W + 20) c.drift = -Math.abs(c.drift);
+        const x = c.x + Math.cos(a) * 26, y = c.y + (1 - k) * (S + 260) + Math.sin(a) * 18 - lift * 1.3;
+        g.globalAlpha = .35 * fade * k; g.drawImage(this.hi, x - c.r, y - c.r, c.r * 2, c.r * 2);
+      }
+      g.globalAlpha = 1;
+      if (fade > 0) requestAnimationFrame(frame); else { g.clearRect(0, 0, W, H); this.on = false; }
+    };
+    requestAnimationFrame(frame);
+  }
+};
+
 /* ================= Kazul123 =================
    Artillery guns roll in from every side of the screen (left, right, top and bottom), all aimed at the middle.
    One by one they fire, each shooting one letter of KAZUL123 into the center, where the letters slam into place.
@@ -3612,6 +3664,7 @@ window.onRemote = c => {
   else if (c.cmd === "effect" && c.name === "tank") Tank.run();
   else if (c.cmd === "effect" && c.name === "kazul") Kazul.run();
   else if (c.cmd === "effect" && c.name === "jinx") Jinx.run();
+  else if (c.cmd === "effect" && c.name === "smoke") Smoke.run();
   else if (c.cmd === "art") ChefArt.receive(c);
   else if (c.cmd === "scroop") {
     if (c.action === "spawn") { if (!Scrap.piles.some(p => p.state !== "none")) { clearTimeout(Scrap.timer); Scrap.timer = 0; Scrap.spawn(); } }
@@ -3723,6 +3776,7 @@ document.querySelectorAll("#testbar [data-t]").forEach(b => b.onclick = () => {
   else if (t === "tank") Tank.run();
   else if (t === "kazul") Kazul.run();
   else if (t === "jinx") Jinx.run();
+  else if (t === "smoke") Smoke.run();
   else if (t === "chat") Lurk.leave(name);
 });
 
@@ -4189,7 +4243,7 @@ window.KZRelay = function (topic, onMessage, servers) {
 (() => {
   const qs = new URLSearchParams(location.search), key = qs.get("ctl");
   if (!key || !window.WebSocket) return;
-  const PAGE = "html3", VERSION = "0c3c163";
+  const PAGE = "html3", VERSION = "fe306d5";
   let said = false;
   const relay = KZRelay("kzctl/" + key, c => {
     if (!c || c.from === "overlay" || (c.to && c.to !== "all" && c.to !== PAGE)) return;
