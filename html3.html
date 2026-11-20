@@ -3556,10 +3556,18 @@ const Voice = {
       else this.level *= .85;
     }
     if (this.an) { const db = this.level > 0 ? 20 * Math.log10(this.level * .06) : -100; this.syl(db); }
-    // the mouth: open for each syllable, closed in between
-    const now = performance.now();
-    if (this.open && now - this.openAt > 320) this.open = false;      // nothing heard for a while: close
-    return this.open ? this.amp : 0;
+    /* the mouth: while you're talking it keeps flapping open and shut at a steady talking pace (each flap a slightly
+       different speed and size so it looks natural); when you stop, it closes */
+    const now = performance.now(), dt = Math.min(60, now - (this.flapLast || now)); this.flapLast = now;
+    if (this.level > .1) this.loudAt = now;
+    const talking = now - (this.loudAt || -1e9) < 180;
+    if (talking || this.flapPh % 1 > .02) {                            // finish the flap it's on, then stop
+      this.flapPh = (this.flapPh || 0) + dt / 1000 * (this.flapHz || 5.5);
+      if (Math.floor(this.flapPh) !== this.flapN) { this.flapN = Math.floor(this.flapPh); this.flapHz = rand(4.5, 6.5); this.flapAmp = rand(.65, 1);
+        if (!talking) { this.flapPh = this.flapN; return 0; } }
+      const k = this.flapPh % 1; return Math.max(0, Math.sin(k * Math.PI)) * this.flapAmp;
+    }
+    return 0;
   },
   /* syllables: every syllable you say is a little burst of loudness. The mouth opens when the loudness jumps up from
      the quiet point before it, and closes again once it drops back down from that syllable's peak, so the mouth flaps
@@ -3736,7 +3744,7 @@ const Face = {
       this.pos = [px, py];
       // the eyes look straight ahead (at the top and at the bottom)
       this.lookTo = [0, 0];
-      const sq = 1 + E.jaw * .12, x = px + Math.sin(t / 2300) * 18, y = py + Math.sin(t / 900) * 12 + Math.sin(t / 2700) * 9;
+      const sq = 1, x = px + Math.sin(t / 2300) * 18, y = py + Math.sin(t / 900) * 12 + Math.sin(t / 2700) * 9;
       // ---- snowflakes falling from the cloud, and the snowmen at the bottom
       // each flake has its own size (bigger ones are "closer": brighter and a bit faster), its own gentle sway, and the
       // snow spreads out a little as it falls, like real snowfall
@@ -4844,7 +4852,7 @@ window.KZRelay = function (topic, onMessage, servers) {
 (() => {
   const qs = new URLSearchParams(location.search), key = qs.get("ctl");
   if (!key || !window.WebSocket) return;
-  const PAGE = "html3", VERSION = "bf103d6";
+  const PAGE = "html3", VERSION = "bef6abf";
   let said = false;
   const relay = KZRelay("kzctl/" + key, c => {
     if (!c || c.from === "overlay" || (c.to && c.to !== "all" && c.to !== PAGE)) return;
