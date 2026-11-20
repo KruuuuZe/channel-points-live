@@ -2865,7 +2865,7 @@ const ChefArt = {
   use(name, a) { const img = new Image(); img.onload = () => { this.sprites[name] = Object.assign({ img }, a); if (name === "tower" && Lurk.up) Lurk.paint(); }; img.src = a.url; },
   async load() {
     try { const db = await this.open();
-      ["cf_ref", "cf_x_talk", "cf_x_wide", "cf_x_look_l", "cf_x_look_r", "cf_x_smile", "cf_x_grin", "cf_x_oo", "cf_x_blink", "cf_v_smile_talk", "cf_v_smile_l", "cf_v_smile_r", "cf_v_grin_talk", "cf_v_grin_l", "cf_v_grin_r", "cf_v_oo_talk", "cf_v_oo_l", "cf_v_oo_r", "cf_v_closed_talk", "cf_e_smirk", "cf_v_smirk_talk", "cf_v_smirk_l", "cf_v_smirk_r", "cf_e_wink", "cf_v_wink_talk", "cf_e_laugh", "cf_v_laugh_talk", "cf_e_shocked", "cf_v_shocked_talk", "cf_v_shocked_l", "cf_v_shocked_r", "cf_e_sleepy", "cf_v_sleepy_talk", "cf_v_sleepy_l", "cf_v_sleepy_r", "cf_e_sideeye", "cf_v_sideeye_talk", "cf_v_sideeye_l", "cf_v_sideeye_r", "cf_e_sad", "cf_v_sad_talk", "cf_v_sad_l", "cf_v_sad_r", "cf_e_tongue", "cf_v_tongue_talk", "cf_v_tongue_l", "cf_v_tongue_r", "cf_e_puffed", "cf_v_puffed_talk", "cf_v_puffed_l", "cf_v_puffed_r", "cf_e_determined", "cf_v_determined_talk", "cf_v_determined_l", "cf_v_determined_r", "cf_e_evil", "cf_v_evil_talk", "cf_v_evil_l", "cf_v_evil_r", "cf_e_smug", "cf_v_smug_talk", "cf_v_smug_l", "cf_v_smug_r", "cf_e_confused", "cf_v_confused_talk", "cf_v_confused_l", "cf_v_confused_r", "cf_e_disgusted", "cf_v_disgusted_talk", "cf_v_disgusted_l", "cf_v_disgusted_r", "cf_e_nervous", "cf_v_nervous_talk", "cf_v_nervous_l", "cf_v_nervous_r", "cf_e_kissy", "cf_v_kissy_talk", "cf_v_kissy_l", "cf_v_kissy_r", "cf_e_bored", "cf_v_bored_talk", "cf_v_bored_l", "cf_v_bored_r", "cf_e_excited", "cf_v_excited_talk", "cf_v_excited_l", "cf_v_excited_r", "cf_e_thinking", "cf_v_thinking_talk", "cf_v_thinking_l", "cf_v_thinking_r", "cf_e_scared", "cf_v_scared_talk", "cf_v_scared_l", "cf_v_scared_r", "jinx_flip", "jinx_spin", "jinx_fire", "jinx_launch", "artillery", "golden_banana", "golden_mango", "tower", "eagle_roll", "tank_drive", "soldier_run", "soldier_throw", "grenade", "explosion", "eagle_glide", "eagle_flap", "plane", "title", "chef_parachute", "chef_chop", "chef_jump", "chef_fly", "chef_truck"].forEach(n => { const r = db.transaction("a").objectStore("a").get(n); r.onsuccess = () => { if (r.result) this.use(n, r.result); }; });
+      ["sm_hat", "sm_face", "sm_nose", "sm_arm", "cf_ref", "cf_x_talk", "cf_x_wide", "cf_x_look_l", "cf_x_look_r", "cf_x_smile", "cf_x_grin", "cf_x_oo", "cf_x_blink", "cf_v_smile_talk", "cf_v_smile_l", "cf_v_smile_r", "cf_v_grin_talk", "cf_v_grin_l", "cf_v_grin_r", "cf_v_oo_talk", "cf_v_oo_l", "cf_v_oo_r", "cf_v_closed_talk", "cf_e_smirk", "cf_v_smirk_talk", "cf_v_smirk_l", "cf_v_smirk_r", "cf_e_wink", "cf_v_wink_talk", "cf_e_laugh", "cf_v_laugh_talk", "cf_e_shocked", "cf_v_shocked_talk", "cf_v_shocked_l", "cf_v_shocked_r", "cf_e_sleepy", "cf_v_sleepy_talk", "cf_v_sleepy_l", "cf_v_sleepy_r", "cf_e_sideeye", "cf_v_sideeye_talk", "cf_v_sideeye_l", "cf_v_sideeye_r", "cf_e_sad", "cf_v_sad_talk", "cf_v_sad_l", "cf_v_sad_r", "cf_e_tongue", "cf_v_tongue_talk", "cf_v_tongue_l", "cf_v_tongue_r", "cf_e_puffed", "cf_v_puffed_talk", "cf_v_puffed_l", "cf_v_puffed_r", "cf_e_determined", "cf_v_determined_talk", "cf_v_determined_l", "cf_v_determined_r", "cf_e_evil", "cf_v_evil_talk", "cf_v_evil_l", "cf_v_evil_r", "cf_e_smug", "cf_v_smug_talk", "cf_v_smug_l", "cf_v_smug_r", "cf_e_confused", "cf_v_confused_talk", "cf_v_confused_l", "cf_v_confused_r", "cf_e_disgusted", "cf_v_disgusted_talk", "cf_v_disgusted_l", "cf_v_disgusted_r", "cf_e_nervous", "cf_v_nervous_talk", "cf_v_nervous_l", "cf_v_nervous_r", "cf_e_kissy", "cf_v_kissy_talk", "cf_v_kissy_l", "cf_v_kissy_r", "cf_e_bored", "cf_v_bored_talk", "cf_v_bored_l", "cf_v_bored_r", "cf_e_excited", "cf_v_excited_talk", "cf_v_excited_l", "cf_v_excited_r", "cf_e_thinking", "cf_v_thinking_talk", "cf_v_thinking_l", "cf_v_thinking_r", "cf_e_scared", "cf_v_scared_talk", "cf_v_scared_l", "cf_v_scared_r", "jinx_flip", "jinx_spin", "jinx_fire", "jinx_launch", "artillery", "golden_banana", "golden_mango", "tower", "eagle_roll", "tank_drive", "soldier_run", "soldier_throw", "grenade", "explosion", "eagle_glide", "eagle_flap", "plane", "title", "chef_parachute", "chef_chop", "chef_jump", "chef_fly", "chef_truck"].forEach(n => { const r = db.transaction("a").objectStore("a").get(n); r.onsuccess = () => { if (r.result) this.use(n, r.result); }; });
     } catch (e) {}
   },
   // a piece of art arriving from the app (sent in parts)
@@ -3557,7 +3557,7 @@ const Voice = {
   }
 };
 const Face = {
-  on: false, a: 0, run: false, puffs: [], jets: [], drops: [], bolts: [], glows: [],
+  on: false, a: 0, run: false, puffs: [], jets: [], drops: [], bolts: [], glows: [], flakes: [], snowmen: [], snowQ: [],
   cam: null,                                            // the latest face-tracking frame from the Voice & face page
   E: { jaw: 0, smile: 0, frown: 0, browUp: 0, bdL: 0, bdR: 0, bouL: 0, bouR: 0, blinkL: 0, blinkR: 0, squint: 0, wide: 0, lx: 0, ly: 0, pucker: 0 },
   gazeTo: [0, 0], nextLook: 0, blinkAt: 2500, rmood: 0, moodTo: 0, nextMood: 0,
@@ -3569,12 +3569,18 @@ const Face = {
      moving when you talk happen on their own */
   EXPR: {"neutral": {"base": "cf_ref", "talk": "cf_x_talk", "wide": "cf_x_wide", "l": "cf_x_look_l", "r": "cf_x_look_r"}, "smile": {"base": "cf_x_smile", "talk": "cf_v_smile_talk", "l": "cf_v_smile_l", "r": "cf_v_smile_r"}, "grin": {"base": "cf_x_grin", "talk": "cf_v_grin_talk", "l": "cf_v_grin_l", "r": "cf_v_grin_r"}, "oo": {"base": "cf_x_oo", "talk": "cf_v_oo_talk", "l": "cf_v_oo_l", "r": "cf_v_oo_r"}, "closed": {"base": "cf_x_blink", "talk": "cf_v_closed_talk"}, "smirk": {"base": "cf_e_smirk", "talk": "cf_v_smirk_talk", "l": "cf_v_smirk_l", "r": "cf_v_smirk_r"}, "wink": {"base": "cf_e_wink", "talk": "cf_v_wink_talk"}, "laugh": {"base": "cf_e_laugh", "talk": "cf_v_laugh_talk"}, "shocked": {"base": "cf_e_shocked", "talk": "cf_v_shocked_talk", "l": "cf_v_shocked_l", "r": "cf_v_shocked_r"}, "sleepy": {"base": "cf_e_sleepy", "talk": "cf_v_sleepy_talk", "l": "cf_v_sleepy_l", "r": "cf_v_sleepy_r"}, "sideeye": {"base": "cf_e_sideeye", "talk": "cf_v_sideeye_talk", "l": "cf_v_sideeye_l", "r": "cf_v_sideeye_r"}, "sad": {"base": "cf_e_sad", "talk": "cf_v_sad_talk", "l": "cf_v_sad_l", "r": "cf_v_sad_r"}, "tongue": {"base": "cf_e_tongue", "talk": "cf_v_tongue_talk", "l": "cf_v_tongue_l", "r": "cf_v_tongue_r"}, "puffed": {"base": "cf_e_puffed", "talk": "cf_v_puffed_talk", "l": "cf_v_puffed_l", "r": "cf_v_puffed_r"}, "determined": {"base": "cf_e_determined", "talk": "cf_v_determined_talk", "l": "cf_v_determined_l", "r": "cf_v_determined_r"}, "evil": {"base": "cf_e_evil", "talk": "cf_v_evil_talk", "l": "cf_v_evil_l", "r": "cf_v_evil_r"}, "smug": {"base": "cf_e_smug", "talk": "cf_v_smug_talk", "l": "cf_v_smug_l", "r": "cf_v_smug_r"}, "confused": {"base": "cf_e_confused", "talk": "cf_v_confused_talk", "l": "cf_v_confused_l", "r": "cf_v_confused_r"}, "disgusted": {"base": "cf_e_disgusted", "talk": "cf_v_disgusted_talk", "l": "cf_v_disgusted_l", "r": "cf_v_disgusted_r"}, "nervous": {"base": "cf_e_nervous", "talk": "cf_v_nervous_talk", "l": "cf_v_nervous_l", "r": "cf_v_nervous_r"}, "kissy": {"base": "cf_e_kissy", "talk": "cf_v_kissy_talk", "l": "cf_v_kissy_l", "r": "cf_v_kissy_r"}, "bored": {"base": "cf_e_bored", "talk": "cf_v_bored_talk", "l": "cf_v_bored_l", "r": "cf_v_bored_r"}, "excited": {"base": "cf_e_excited", "talk": "cf_v_excited_talk", "l": "cf_v_excited_l", "r": "cf_v_excited_r"}, "thinking": {"base": "cf_e_thinking", "talk": "cf_v_thinking_talk", "l": "cf_v_thinking_l", "r": "cf_v_thinking_r"}, "scared": {"base": "cf_e_scared", "talk": "cf_v_scared_talk", "l": "cf_v_scared_l", "r": "cf_v_scared_r"}},
   mood: (() => { try { return localStorage.getItem("kz_face_mood") || "neutral"; } catch { return "neutral"; } })(),
+  neutralTalk: (() => { try { return localStorage.getItem("kz_face_ntalk") || "cf_x_talk"; } catch { return "cf_x_talk"; } })(),
+  setNeutralTalk(n) { if (!/^cf_/.test(n || "")) return; this.neutralTalk = n; try { localStorage.setItem("kz_face_ntalk", n); } catch {} },
   setMood(m) { if (!this.EXPR[m]) return; this.mood = m; try { localStorage.setItem("kz_face_mood", m); } catch {} },
   rain: false,
   toggleRain() { this.rain = !this.rain; if (this.rain && !this.on) this.toggle(); },     // rain brings the cloud out if it's away
   /* anyone in chat can type !rain: if the cloud is out, it rains for 5 to 15 seconds (more !rain while it's raining
      keeps it going). If the cloud isn't out, nothing happens. */
   rainTill: 0,
+  /* anyone in chat can type !snow (while the cloud is out): the cloud stops, snows until the snow piles up at the
+     bottom of the screen under it and forms into a snowman, then moves on. A hat, coal face, stick arms and carrot
+     nose pop onto the snowman, with the name of whoever typed !snow on top of the hat. More !snow are queued up. */
+  chatSnow(name, color) { if (!this.on || this.snowQ.length >= 4) return; this.snowQ.push({ name, color: color || "#ffffff" }); },
   chatRain() { if (!this.on) return; this.rainTill = Math.max(this.rainTill, performance.now() + rand(5000, 15000)); },
   /* a sound spike on the video capture device: the eyes look toward the middle of the screen for a while */
   attendUntil: 0, centerDir: 0,
@@ -3583,13 +3589,15 @@ const Face = {
      talking picture and looking-left/right pictures. The eyes pick the looking picture, and the talking picture fades
      in over it as your mouth opens (for the neutral face, a wide-open one when you're loud). */
   ART_W: 600, ART_H: 600, ART_EYE_Y: .42,
+  SC: .5,                                               // overall size of the cloud on screen
   drawArtCloud(lg, AS, t) {
     const E = this.E, has = n => n && !!AS[n], X = this.EXPR[this.mood] || this.EXPR.neutral, N = this.EXPR.neutral;
     const base = has(X.base) ? X.base : "cf_ref";
     let eyes = base;
     if (base === X.base) { if (E.lx < -.45 && has(X.l)) eyes = X.l; else if (E.lx > .45 && has(X.r)) eyes = X.r; }
     else if (E.lx < -.45 && has(N.l)) eyes = N.l; else if (E.lx > .45 && has(N.r)) eyes = N.r;
-    const talk = base === X.base ? (E.jaw > .6 && has(X.wide) ? X.wide : has(X.talk) ? X.talk : null) : (has(N.talk) ? N.talk : null);
+    const nTalk = has(this.neutralTalk) ? this.neutralTalk : N.talk;      // the neutral face's talking picture is picked in the app
+    const talk = X === N || base !== X.base ? (has(nTalk) ? nTalk : null) : has(X.talk) ? X.talk : null;
     if (eyes !== this.xNow) { this.xPrev = this.xNow; this.xNow = eyes; this.xAt = t; }
     const draw = (n, a) => { const sp = AS[n]; if (!sp || a <= .01) return;
       const w = this.ART_W, h = w * sp.h / sp.w; this.ART_H = h; lg.globalAlpha = a; lg.drawImage(sp.img, 0, 0, sp.w, sp.h, -w / 2, -h / 2 - 30, w, h); };
@@ -3630,10 +3638,12 @@ const Face = {
     this.run = true; Smoke.textures(); Sound.init();
     const cv = $("#facecv"), g = cv.getContext("2d"), W = 2560, H = 1440, t0 = performance.now();
     const LW = 760, LH = 660, layer = document.createElement("canvas"); layer.width = LW; layer.height = LH; const lg = layer.getContext("2d");
-    // it likes the top of the screen: hovers a while, then glides to a new spot, usually along the top,
-    // but every so often it floats down to the bottom for a while
-    const MX = 330, CORNER = [W - 330, H - 260];
-    const pick = (low) => [rand(MX, W - MX), low ? rand(1020, H - 260) : rand(240, 470)];
+    // it stays along the top of the screen (always fully on screen): hovers a while, then glides to a new spot.
+    // Every so often it goes down to the bottom, but only down the left or right edge (never through the middle),
+    // stays there a while, then goes back up the same edge.
+    const SC = this.SC, MX = 195, TOP = [205, 228], LOW = H - 180, CORNER = [W - 430, H - 260];
+    let route = [], snowing = null;                      // waypoints still to glide through; the snowman being snowed
+
     let [px, py] = CORNER, fromX = px, fromY = py, toX = px, toY = py, moveAt = 0, moveDur = 1, hoverUntil = 0, last = t0, enterAt = -1e9, wasLow = false;
     let nextBolt = rand(6000, 14000), nextRain = rand(12000, 25000), rainUntil = 0, nextGlow = 0;
     const frame = now => {
@@ -3644,22 +3654,49 @@ const Face = {
       if (this.on && this.a < .06 && t - enterAt > 2500) {
         enterAt = t; px = fromX = toX = CORNER[0]; py = fromY = toY = CORNER[1]; moveAt = 0; hoverUntil = t + 2600; this.a = .02;
         for (let i = 0; i < 70; i++) { const a = rand(-Math.PI, 0) + rand(-.4, .4) - .5, sp = rand(4, 16);
-          this.puffs.push({ x: px + rand(-60, 60), y: py + rand(-40, 60), vx: Math.cos(a) * sp, vy: Math.sin(a) * sp * .8, r: rand(30, 70), born: t, life: rand(1400, 2600) }); }
+          this.puffs.push({ x: px + rand(-60, 60) * SC, y: py + rand(-40, 60) * SC, vx: Math.cos(a) * sp * .7, vy: Math.sin(a) * sp * .55, r: rand(30, 70) * .65, born: t, life: rand(1400, 2600) }); }
       }
       const ek = Math.min(1, (t - enterAt) / 1300), es = .2 + .8 * (1 - Math.pow(1 - ek, 3));   // grows out of the poof
+      // ---- snow: when someone typed !snow, the cloud stops somewhere along the top with room for a snowman and snows
+      if (this.snowQ.length && !snowing && moveAt <= hoverUntil && !route.length) {
+        if (py > H / 2) hoverUntil = Math.min(hoverUntil, t);                // at the bottom: head back up first
+        else {
+          const free = sx => this.snowmen.every(m => Math.abs(m.x - sx) > 340), here = Math.max(270, Math.min(W - 270, px));
+          if (free(here)) { const q = this.snowQ.shift(); snowing = { x: here, at: t, name: q.name, color: q.color }; this.snowmen.push(snowing); hoverUntil = Infinity; }
+          else { let best = null; for (let i = 0; i < 60; i++) { const c = rand(270, W - 270); if (free(c) && (best === null || Math.abs(c - px) < Math.abs(best - px))) best = c; }
+            if (best !== null) { route = [[best, rand(...TOP)]]; hoverUntil = Math.min(hoverUntil, t); } }
+        }
+      }
+      if (snowing && t - snowing.at > Snowman.FORMED) {                      // the snowman is formed: stop snowing and move on
+        const from = snowing.x; snowing = null; let nx = rand(MX, W - MX); if (Math.abs(nx - from) < 600) nx = from < W / 2 ? rand(from + 600, W - MX) : rand(MX, from - 600);
+        route = [[Math.max(MX, Math.min(W - MX, nx)), rand(...TOP)]]; hoverUntil = t + 700;
+      }
       // ---- movement: hover a while, then glide (eased) to a new spot
       if (t > hoverUntil && moveAt <= hoverUntil) {
-        const low = !wasLow && Math.random() < .2; wasLow = low;
-        fromX = px; fromY = py; [toX, toY] = pick(low); if (Math.hypot(toX - fromX, toY - fromY) < 300) toX = fromX + (toX < fromX ? -1 : 1) * 500;
-        toX = Math.max(MX, Math.min(W - MX, toX)); moveAt = t; moveDur = Math.max(2500, Math.min(9000, Math.hypot(toX - fromX, toY - fromY) / .14));
+        if (!route.length) {
+          const atBottom = py > H / 2;
+          if (atBottom) route = [[px, rand(...TOP)]];                                       // back up the same edge
+          else if (Math.random() < .2) { const ex = px < W / 2 ? MX : W - MX; route = [[ex, rand(...TOP)], [ex, LOW]]; }   // over to the nearest edge, then down
+          else { let nx = rand(MX, W - MX); if (Math.abs(nx - px) < 300) nx = px + (nx < px ? -1 : 1) * 500; route = [[Math.max(MX, Math.min(W - MX, nx)), rand(...TOP)]]; }
+        }
+        fromX = px; fromY = py; [toX, toY] = route.shift(); wasLow = toY > H / 2;
+        moveAt = t; moveDur = Math.max(1800, Math.min(9000, Math.hypot(toX - fromX, toY - fromY) / .14));
       }
       let moving = 0;
       if (moveAt > hoverUntil) { const k = Math.min(1, (t - moveAt) / moveDur), e = k < .5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2;
         px = fromX + (toX - fromX) * e; py = fromY + (toY - fromY) * e; moving = k < 1 ? 1 : 0;
-        if (k >= 1) { hoverUntil = t + (wasLow ? rand(4000, 8000) : rand(4000, 11000)); moveAt = 0; } }
+        if (k >= 1) { hoverUntil = t + (route.length ? 250 : wasLow ? rand(4000, 8000) : rand(4000, 11000)); moveAt = 0; } }
       const dir = moving ? Math.sign(toX - fromX) : 0;
+      this.pos = [px, py];
       this.centerDir = Math.abs(1280 - px) < 220 ? 0 : Math.sign(1280 - px);   // which way the middle of the screen is
       const sq = 1 + E.jaw * .12, x = px + Math.sin(t / 2300) * 18, y = py + Math.sin(t / 900) * 12 + Math.sin(t / 2700) * 9;
+      // ---- snowflakes falling from the cloud, and the snowmen at the bottom
+      if (snowing && this.on) for (let i = 0; i < 4; i++) this.flakes.push({ x: x + rand(-95, 95), y: y + 45, vy: rand(2.4, 4.2), ph: rand(0, 6.3), r: rand(2.5, 6), to: snowing });
+      this.snowmen = this.snowmen.filter(m => Snowman.draw(g, m, t, ChefArt.sprites, H));
+      g.fillStyle = "#fff";
+      this.flakes = this.flakes.filter(f => { f.y += f.vy * dt / 16; f.x += Math.sin(t / 380 + f.ph) * .7 + (f.to.x - f.x) * .0035;
+        if (f.y > Snowman.surface(f.to, f.x, t, H)) return false; g.globalAlpha = .9; g.beginPath(); g.arc(f.x, f.y, f.r, 0, 6.283); g.fill(); return true; });
+      g.globalAlpha = 1;
       // ---- the cloud body, with the logo's green and purple glowing inside and soft lightning flickers
       lg.setTransform(1, 0, 0, 1, 0, 0); lg.clearRect(0, 0, LW, LH); lg.translate(LW / 2, LH / 2 + 30); lg.scale(sq, 1 / Math.sqrt(sq));
       const AS = ChefArt.sprites, artCloud = !!AS.cf_ref;
@@ -3674,10 +3711,10 @@ const Face = {
         const gr = lg.createRadialGradient(f.x, f.y, 0, f.x, f.y, 170); gr.addColorStop(0, `rgba(${r},${gg},${b},${.55 * env})`); gr.addColorStop(1, `rgba(${r},${gg},${b},0)`);
         lg.globalAlpha = 1; lg.fillStyle = gr; lg.fillRect(f.x - 170, f.y - 170, 340, 340); return true; });
       lg.globalCompositeOperation = "source-over"; lg.globalAlpha = 1;
-      g.globalAlpha = this.a; g.save(); g.filter = artCloud ? "blur(.4px)" : "blur(5px)"; g.drawImage(layer, x - LW / 2 * es, y - (LH / 2 + 30) * es, LW * es, LH * es); g.restore();
+      g.globalAlpha = this.a; g.save(); g.filter = artCloud ? "blur(.4px)" : "blur(5px)"; g.drawImage(layer, x - LW / 2 * es * SC, y - (LH / 2 + 30) * es * SC, LW * es * SC, LH * es * SC); g.restore();
       // ---- the face: art from the Art screen if it's been made, otherwise drawn
       if (artCloud) {} else {
-      g.save(); g.translate(x, y + 10); g.scale(sq, 1 / Math.sqrt(sq)); g.filter = "blur(.8px)";
+      g.save(); g.translate(x, y + 10 * SC); g.scale(sq * SC, SC / Math.sqrt(sq)); g.filter = "blur(.8px)";
       const ink = "rgba(42,38,58,.92)";
       [-1, 1].forEach(d => {
         const L = d < 0, blink = L ? E.blinkL : E.blinkR, bd = L ? E.bdL : E.bdR, bou = L ? E.bouL : E.bouR;
@@ -3730,9 +3767,9 @@ const Face = {
       if (t > (this.glowAt || 1e9) && t < this.glowAt + 1800) {
         const k = (t - this.glowAt) / 1800, env = Math.sin(k * Math.PI);
         g.save(); g.globalCompositeOperation = "lighter";
-        [-1, 1].forEach(d => { const ex = x + (artCloud ? d * this.ART_W * .125 : d * 70) * sq, ey = artCloud ? y + (this.ART_EYE_Y - .5) * this.ART_H : y + 10 - 26; const gr = g.createRadialGradient(ex, ey, 0, ex, ey, 70);
+        [-1, 1].forEach(d => { const ex = x + (artCloud ? d * this.ART_W * .125 : d * 70) * sq * SC, ey = y + (artCloud ? (this.ART_EYE_Y - .5) * this.ART_H : -16) * SC, R = 70 * SC; const gr = g.createRadialGradient(ex, ey, 0, ex, ey, R);
           gr.addColorStop(0, `rgba(${this.glowCol},${.9 * env * this.a})`); gr.addColorStop(.35, `rgba(${this.glowCol},${.45 * env * this.a})`); gr.addColorStop(1, `rgba(${this.glowCol},0)`);
-          g.fillStyle = gr; g.fillRect(ex - 70, ey - 70, 140, 140); });
+          g.fillStyle = gr; g.fillRect(ex - R, ey - R, R * 2, R * 2); });
         g.restore();
       }
       // ---- talking: streams of smoke shooting out of different spots on the cloud (and the mouth), lots of them
@@ -3745,17 +3782,17 @@ const Face = {
       this.jets = this.jets.filter(j => {
         if (t > j.until) return false;
         for (let i = 0; i < 3 && this.puffs.length < 900; i++) { const sp = j.sp * (.7 + E.jaw), a = j.a + rand(-.12, .12);
-          this.puffs.push({ x: x + j.ox * sq, y: y + j.oy, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, r: rand(16, 34), born: t, life: rand(1300, 2400) }); }
+          this.puffs.push({ x: x + j.ox * sq * SC, y: y + j.oy * SC, vx: Math.cos(a) * sp * SC, vy: Math.sin(a) * sp * SC, r: rand(16, 34) * SC, born: t, life: rand(1300, 2400) }); }
         return true;
       });
       // ---- rain, while it's switched on (Rain on/off button)
-      if (this.on && (this.rain || performance.now() < this.rainTill)) for (let i = 0; i < 3; i++) this.drops.push({ x: x + rand(-200, 200), y: y + 95 + rand(0, 20), v: rand(14, 20), c: Math.random() < .2 ? "rgba(190,150,255,.7)" : Math.random() < .2 ? "rgba(190,240,150,.7)" : "rgba(185,205,235,.65)" });
+      if (this.on && (this.rain || performance.now() < this.rainTill)) for (let i = 0; i < 3; i++) this.drops.push({ x: x + rand(-200, 200) * SC, y: y + (95 + rand(0, 20)) * SC, v: rand(14, 20), c: Math.random() < .2 ? "rgba(190,150,255,.7)" : Math.random() < .2 ? "rgba(190,240,150,.7)" : "rgba(185,205,235,.65)" });
       g.lineCap = "round"; g.lineWidth = 2.5;
       this.drops = this.drops.filter(d => { d.y += d.v * dt / 16; if (d.y > H + 20) return false; g.strokeStyle = d.c; g.beginPath(); g.moveTo(d.x, d.y); g.lineTo(d.x - 2, d.y - 18); g.stroke(); return true; });
       // ---- and once in a while it shoots a bolt of lightning out of the cloud
       if (this.on && t > nextBolt) {
         nextBolt = t + rand(8000, 20000);
-        const sx = x + rand(-150, 150), sy = y + 70, ang = Math.PI / 2 + rand(-1.1, 1.1), len = rand(260, 560), pts = [[sx, sy]];
+        const sx = x + rand(-150, 150) * SC, sy = y + 70 * SC, ang = Math.PI / 2 + rand(-1.1, 1.1), len = rand(260, 560) * SC, pts = [[sx, sy]];
         for (let i = 1; i <= 9; i++) { const k = i / 9; pts.push([sx + Math.cos(ang) * len * k + rand(-28, 28), sy + Math.sin(ang) * len * k + rand(-16, 16)]); }
         this.bolts.push({ pts, born: t, c: Math.random() < .5 ? "#c084fc" : "#a3e635" });
         if (Sound.ctx) Sound.burst(Sound.ctx.currentTime, .25, .03, "highpass", 3000);
@@ -3771,9 +3808,64 @@ const Face = {
         const r = q.r * (1 + k * 2.2); g.globalAlpha = .65 * (1 - k) * Math.min(1, k * 10); g.drawImage(i % 3 ? Smoke.light : Smoke.hi, q.x - r, q.y - r, r * 2, r * 2);
       }
       g.globalAlpha = 1;
-      if (this.a > .01 || this.puffs.length || this.drops.length || this.on) requestAnimationFrame(frame); else { g.clearRect(0, 0, W, H); this.run = false; }
+      if (this.a > .01 || this.puffs.length || this.drops.length || this.on || this.snowmen.length || this.flakes.length) requestAnimationFrame(frame); else { g.clearRect(0, 0, W, H); this.run = false; }
     };
     requestAnimationFrame(frame);
+  }
+};
+
+/* ================= Snowman (from !snow) =================
+   The snow piles up into a mound under the cloud, the mound rolls up into three snowballs, and then a hat, coal
+   face, stick arms and carrot nose pop on (art from the Art screen's SNOWMAN ART, or drawn if it isn't made yet),
+   with the !snow person's name on top of the hat. It stands for a while, then melts away. */
+const Snowman = {
+  PILE: 9000, FORMED: 12500, ACC: 12800, STAY: 45000, MELT: 3000,
+  e: k => 1 - Math.pow(1 - Math.max(0, Math.min(1, k)), 3),
+  back: k => { k = Math.max(0, Math.min(1, k)); const c = 1.7; return 1 + (c + 1) * Math.pow(k - 1, 3) + c * Math.pow(k - 1, 2); },
+  // how high the snow is at x (where the flakes land)
+  surface(m, x, t, H) { const T = t - m.at, h = 170 * this.e(T / this.PILE), d = Math.abs(x - m.x) / 160; return H - 6 - (d < 1 ? h * Math.cos(d * Math.PI / 2) : 0); },
+  ball(g, cx, cy, r) { if (r < 1) return; const gr = g.createRadialGradient(cx - r * .35, cy - r * .4, r * .1, cx, cy, r);
+    gr.addColorStop(0, "#ffffff"); gr.addColorStop(.7, "#eef3fb"); gr.addColorStop(1, "#c9d6ea"); g.fillStyle = gr; g.beginPath(); g.arc(cx, cy, r, 0, 6.283); g.fill(); },
+  pop(A, at) { const k = (A - at) / 350; return k <= 0 ? 0 : k >= 1 ? 1 : this.back(k); },
+  pic(g, sp, cx, cy, w, sc, flip, rot) { const h = w * sp.h / sp.w; g.save(); g.translate(cx, cy); if (rot) g.rotate(rot); g.scale((flip ? -1 : 1) * sc, sc); g.drawImage(sp.img, 0, 0, sp.w, sp.h, -w / 2, -h / 2, w, h); g.restore(); return h; },
+  draw(g, m, t, S, H) {
+    const T = t - m.at, END = this.ACC + this.STAY; if (T > END + this.MELT) return false;
+    const melt = T > END ? (T - END) / this.MELT : 0, X = m.x, G = H - 6;
+    g.save(); g.globalAlpha = 1 - melt; g.translate(X, G); g.scale(1 + melt * .4, 1 - melt * .8); g.translate(-X, -G);
+    // the mound of snow, which shrinks away as the snowballs grow out of it
+    const k = Math.max(0, Math.min(1, (T - this.PILE) / (this.FORMED - this.PILE)));
+    const ph = 170 * this.e(T / this.PILE) * (1 - k * .85);
+    if (ph > 1) { g.fillStyle = "#f4f8ff"; g.beginPath(); g.moveTo(X - 175, G + 6); for (let i = 0; i <= 24; i++) { const u = -1 + i / 12; g.lineTo(X + u * 170, G - ph * Math.cos(u * Math.PI / 2) + Math.sin(i * 1.7 + m.at) * 3); } g.lineTo(X + 175, G + 6); g.closePath(); g.fill();
+      g.fillStyle = "rgba(190,205,230,.45)"; g.beginPath(); g.ellipse(X + 30, G - ph * .25, 120, ph * .2, 0, 0, 6.283); g.fill(); }
+    // the three snowballs
+    const rb = 95 * this.back(k * 3), rm = 70 * this.back(k * 3 - 1), rh = 50 * this.back(k * 3 - 2);
+    const by = G - 82, my = by - 95 - 70 + 24, hy = my - 70 - 50 + 16;
+    this.ball(g, X, by, rb); this.ball(g, X, my, rm); this.ball(g, X, hy, rh);
+    // the pieces pop on one after another
+    const A = T - this.ACC;
+    if (A > 0) {
+      const sa = this.pop(A, 0), sf = this.pop(A, 500), sn = this.pop(A, 1000), sh = this.pop(A, 1500), sname = Math.max(0, Math.min(1, (A - 2100) / 400));
+      [-1, 1].forEach(d => { if (!sa) return;                            // stick arms
+        if (S.sm_arm) this.pic(g, S.sm_arm, X + d * (rm + 50), my - 18, 150, sa, d < 0, d * -.25);
+        else { g.save(); g.translate(X + d * rm * .8, my - 6); g.scale(d * sa, sa); g.strokeStyle = "#5b3a1e"; g.lineWidth = 7; g.lineCap = "round"; g.beginPath(); g.moveTo(0, 0); g.lineTo(120, -50); g.moveTo(90, -38); g.lineTo(108, -70); g.moveTo(100, -42); g.lineTo(132, -40); g.stroke(); g.restore(); } });
+      if (sf) { if (S.sm_face) this.pic(g, S.sm_face, X, hy + 4, 78, sf);   // coal eyes and smile, plus coal buttons
+        else { g.fillStyle = "#1b1b1f"; [[-16, -12], [16, -12]].forEach(([u, v]) => { g.beginPath(); g.arc(X + u, hy + v, 6 * sf, 0, 6.283); g.fill(); });
+          for (let i = 0; i < 5; i++) { const u = (i - 2) * 9, v = 18 + Math.abs(i - 2) * -3; g.beginPath(); g.arc(X + u, hy + v, 3.5 * sf, 0, 6.283); g.fill(); } }
+        g.fillStyle = "#1b1b1f"; [-28, 0, 28].forEach(v => { g.beginPath(); g.arc(X, my + v, 7 * sf, 0, 6.283); g.fill(); }); }
+      if (sn) { if (S.sm_nose) this.pic(g, S.sm_nose, X + 24, hy + 4, 56, sn);  // carrot nose
+        else { g.save(); g.translate(X, hy + 3); g.scale(sn, sn); g.fillStyle = "#f97316"; g.beginPath(); g.moveTo(0, -6); g.lineTo(42, 2); g.lineTo(0, 7); g.closePath(); g.fill(); g.restore(); } }
+      let hatTop = hy - rh - 6;
+      if (sh) { if (S.sm_hat) { const hh = this.pic(g, S.sm_hat, X, hy - rh - 14, 120, sh); hatTop = hy - rh + 8 - hh * sh; }   // the hat
+        else { g.save(); g.translate(X, hy - rh + 6); g.scale(sh, sh); g.fillStyle = "#16141c"; g.fillRect(-60, -10, 120, 14); g.fillRect(-38, -86, 76, 80); g.fillStyle = "#b91c1c"; g.fillRect(-38, -26, 76, 14); g.restore(); hatTop = hy - rh + 6 - 90 * sh; } }
+      if (sname > 0) { const fs = Math.max(26, Math.min(44, 520 / Math.max(6, m.name.length)));
+        g.save(); g.globalAlpha *= sname; g.font = `900 ${fs}px ${FONT}`; g.textAlign = "center"; g.textBaseline = "bottom";
+        g.lineWidth = 7; g.strokeStyle = "rgba(10,8,20,.85)"; g.strokeText(m.name, X, hatTop - 8 - (1 - sname) * 12);
+        g.shadowColor = m.color; g.shadowBlur = 14; g.fillStyle = m.color; g.fillText(m.name, X, hatTop - 8 - (1 - sname) * 12); g.restore(); }
+      // a little sparkle as each piece pops on
+      [0, 500, 1000, 1500].forEach(at => { const q = (A - at) / 450; if (q > 0 && q < 1) { g.save(); g.globalAlpha = (1 - q) * .8; g.strokeStyle = "#fff"; g.lineWidth = 3;
+        const cy = at === 0 ? my : at === 1500 ? hy - rh - 40 : hy; for (let i = 0; i < 8; i++) { const a = i * Math.PI / 4, r1 = 30 + q * 70, r2 = r1 + 18; g.beginPath(); g.moveTo(X + Math.cos(a) * r1, cy + Math.sin(a) * r1); g.lineTo(X + Math.cos(a) * r2, cy + Math.sin(a) * r2); g.stroke(); } g.restore(); } });
+    }
+    g.restore(); return true;
   }
 };
 
@@ -4043,6 +4135,7 @@ window.onRemote = c => {
   else if (c.cmd === "effect" && c.name === "face") Face.toggle();
   else if (c.cmd === "effect" && c.name === "rain") Face.toggleRain();
   else if (c.cmd === "faceMood") Face.setMood(c.name);
+  else if (c.cmd === "faceTalk") Face.setNeutralTalk(c.name);
   if (c.cmd === "faceMood") { const sel = $("#facemood"); if (sel) sel.value = Face.mood; }
   else if (c.cmd === "voice") Voice.remote(+c.l || 0, c.s == null ? .5 : +c.s);
   else if (c.cmd === "face") Face.face(c);
@@ -4329,6 +4422,7 @@ const Chat = {
         Lurk.leave(login);
       }
       else if (/^!rain\b/i.test(msg)) { Face.chatRain(); Lurk.leave(login); }
+      else if (/^!snow\b/i.test(msg)) { Face.chatSnow(tags["display-name"] || login, tags.color || chatColors[tags["user-id"]]); Lurk.leave(login); }
       else if (/^!scroopleaderboard\b/i.test(msg)) Scrap.showBoard();
       else if (/^!scroop\b/i.test(msg) || msg.includes("kruuuuCatch1")) Scrap.dig(tags["display-name"] || login, login, tags.color || chatColors[tags["user-id"]]);   // lurkers can scroop without leaving the tower
       else Lurk.leave(login);
@@ -4627,7 +4721,7 @@ window.KZRelay = function (topic, onMessage, servers) {
 (() => {
   const qs = new URLSearchParams(location.search), key = qs.get("ctl");
   if (!key || !window.WebSocket) return;
-  const PAGE = "html3", VERSION = "e6e48e7";
+  const PAGE = "html3", VERSION = "803773a";
   let said = false;
   const relay = KZRelay("kzctl/" + key, c => {
     if (!c || c.from === "overlay" || (c.to && c.to !== "all" && c.to !== PAGE)) return;
