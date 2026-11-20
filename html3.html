@@ -192,6 +192,8 @@ body.fit #stage{background:radial-gradient(1200px 700px at 30% 20%,#1a103322,tra
 /* the test bar tucks itself away; tap the bottom of the screen to bring it back */
 #testbar{transition:transform .35s ease}
 #testbar.tuck{transform:translateY(110%)}
+#secretCorner{position:fixed;right:0;bottom:0;width:90px;height:90px;z-index:30;cursor:pointer;background:transparent}
+#testbar.live{padding-right:100px}
 #tapzone{position:fixed;left:0;right:0;bottom:0;height:56px;z-index:19;display:none}
 #tapzone.on{display:block}
 #tapzone::after{content:"";position:absolute;left:50%;bottom:8px;width:56px;height:5px;margin-left:-28px;border-radius:9px;background:#ffffff40}
@@ -3265,7 +3267,7 @@ const Alerts = {
 /* ================= test bar ================= */
 const NAMES = ["NebulaNacho", "PixelPaladin", "ZapZilla", "CosmoCrumb", "GlitchGoblin", "StarDustSam", "VoltVixen", "LunaLag", "OrbitOtter",
   "QuasarQueso", "MeteorMo", "NovaNoodle", "AstroAvo", "CometKat", "PlasmaPanda", "WarpWizard", "GalaxyGus", "ThunderTaco", "RocketRay", "NeonNarwhal"];
-if (!LIVE || qs.has("test")) {
+function setupTestBar() {
   const bar = $("#testbar"), zone = $("#tapzone");
   bar.classList.add("on");          // starts open; tucks away after you pick something, tap the bottom to bring it back
   const show = () => { bar.classList.remove("tuck"); zone.classList.remove("on"); };
@@ -3275,6 +3277,14 @@ if (!LIVE || qs.has("test")) {
   // pressing an effect button or choosing from a drop-down (or a color) counts as a selection: tuck the bar away
   bar.querySelectorAll("[data-t]").forEach(b => b.addEventListener("click", () => setTimeout(hide, 60)));
   bar.querySelectorAll("select, input[type=color]").forEach(x => x.addEventListener("change", () => setTimeout(hide, 60)));
+}
+if (!LIVE || qs.has("test")) setupTestBar();
+/* In OBS (live), the test bar is hidden. Right-click the source > Interact, then click the invisible square in the
+   bottom-right corner to open it; click the corner again to close it. While it's open it shows on stream too. */
+else {
+  const corner = el("div"); corner.id = "secretCorner"; document.body.append(corner);
+  const bar = $("#testbar");
+  corner.addEventListener("click", () => { const on = !bar.classList.contains("on"); bar.classList.toggle("on", on); bar.classList.remove("tuck"); bar.classList.toggle("live", on); });
 }
 {
   const pick = document.createElement("input"); pick.type = "file"; pick.accept = "audio/*,.mp3,.wav,.ogg,.m4a,.aac,.flac,.webm"; pick.style.display = "none";
@@ -3707,7 +3717,7 @@ window.KZRelay = function (topic, onMessage, servers) {
 (() => {
   const qs = new URLSearchParams(location.search), key = qs.get("ctl");
   if (!key || !window.WebSocket) return;
-  const PAGE = "html3", VERSION = "b0decd0";
+  const PAGE = "html3", VERSION = "712316e";
   let said = false;
   const relay = KZRelay("kzctl/" + key, c => {
     if (!c || c.from === "overlay" || (c.to && c.to !== "all" && c.to !== PAGE)) return;
