@@ -234,7 +234,7 @@ body.fit #stage{background:radial-gradient(1200px 700px at 30% 20%,#1a103322,tra
 #testbar button{font-weight:800}
 #testbar .b-sub{background:#6d28d9;border-color:transparent} #testbar .b-gift{background:#db2777;border-color:transparent} #testbar .b-fol{background:#4d8a1f;border-color:transparent}
 #testbar .b-bit{background:#7c3aed;border-color:transparent} #testbar .b-str{background:#c2410c;border-color:transparent}
-#testbar .b-raid{background:#0e7490;border-color:transparent} #testbar .b-tank{background:linear-gradient(135deg,#7f1d1d,#475569);border-color:transparent} #testbar .b-chef{background:linear-gradient(135deg,#db2777,#38bdf8);border-color:transparent} #testbar .b-eagle{background:linear-gradient(135deg,#3b2a1a,#d97706);border-color:transparent} #testbar .b-fish{background:linear-gradient(135deg,#15803d,#0ea5e9);border-color:transparent} #testbar .b-penguin{background:linear-gradient(135deg,#0f172a,#38bdf8);border-color:transparent} #testbar .b-turkey{background:linear-gradient(135deg,#7c2d12,#ea580c);border-color:transparent} #testbar .b-banana{background:linear-gradient(135deg,#15803d,#facc15);border-color:transparent;color:#1a1400} #testbar .b-mango{background:linear-gradient(135deg,#15803d,#f59e0b);border-color:transparent} #testbar .b-bolt{background:linear-gradient(135deg,#65a30d,#7c3aed);border-color:transparent} #testbar .b-scrap{background:#7c4a1e;border-color:#e2b26b88}
+#testbar .b-raid{background:#0e7490;border-color:transparent} #testbar .b-kaz{background:linear-gradient(135deg,#4d5233,#b45309);border-color:transparent} #testbar .b-tank{background:linear-gradient(135deg,#7f1d1d,#475569);border-color:transparent} #testbar .b-chef{background:linear-gradient(135deg,#db2777,#38bdf8);border-color:transparent} #testbar .b-eagle{background:linear-gradient(135deg,#3b2a1a,#d97706);border-color:transparent} #testbar .b-fish{background:linear-gradient(135deg,#15803d,#0ea5e9);border-color:transparent} #testbar .b-penguin{background:linear-gradient(135deg,#0f172a,#38bdf8);border-color:transparent} #testbar .b-turkey{background:linear-gradient(135deg,#7c2d12,#ea580c);border-color:transparent} #testbar .b-banana{background:linear-gradient(135deg,#15803d,#facc15);border-color:transparent;color:#1a1400} #testbar .b-mango{background:linear-gradient(135deg,#15803d,#f59e0b);border-color:transparent} #testbar .b-bolt{background:linear-gradient(135deg,#65a30d,#7c3aed);border-color:transparent} #testbar .b-scrap{background:#7c4a1e;border-color:#e2b26b88}
 #testbar .b-lurk{background:#334155;border-color:#a3e63588} #testbar .b-chat{background:#1f2937}
 
 /* sound slots: a + next to each test button to give that alert its own sound file */
@@ -332,6 +332,8 @@ body.fit #stage{background:radial-gradient(1200px 700px at 30% 20%,#1a103322,tra
 
 /* ---------- ATT3NCHUN: drawn on its own canvas with the real fish artwork ---------- */
 #fishcv{position:absolute;inset:0;width:2560px;height:1440px;pointer-events:none;z-index:6}
+/* ---------- Kazul123: artillery from every side ---------- */
+#kazcv{position:absolute;inset:0;width:2560px;height:1440px;pointer-events:none;z-index:7}
 /* ---------- Silverhand (canvas + a red shade over the whole screen) ---------- */
 #tankcv{position:absolute;inset:0;width:2560px;height:1440px;pointer-events:none;z-index:7}
 #redtint{position:absolute;inset:0;pointer-events:none;z-index:4;opacity:0;
@@ -413,6 +415,7 @@ body.fit #stage{background:radial-gradient(1200px 700px at 30% 20%,#1a103322,tra
   <canvas id="fishcv" width="2560" height="1440"></canvas>
   <canvas id="chefcv" width="2560" height="1440"></canvas>
   <div id="redtint"></div>
+  <canvas id="kazcv" width="2560" height="1440"></canvas>
   <canvas id="tankcv" width="2560" height="1440"></canvas>
   <div id="pane"></div>
   <canvas id="holes" width="2560" height="1440"></canvas>
@@ -530,6 +533,7 @@ body.fit #stage{background:radial-gradient(1200px 700px at 30% 20%,#1a103322,tra
   <button class="b-eagle" data-t="eagle">🦅 Eagle</button><button class="snd" data-snd="eagle" title="Add a sound for this effect">🔊+</button>
   <button class="b-chef" data-t="chef">👨‍🍳 anime_chef</button><button class="snd" data-snd="anime_chef" title="Add a sound for this effect">🔊+</button>
   <button class="b-tank" data-t="tank">💥 Silverhand</button><button class="snd" data-snd="tank" title="Add a sound for this effect">🔊+</button>
+  <button class="b-kaz" data-t="kazul">💣 Kazul123</button><button class="snd" data-snd="kazul" title="Add a sound for this effect">🔊+</button>
   <button class="b-chat" data-t="chat">Chat</button><button class="snd" data-snd="chat" title="Add a sound for this alert">🔊+</button>
 </div>
 
@@ -2832,7 +2836,7 @@ const ChefArt = {
   use(name, a) { const img = new Image(); img.onload = () => { this.sprites[name] = Object.assign({ img }, a); if (name === "tower" && Lurk.up) Lurk.paint(); }; img.src = a.url; },
   async load() {
     try { const db = await this.open();
-      ["golden_banana", "tower", "eagle_roll", "tank_drive", "soldier_run", "soldier_throw", "grenade", "explosion", "eagle_glide", "eagle_flap", "plane", "title", "chef_parachute", "chef_chop", "chef_jump", "chef_fly", "chef_truck"].forEach(n => { const r = db.transaction("a").objectStore("a").get(n); r.onsuccess = () => { if (r.result) this.use(n, r.result); }; });
+      ["artillery", "golden_banana", "tower", "eagle_roll", "tank_drive", "soldier_run", "soldier_throw", "grenade", "explosion", "eagle_glide", "eagle_flap", "plane", "title", "chef_parachute", "chef_chop", "chef_jump", "chef_fly", "chef_truck"].forEach(n => { const r = db.transaction("a").objectStore("a").get(n); r.onsuccess = () => { if (r.result) this.use(n, r.result); }; });
     } catch (e) {}
   },
   // a piece of art arriving from the app (sent in parts)
@@ -3216,6 +3220,114 @@ const Tank = {
   }
 };
 
+/* ================= Kazul123 =================
+   Artillery guns roll in from every side of the screen (left, right, top and bottom), all aimed at the middle.
+   One by one they fire, each shooting one letter of KAZUL123 into the center, where the letters slam into place.
+   Once the whole name is there it holds a moment, then every letter explodes, and the guns pull back out.
+   The gun art is made in the app's Art screen; the explosions use the Silverhand explosion art if it's made. */
+const Kazul = {
+  busy: false, NAME: "Kazul123",
+  run() {
+    if (this.busy) { this.again = true; return; }
+    this.busy = true; Sound.init(); MySounds.play("kazul");
+    const cv = $("#kazcv"), g = cv.getContext("2d"), t0 = performance.now(), W = 2560, H = 1440, CX = 1280, CY = 700, S = ChefArt.sprites;
+    g.imageSmoothingEnabled = true; g.imageSmoothingQuality = "high";
+    const letters = [...this.NAME], FS = 230, FONT_K = `900 ${FS}px Impact, "Arial Black", ${FONT}`;
+    g.font = FONT_K; const widths = letters.map(ch => g.measureText(ch).width), gap = 14, total = widths.reduce((a, b) => a + b, 0) + gap * (letters.length - 1);
+    let lx = CX - total / 2; const slots = letters.map((ch, i) => { const x = lx + widths[i] / 2; lx += widths[i] + gap; return { ch, x, y: CY }; });
+    // gun spots around the edges (2 left, 2 right, 2 top, 2 bottom), shuffled so letters come from everywhere
+    const spots = [[-10, 470], [-10, 1010], [W + 10, 470], [W + 10, 1010], [820, -10], [1740, -10], [820, H + 10], [1740, H + 10]].sort(() => Math.random() - .5);
+    const GUN_W = 300, IN = 650, FIRE0 = 900, GAP_F = 430, FLY = 650, HOLD_END = FIRE0 + GAP_F * (letters.length - 1) + FLY + 1500, BOOM = HOLD_END, OUT = BOOM + 900, END = OUT + 1400;
+    const guns = letters.map((_, i) => {
+      const [ex, ey] = spots[i % spots.length], a = Math.atan2(CY - ey, CX - ex), dx = Math.cos(a), dy = Math.sin(a);
+      return { ex, ey, a, dx, dy, fireAt: FIRE0 + i * GAP_F, inAt: i * 60 };
+    });
+    const smoke = [], bits = []; let shake = 0, sfx = {};
+    const once = (k, fn) => { if (!sfx[k]) { sfx[k] = 1; fn(); } };
+    const boomSnd = big => { if (!Sound.ctx) return; const c = Sound.ctx.currentTime; Sound.burst(c, big ? 1.6 : .5, big ? .35 : .16, "lowpass", big ? 1200 : 900, 60); Sound.tone(c, big ? 1 : .35, big ? .3 : .12, big ? 80 : 120, 35); };
+    const gunPos = (gn, t) => {     // slides in from just off its edge, recoils when firing, pulls back out at the end
+      const k = Math.max(0, Math.min(1, (t - gn.inAt) / IN)), e = 1 - Math.pow(1 - k, 3), out = t > OUT ? Math.min(1, (t - OUT) / 700) : 0;
+      const recoil = t > gn.fireAt && t < gn.fireAt + 260 ? Math.sin((t - gn.fireAt) / 260 * Math.PI) * 40 : 0;
+      const d = (GUN_W * .55) * (e - out * out) - 220 * (1 - e) - recoil;
+      return [gn.ex + gn.dx * d, gn.ey + gn.dy * d];
+    };
+    const drawGun = (gn, t) => {
+      const [x, y] = gunPos(gn, t); g.save(); g.translate(x, y); g.rotate(gn.a); if (Math.cos(gn.a) < -.01) g.scale(1, -1);   // keep wheels on the "ground" side
+      const sp = S.artillery;
+      if (sp) { const h = GUN_W * sp.h / sp.w; g.drawImage(sp.img, 0, 0, sp.w, sp.h, -GUN_W * .45, -h * .62, GUN_W, h); }
+      else this.standInGun(g);
+      g.restore();
+    };
+    const muzzle = gn => { const [x, y] = gunPos(gn, gn.fireAt); return [x + gn.dx * GUN_W * .55, y + gn.dy * GUN_W * .55]; };
+    const drawLetter = (ch, x, y, sc, rot, glow) => {
+      g.save(); g.translate(x, y); g.rotate(rot); g.scale(sc, sc); g.font = FONT_K; g.textAlign = "center"; g.textBaseline = "middle"; g.lineJoin = "round";
+      g.lineWidth = 16; g.strokeStyle = "#1a1408"; g.strokeText(ch, 0, 6);
+      const gr = g.createLinearGradient(0, -FS / 2, 0, FS / 2); gr.addColorStop(0, "#fff3c4"); gr.addColorStop(.45, "#f59e0b"); gr.addColorStop(1, "#b45309");
+      g.shadowColor = "rgba(255,140,30," + glow + ")"; g.shadowBlur = 30; g.fillStyle = gr; g.fillText(ch, 0, 0); g.restore();
+    };
+    const frame = now => {
+      const t = now - t0; g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, W, H);
+      if (shake > .5) { g.translate(rand(-1, 1) * shake, rand(-1, 1) * shake); shake *= .9; }
+      // smoke puffs behind everything
+      for (let i = smoke.length - 1; i >= 0; i--) { const p = smoke[i], a = t - p.born; if (a > 1800) { smoke.splice(i, 1); continue; }
+        p.x += p.vx; p.y += p.vy; g.globalAlpha = .45 * (1 - a / 1800); g.drawImage(PUFF, p.x - p.r * (1 + a / 900), p.y - p.r * (1 + a / 900), p.r * 2 * (1 + a / 900), p.r * 2 * (1 + a / 900)); }
+      g.globalAlpha = 1;
+      // letters: flying in, landed, then exploding
+      slots.forEach((sl, i) => {
+        const gn = guns[i];
+        if (t < gn.fireAt) return;
+        if (t >= BOOM + i * 70) return;
+        const k = Math.min(1, (t - gn.fireAt) / FLY);
+        if (k < 1) {
+          const [mx, my] = muzzle(gn), e = k * k * (3 - 2 * k), x = mx + (sl.x - mx) * e, y = my + (sl.y - my) * e;
+          if (Math.random() < .7) smoke.push({ x, y, vx: rand(-.4, .4), vy: rand(-.4, .2), r: rand(14, 22), born: t });
+          drawLetter(sl.ch, x, y, .35 + .65 * e, (1 - e) * 6 * (i % 2 ? 1 : -1), .9);
+        } else {
+          once("land" + i, () => { shake = Math.max(shake, 10); boomSnd(false); for (let j = 0; j < 16; j++) bits.push({ x: sl.x, y: sl.y + FS * .35, vx: rand(-6, 6), vy: rand(-8, -2), r: rand(3, 7), born: t, c: "#c7a46a" }); });
+          const land = t - gn.fireAt - FLY, pop = land < 160 ? 1.18 - .18 * (land / 160) : 1;
+          drawLetter(sl.ch, sl.x, sl.y, pop, 0, .55 + .25 * Math.sin(t / 160 + i));
+        }
+      });
+      // guns on top of the smoke
+      guns.forEach(gn => {
+        drawGun(gn, t);
+        if (t >= gn.fireAt) once("fire" + gn.fireAt, () => { boomSnd(false); const [mx, my] = muzzle(gn);
+          for (let j = 0; j < 8; j++) smoke.push({ x: mx + rand(-20, 20), y: my + rand(-20, 20), vx: gn.dx * rand(.5, 2) + rand(-.5, .5), vy: gn.dy * rand(.5, 2) + rand(-.5, .5), r: rand(24, 40), born: t }); });
+        const f = t - gn.fireAt;
+        if (f >= 0 && f < 120) { const [mx, my] = muzzle(gn); const gr = g.createRadialGradient(mx, my, 0, mx, my, 70); gr.addColorStop(0, "rgba(255,250,210,.95)"); gr.addColorStop(.4, "rgba(255,170,50,.7)"); gr.addColorStop(1, "rgba(255,120,20,0)"); g.fillStyle = gr; g.beginPath(); g.arc(mx, my, 70, 0, 6.283); g.fill(); }
+      });
+      // the big finish: every letter explodes
+      slots.forEach((sl, i) => {
+        const a = t - (BOOM + i * 70); if (a < 0) return;
+        once("boom" + i, () => { shake = 30; if (i === 0) boomSnd(true);
+          for (let j = 0; j < 22; j++) bits.push({ x: sl.x + rand(-40, 40), y: sl.y + rand(-60, 60), vx: rand(-9, 9), vy: rand(-12, -2), r: rand(5, 12), born: t, c: j % 3 ? "#f59e0b" : "#3b3b40" });
+          burst(sl.x, sl.y, [255, 170, 40], 40); kick(); });
+        if (S.explosion) { const sp = S.explosion, fr = Math.floor(a / (sp.ms || 90)); if (fr < sp.frames + 3) { const h = 420, w = h * sp.w / sp.h;
+          g.globalAlpha = fr < sp.frames ? 1 : 1 - (fr - sp.frames + 1) / 4; g.drawImage(sp.img, Math.min(fr, sp.frames - 1) * sp.w, 0, sp.w, sp.h, sl.x - w / 2, sl.y - h * .62, w, h); g.globalAlpha = 1; } }
+        else if (a < 900) { const k = a / 900, r = 60 + 220 * Math.sqrt(k), gr = g.createRadialGradient(sl.x, sl.y, 0, sl.x, sl.y, r);
+          gr.addColorStop(0, `rgba(255,250,210,${1 - k})`); gr.addColorStop(.35, `rgba(255,170,40,${1 - k})`); gr.addColorStop(.75, `rgba(200,50,10,${.8 * (1 - k)})`); gr.addColorStop(1, "rgba(60,20,10,0)");
+          g.fillStyle = gr; g.beginPath(); g.arc(sl.x, sl.y, r, 0, 6.283); g.fill(); }
+      });
+      for (let i = bits.length - 1; i >= 0; i--) { const p = bits[i], a = t - p.born; if (a > 1500 || p.y > H + 40) { bits.splice(i, 1); continue; }
+        p.x += p.vx; p.y += p.vy; p.vy += .35; g.globalAlpha = 1 - a / 1500; g.fillStyle = p.c; g.fillRect(p.x - p.r / 2, p.y - p.r / 2, p.r, p.r); }
+      g.globalAlpha = 1;
+      if (t < END) requestAnimationFrame(frame);
+      else { g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, W, H); this.busy = false; if (this.again) { this.again = false; this.run(); } }
+    };
+    requestAnimationFrame(frame);
+  },
+  standInGun(g) {     // a field gun from the side, barrel pointing along +x, drawn around its pivot
+    g.lineJoin = "round"; g.strokeStyle = "#1b1d12"; g.lineWidth = 4;
+    g.fillStyle = "#4d5233"; g.beginPath(); g.moveTo(-130, 20); g.lineTo(-20, 0); g.lineTo(-10, 22); g.lineTo(-120, 40); g.closePath(); g.fill(); g.stroke();   // trail
+    g.fillStyle = "#59603c"; g.beginPath(); g.roundRect(-40, -34, 70, 50, 6); g.fill(); g.stroke();                                                        // breech
+    g.fillStyle = "#4a5032"; g.beginPath(); g.roundRect(20, -22, 150, 22, 6); g.fill(); g.stroke();                                                       // barrel
+    g.fillStyle = "#3d4229"; g.fillRect(160, -26, 16, 30); g.strokeRect(160, -26, 16, 30);                                                                  // muzzle brake
+    g.fillStyle = "#5c6340"; g.beginPath(); g.moveTo(-10, -70); g.lineTo(30, -66); g.lineTo(34, 24); g.lineTo(-6, 28); g.closePath(); g.fill(); g.stroke();  // shield
+    g.fillStyle = "#262621"; g.beginPath(); g.arc(-5, 40, 34, 0, 6.283); g.fill(); g.stroke();
+    g.fillStyle = "#6d6a58"; g.beginPath(); g.arc(-5, 40, 12, 0, 6.283); g.fill();
+  }
+};
+
 /* ================= automatic effects =================
    - TheNapalmer's first chat message of the day plays the mango tree; Kapelan012's plays the banana tree;
      ATT3NCHUN's plays the fish effect.
@@ -3223,7 +3335,7 @@ const Tank = {
    - The lightning lap plays once an hour, at the top of the hour. */
 const AutoFx = {
   KEY: "autoFxDay",
-  FIRST_OF_DAY: { thenapalmer: () => Mango.run(), kapelan012: () => Banana.run(), att3nchun: () => Fishy.run(), anime_chef: () => Chef.run(), tassiethedevil: () => Tank.run() },
+  FIRST_OF_DAY: { thenapalmer: () => Mango.run(), kapelan012: () => Banana.run(), att3nchun: () => Fishy.run(), anime_chef: () => Chef.run(), tassiethedevil: () => Tank.run(), kazul123: () => Kazul.run() },
   chat(login) {
     const k = (login || "").toLowerCase(), fx = this.FIRST_OF_DAY[k]; if (!fx) return;
     const d = new Date(), today = d.getFullYear() + "-" + (d.getMonth() + 1) + "-" + d.getDate();
@@ -3346,6 +3458,7 @@ window.onRemote = c => {
   else if (c.cmd === "effect" && c.name === "eagle") Eagle.run();
   else if (c.cmd === "effect" && c.name === "chef") Chef.run();
   else if (c.cmd === "effect" && c.name === "tank") Tank.run();
+  else if (c.cmd === "effect" && c.name === "kazul") Kazul.run();
   else if (c.cmd === "art") ChefArt.receive(c);
   else if (c.cmd === "scroop") {
     if (c.action === "spawn") { if (!Scrap.piles.some(p => p.state !== "none")) { clearTimeout(Scrap.timer); Scrap.timer = 0; Scrap.spawn(); } }
@@ -3455,6 +3568,7 @@ document.querySelectorAll("#testbar [data-t]").forEach(b => b.onclick = () => {
   else if (t === "eagle") Eagle.run();
   else if (t === "chef") Chef.run();
   else if (t === "tank") Tank.run();
+  else if (t === "kazul") Kazul.run();
   else if (t === "chat") Lurk.leave(name);
 });
 
@@ -3915,7 +4029,7 @@ window.KZRelay = function (topic, onMessage, servers) {
 (() => {
   const qs = new URLSearchParams(location.search), key = qs.get("ctl");
   if (!key || !window.WebSocket) return;
-  const PAGE = "html3", VERSION = "c892fab";
+  const PAGE = "html3", VERSION = "8245faf";
   let said = false;
   const relay = KZRelay("kzctl/" + key, c => {
     if (!c || c.from === "overlay" || (c.to && c.to !== "all" && c.to !== PAGE)) return;
