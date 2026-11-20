@@ -2818,7 +2818,7 @@ const Chef = {
     const S = ChefArt.sprites;
     // the timeline (ms)
     const PLANE = 4200, DROP = 1150, LAND = 4700, CHOP = 3000, J1 = LAND + CHOP, J1D = 900, PAUSE = 320,
-          J2 = J1 + J1D + PAUSE, J2D = 1500, MORPH = J2 + J2D + 380, TRUCK = MORPH + 260, TRD = 2900, SMOKE_FADE = TRUCK + TRD + 2000, END = SMOKE_FADE + 1400;
+          J2 = J1 + J1D + PAUSE, J2D = 1500, TRUCK = J2 + J2D + 350, TRD = 2900, SMOKE_FADE = TRUCK + TRD + 2000, END = SMOKE_FADE + 1400;
     // the leaps go right to the screen edges: the chef's own half-width in from each side
     const jw = S.chef_jump ? S.chef_jump.w * this.H.chef_jump / S.chef_jump.h : 260, half = jw / 2;
     const GROUND = H - 26, MIDY = 790, CHOPX = 780, RIGHTX = W - half - 8, LEFTX = half + 8;
@@ -2888,32 +2888,21 @@ const Chef = {
         if (k >= 1) once("land1", () => { Sound.thump(); this.puff(goo, RIGHTX, MIDY, t); });
         draw("chef_jump", t, x, y, false);
       }
-      // ---- leap 2: straight across to the left
-      if (t >= J2 && t < MORPH + 120) {
+      // ---- leap 2: flies like Superman across to the left and right off the screen
+      if (t >= J2 && t < TRUCK) {
         once("boing2", () => this.boing(.8));
-        const k = Math.min(1, (t - J2) / J2D), x = RIGHTX + (LEFTX - RIGHTX) * ease(k);
-        if (k >= 1) once("land2", () => { Sound.thump(); this.puff(goo, LEFTX, MIDY, t); });
-        if (k > .1 && k < .93) {
-          // flying across like Superman: stretched out flat, fist forward, kept fully on screen
+        const fs = S.chef_fly, fw = fs ? fs.w * this.H.chef_fly / fs.h : 330;
+        const k = Math.min(1, (t - J2) / J2D), x = RIGHTX + (-fw / 2 - 60 - RIGHTX) * (k * k * (2.2 - 1.2 * k));
+        if (k > .1) {
           once("whoosh2", () => { if (Sound.ctx) Sound.burst(Sound.ctx.currentTime, 1.1, .05, "bandpass", 400, 1600); });
-          const fs = S.chef_fly, fw = fs ? fs.w * this.H.chef_fly / fs.h : 330, fx = Math.max(fw / 2 + 8, Math.min(W - fw / 2 - 8, x));
-          const lift = Math.sin((k - .1) / .83 * Math.PI) * 90 + Math.sin(t / 120) * 6;
-          draw("chef_fly", t, fx, MIDY - 60 - lift, true);
+          const lift = Math.sin(Math.min(1, (k - .1) / .9) * Math.PI) * 90 + Math.sin(t / 120) * 6;
+          if (k < 1) draw("chef_fly", t, Math.min(x, W - fw / 2 - 8), MIDY - 60 - lift, true);
         } else draw("chef_jump", t, x, MIDY, true);
       }
-      // ---- the chef turns into a military logistics truck (a puff of smoke and sparkles), which drives off to the right
-      if (t >= MORPH) {
-        once("morph", () => {
-          if (Sound.ctx) { const s = Sound.ctx.currentTime; Sound.tone(s, .35, .07, 300, 1400, "triangle"); Sound.burst(s, .5, .06, "bandpass", 700, 3000); Sound.tone(s + .25, .25, .05, 1200, 1800); }
-          for (let i = 0; i < 26; i++) { const a = i / 26 * 6.283, sp = rand(.25, .7); goo.push({ x: LEFTX, y: MIDY - 140, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, r: rand(18, 34), born: t, dust: true }); }
-        });
-        const m = t - MORPH;
-        if (m < 420) { g.save(); g.globalAlpha = 1 - m / 420; g.fillStyle = "#fff8d6"; g.beginPath(); g.arc(LEFTX, MIDY - 140, 60 + m * .5, 0, 6.283); g.fill(); g.restore(); }   // flash
-      }
       if (t >= TRUCK && t < END) {
-        once("engine", () => { if (Sound.ctx) { const s = Sound.ctx.currentTime; Sound.tone(s, TRD / 1000, .06, 60, 120, "sawtooth"); Sound.burst(s, TRD / 1000, .035, "lowpass", 250, 600); Sound.tone(s + .1, .18, .05, 520, 520, "square"); Sound.tone(s + .32, .18, .05, 420, 420, "square"); } });
-        const k = (t - TRUCK) / TRD, TW = this.TRUCK_W, x0 = Math.max(LEFTX, TW / 2 + 8), x1 = W + TW / 2 + 40, x = x0 + (x1 - x0) * k * k * (1.6 - .6 * k);
-        const pop = Math.min(1, (t - TRUCK) / 200), bounce = Math.abs(Math.sin(t / 90)) * 4;
+        once("engine", () => { if (Sound.ctx) { const s = Sound.ctx.currentTime; Sound.tone(s, TRD / 1000, .06, 60, 120, "sawtooth"); Sound.burst(s, TRD / 1000, .035, "lowpass", 250, 600); } });
+        const k = (t - TRUCK) / TRD, TW = this.TRUCK_W, x0 = -TW / 2 - 20, x1 = W + TW / 2 + 40, x = x0 + (x1 - x0) * k * k * (1.6 - .6 * k);
+        const pop = 1, bounce = Math.abs(Math.sin(t / 90)) * 4;
         g.save(); g.translate(x, MIDY - bounce); g.scale(pop, pop);
         const tr = S.chef_truck;
         if (tr) { const h = TW * tr.h / tr.w; g.drawImage(tr.img, frameOf(tr, t) * tr.w, 0, tr.w, tr.h, -TW / 2, -h, TW, h); }
@@ -3797,7 +3786,7 @@ window.KZRelay = function (topic, onMessage, servers) {
 (() => {
   const qs = new URLSearchParams(location.search), key = qs.get("ctl");
   if (!key || !window.WebSocket) return;
-  const PAGE = "html3", VERSION = "a99a661";
+  const PAGE = "html3", VERSION = "46f235c";
   let said = false;
   const relay = KZRelay("kzctl/" + key, c => {
     if (!c || c.from === "overlay" || (c.to && c.to !== "all" && c.to !== PAGE)) return;
