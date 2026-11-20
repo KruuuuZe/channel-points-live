@@ -25,6 +25,7 @@ video{width:320px;border-radius:14px;transform:scaleX(-1);background:#111;border
 <div class="row"><label><input type="checkbox" id="useCam" checked> 📷 Copy my face</label><select id="cam"><option value="">Default camera</option></select></div>
 <div class="row"><label><input type="checkbox" id="useMic"> 🎙 Also send my mic (only if OBS can't)</label><select id="mic"><option value="">Default microphone</option></select></div>
 <button id="go">Start</button>
+<p style="font-size:13px"><b>Webcam already used by OBS?</b> In OBS, click the ⚙ next to <b>Start Virtual Camera</b> (Controls dock), set <b>Output Type</b> to <b>Source</b> and pick your webcam source, press OK, then <b>Start Virtual Camera</b>. This page then uses <b>OBS Virtual Camera</b> by itself.</p>
 <video id="vid" autoplay muted playsinline hidden></video>
 <div id="fs" class="muted"></div>
 <div id="meter" hidden><div id="bar"></div></div>
@@ -113,9 +114,17 @@ const $ = s => document.querySelector(s), key = new URLSearchParams(location.sea
 if (!key) { $("#st").innerHTML = '<span class="bad">This link is missing your pairing key. Copy the link from the app\'s Control screen.</span>'; $("#go").disabled = true; }
 const relay = key ? KZRelay("kzctl/" + key, () => {}) : null;
 const send = o => relay && relay.send(Object.assign({ from: "app", to: "html3", noack: true, t: Date.now() }, o));
-navigator.mediaDevices && navigator.mediaDevices.enumerateDevices().then(ds => ds.forEach(d => {
-  const o = document.createElement("option"); o.value = d.deviceId; o.textContent = d.label || (d.kind === "videoinput" ? "Camera" : "Microphone");
-  if (d.kind === "videoinput") $("#cam").append(o); if (d.kind === "audioinput") $("#mic").append(o); })).catch(() => {});
+window.listDevices = async () => {
+  const ds = await navigator.mediaDevices.enumerateDevices();
+  [["#cam", "videoinput", "Default camera"], ["#mic", "audioinput", "Default microphone"]].forEach(([sel, kind, def]) => {
+    const el = $(sel), keep = el.value || localStorage.getItem("kz_" + sel.slice(1)) || ""; el.innerHTML = `<option value="">${def}</option>`;
+    ds.filter(d => d.kind === kind).forEach((d, i) => { const o = document.createElement("option"); o.value = d.deviceId; o.textContent = d.label || (kind === "videoinput" ? "Camera " : "Microphone ") + (i + 1); el.append(o); });
+    if ([...el.options].some(o => o.value === keep)) el.value = keep;
+    el.onchange = () => localStorage.setItem("kz_" + sel.slice(1), el.value);
+  });
+  return ds;
+};
+navigator.mediaDevices && listDevices().catch(() => {});
 setInterval(() => { const n = relay ? relay.connected() : 0; $("#st").innerHTML = n ? '<span class="ok">● Connected to your overlay</span>' : '<span class="bad">○ Connecting…</span>'; }, 1000);
 window.startMic = async () => {
   const st = await navigator.mediaDevices.getUserMedia({ audio: { deviceId: $("#mic").value || undefined, echoCancellation: false, noiseSuppression: false } });
@@ -144,8 +153,18 @@ async function startFace() {
   const fl = await FaceLandmarker.createFromOptions(files, { baseOptions: { modelAssetPath: "https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task", delegate: "GPU" },
     runningMode: "VIDEO", numFaces: 1, outputFaceBlendshapes: true });
   const vid = $("#vid"); vid.hidden = false;
-  vid.srcObject = await navigator.mediaDevices.getUserMedia({ video: { deviceId: $("#cam").value || undefined, width: 640, height: 480 } });
-  await vid.play();
+  const open = id => navigator.mediaDevices.getUserMedia({ video: { deviceId: id ? { exact: id } : undefined, width: 640, height: 480 } });
+  let stream = null, firstErr = null;
+  try { stream = await open($("#cam").value); } catch (e) { firstErr = e; }
+  if (!stream) {
+    // your webcam is busy (OBS is using it): fall back to OBS's Virtual Camera, then to any other camera
+    const ds = (await window.listDevices()).filter(d => d.kind === "videoinput");
+    const order = [...ds.filter(d => /obs/i.test(d.label)), ...ds.filter(d => !/obs/i.test(d.label))];
+    for (const d of order) { if (d.deviceId === $("#cam").value) continue; try { stream = await open(d.deviceId); $("#cam").value = d.deviceId; break; } catch (e) {} }
+  }
+  if (!stream) throw new Error((firstErr && firstErr.message || "no camera") + ". Your webcam is probably busy in OBS: start OBS's Virtual Camera (see below) and press Start again.");
+  vid.srcObject = stream; await vid.play();
+  if (/obs/i.test(($("#cam").selectedOptions[0] || {}).textContent || "")) $("#fs").innerHTML = '<span class="ok">Using OBS Virtual Camera</span>';
   let lastSend = 0, lastSeen = 0, sentGone = false;
   const tick = () => {
     const now = performance.now();
@@ -172,9 +191,12 @@ async function startFace() {
 function relaySend(o) { window.__send ? window.__send(o) : null; }
 $("#go").onclick = async () => {
   $("#go").disabled = true; $("#go").textContent = "Running…";
+  localStorage.setItem("kz_useCam", $("#useCam").checked ? "1" : "0"); localStorage.setItem("kz_useMic", $("#useMic").checked ? "1" : "0");
   try { if ($("#useMic").checked) await window.startMic(); } catch (e) { $("#fs").innerHTML = '<span class="bad">Mic: ' + e.message + '</span>'; }
-  try { if ($("#useCam").checked) await startFace(); } catch (e) { $("#fs").innerHTML = '<span class="bad">Face tracking couldn\'t start: ' + e.message + '</span>'; }
+  try { if ($("#useCam").checked) await startFace(); } catch (e) { $("#fs").innerHTML = '<span class="bad">Face tracking couldn\'t start: ' + e.message + '</span>'; $("#go").disabled = false; $("#go").textContent = "Start"; }
 };
+if (localStorage.getItem("kz_useCam") === "0") $("#useCam").checked = false;
+if (localStorage.getItem("kz_useMic") === "1") $("#useMic").checked = true;
 </script>
 <script>window.__send = o => send(o);</script>
 </body>
