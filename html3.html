@@ -543,7 +543,7 @@ body.fit #stage{background:radial-gradient(1200px 700px at 30% 20%,#1a103322,tra
   <button class="b-tank" data-t="tank">💥 Silverhand</button><button class="snd" data-snd="tank" title="Add a sound for this effect">🔊+</button>
   <button class="b-kaz" data-t="kazul">💣 Kazul123</button><button class="snd" data-snd="kazul" title="Add a sound for this effect">🔊+</button>
   <button class="b-jinx" data-t="jinx">🔥 JINX</button><button class="snd" data-snd="jinx" title="Add a sound for this effect">🔊+</button>
-  <button class="b-smoke" data-t="smoke">💨 Smoke on/off</button><button class="b-smoke" data-t="face">😶 Face on/off</button><button class="b-smoke" data-t="rain">🌧 Rain on/off</button><select id="facemood" title="Cloud face expression"><option value="neutral">😐</option><option value="smile">🙂</option><option value="grin">😁</option><option value="oo">😗</option><option value="closed">😌</option></select><button class="snd" data-snd="smoke" title="Add a sound for this effect">🔊+</button>
+  <button class="b-smoke" data-t="smoke">💨 Smoke on/off</button><button class="b-smoke" data-t="face">😶 Face on/off</button><button class="b-smoke" data-t="rain">🌧 Rain on/off</button><select id="facemood" title="Cloud face expression"><option value="neutral">😐 Neutral</option><option value="smile">🙂 Smile</option><option value="grin">😁 Big grin</option><option value="oo">😗 Oo</option><option value="closed">😌 Eyes closed</option><option value="smirk">😏 Smirk</option><option value="wink">😉 Wink</option><option value="laugh">😆 Laughing</option><option value="shocked">😲 Shocked</option><option value="sleepy">😪 Sleepy</option><option value="sideeye">🤨 Side-eye</option><option value="sad">😢 Sad</option><option value="tongue">😛 Tongue out</option><option value="puffed">🐡 Cheeks puffed</option><option value="determined">😤 Determined</option><option value="evil">😈 Evil grin</option><option value="smug">😌 Smug</option><option value="confused">😕 Confused</option><option value="disgusted">🤢 Disgusted</option><option value="nervous">😬 Nervous</option><option value="kissy">😘 Kissy face</option><option value="bored">😑 Bored</option><option value="excited">🤩 Excited</option><option value="thinking">🤔 Thinking</option><option value="scared">😨 Scared</option></select><button class="snd" data-snd="smoke" title="Add a sound for this effect">🔊+</button>
   <button class="b-chat" data-t="chat">Chat</button><button class="snd" data-snd="chat" title="Add a sound for this alert">🔊+</button>
 </div>
 
@@ -2865,7 +2865,7 @@ const ChefArt = {
   use(name, a) { const img = new Image(); img.onload = () => { this.sprites[name] = Object.assign({ img }, a); if (name === "tower" && Lurk.up) Lurk.paint(); }; img.src = a.url; },
   async load() {
     try { const db = await this.open();
-      ["cf_ref", "cf_x_talk", "cf_x_wide", "cf_x_smile", "cf_x_grin", "cf_x_oo", "cf_x_blink", "cf_x_brows", "cf_x_angry", "cf_x_look_l", "cf_x_look_r", "jinx_flip", "jinx_spin", "jinx_fire", "jinx_launch", "artillery", "golden_banana", "golden_mango", "tower", "eagle_roll", "tank_drive", "soldier_run", "soldier_throw", "grenade", "explosion", "eagle_glide", "eagle_flap", "plane", "title", "chef_parachute", "chef_chop", "chef_jump", "chef_fly", "chef_truck"].forEach(n => { const r = db.transaction("a").objectStore("a").get(n); r.onsuccess = () => { if (r.result) this.use(n, r.result); }; });
+      ["cf_ref", "cf_x_talk", "cf_x_wide", "cf_x_look_l", "cf_x_look_r", "cf_x_smile", "cf_x_grin", "cf_x_oo", "cf_x_blink", "cf_v_smile_talk", "cf_v_smile_l", "cf_v_smile_r", "cf_v_grin_talk", "cf_v_grin_l", "cf_v_grin_r", "cf_v_oo_talk", "cf_v_oo_l", "cf_v_oo_r", "cf_v_closed_talk", "cf_e_smirk", "cf_v_smirk_talk", "cf_v_smirk_l", "cf_v_smirk_r", "cf_e_wink", "cf_v_wink_talk", "cf_e_laugh", "cf_v_laugh_talk", "cf_e_shocked", "cf_v_shocked_talk", "cf_v_shocked_l", "cf_v_shocked_r", "cf_e_sleepy", "cf_v_sleepy_talk", "cf_v_sleepy_l", "cf_v_sleepy_r", "cf_e_sideeye", "cf_v_sideeye_talk", "cf_v_sideeye_l", "cf_v_sideeye_r", "cf_e_sad", "cf_v_sad_talk", "cf_v_sad_l", "cf_v_sad_r", "cf_e_tongue", "cf_v_tongue_talk", "cf_v_tongue_l", "cf_v_tongue_r", "cf_e_puffed", "cf_v_puffed_talk", "cf_v_puffed_l", "cf_v_puffed_r", "cf_e_determined", "cf_v_determined_talk", "cf_v_determined_l", "cf_v_determined_r", "cf_e_evil", "cf_v_evil_talk", "cf_v_evil_l", "cf_v_evil_r", "cf_e_smug", "cf_v_smug_talk", "cf_v_smug_l", "cf_v_smug_r", "cf_e_confused", "cf_v_confused_talk", "cf_v_confused_l", "cf_v_confused_r", "cf_e_disgusted", "cf_v_disgusted_talk", "cf_v_disgusted_l", "cf_v_disgusted_r", "cf_e_nervous", "cf_v_nervous_talk", "cf_v_nervous_l", "cf_v_nervous_r", "cf_e_kissy", "cf_v_kissy_talk", "cf_v_kissy_l", "cf_v_kissy_r", "cf_e_bored", "cf_v_bored_talk", "cf_v_bored_l", "cf_v_bored_r", "cf_e_excited", "cf_v_excited_talk", "cf_v_excited_l", "cf_v_excited_r", "cf_e_thinking", "cf_v_thinking_talk", "cf_v_thinking_l", "cf_v_thinking_r", "cf_e_scared", "cf_v_scared_talk", "cf_v_scared_l", "cf_v_scared_r", "jinx_flip", "jinx_spin", "jinx_fire", "jinx_launch", "artillery", "golden_banana", "golden_mango", "tower", "eagle_roll", "tank_drive", "soldier_run", "soldier_throw", "grenade", "explosion", "eagle_glide", "eagle_flap", "plane", "title", "chef_parachute", "chef_chop", "chef_jump", "chef_fly", "chef_truck"].forEach(n => { const r = db.transaction("a").objectStore("a").get(n); r.onsuccess = () => { if (r.result) this.use(n, r.result); }; });
     } catch (e) {}
   },
   // a piece of art arriving from the app (sent in parts)
@@ -3504,8 +3504,15 @@ const Voice = {
   fromObs(inputs) {
     // your mic: an input named like a mic, otherwise the loudest input that isn't desktop/game/music audio
     const lvl = i => Math.max(0, ...(i.inputLevelsMul || []).map(ch => ch[1] || 0));
-    let mic = inputs.filter(i => /mic|aux|voice|wave|yeti|shure|rode|headset|focusrite|goxlr|input/i.test(i.inputName));
-    if (!mic.length) mic = inputs.filter(i => !/desktop|game|music|browser|spotify|discord|media|alert|overlay/i.test(i.inputName));
+    const CAP = /video capture|capture device|capture card|elgato|avermedia|hdmi|cam link/i;
+    let mic = inputs.filter(i => !CAP.test(i.inputName) && /mic|aux|voice|wave|yeti|shure|rode|headset|focusrite|goxlr|input/i.test(i.inputName));
+    if (!mic.length) mic = inputs.filter(i => !CAP.test(i.inputName) && !/desktop|game|music|browser|spotify|discord|media|alert|overlay/i.test(i.inputName));
+    // a sudden loud sound on the video capture device: the cloud's eyes look toward the middle of the screen
+    const cap = inputs.filter(i => CAP.test(i.inputName));
+    if (cap.length) { const c = Math.max(0, ...cap.map(lvl)), cdb = c > 0 ? 20 * Math.log10(c) : -100;
+      if (this.capAvg === undefined) this.capAvg = cdb;
+      if (cdb > -32 && cdb - this.capAvg > 10 && Face.on) Face.attend();
+      this.capAvg += (cdb - this.capAvg) * .03; }
     const m = Math.max(0, ...mic.map(lvl)), db = m > 0 ? 20 * Math.log10(m) : -100;
     const now = performance.now();
     if (!this.repAt || now - this.repAt > 3000) { this.repAt = now;      // every few seconds: which source it's hearing and how loud
@@ -3560,36 +3567,38 @@ const Face = {
   },
   /* the expression is picked by hand (from the app's Control screen); only the eyes looking around and the mouth
      moving when you talk happen on their own */
-  MOODS: { neutral: "cf_ref", smile: "cf_x_smile", grin: "cf_x_grin", oo: "cf_x_oo", closed: "cf_x_blink" },
+  EXPR: {"neutral": {"base": "cf_ref", "talk": "cf_x_talk", "wide": "cf_x_wide", "l": "cf_x_look_l", "r": "cf_x_look_r"}, "smile": {"base": "cf_x_smile", "talk": "cf_v_smile_talk", "l": "cf_v_smile_l", "r": "cf_v_smile_r"}, "grin": {"base": "cf_x_grin", "talk": "cf_v_grin_talk", "l": "cf_v_grin_l", "r": "cf_v_grin_r"}, "oo": {"base": "cf_x_oo", "talk": "cf_v_oo_talk", "l": "cf_v_oo_l", "r": "cf_v_oo_r"}, "closed": {"base": "cf_x_blink", "talk": "cf_v_closed_talk"}, "smirk": {"base": "cf_e_smirk", "talk": "cf_v_smirk_talk", "l": "cf_v_smirk_l", "r": "cf_v_smirk_r"}, "wink": {"base": "cf_e_wink", "talk": "cf_v_wink_talk"}, "laugh": {"base": "cf_e_laugh", "talk": "cf_v_laugh_talk"}, "shocked": {"base": "cf_e_shocked", "talk": "cf_v_shocked_talk", "l": "cf_v_shocked_l", "r": "cf_v_shocked_r"}, "sleepy": {"base": "cf_e_sleepy", "talk": "cf_v_sleepy_talk", "l": "cf_v_sleepy_l", "r": "cf_v_sleepy_r"}, "sideeye": {"base": "cf_e_sideeye", "talk": "cf_v_sideeye_talk", "l": "cf_v_sideeye_l", "r": "cf_v_sideeye_r"}, "sad": {"base": "cf_e_sad", "talk": "cf_v_sad_talk", "l": "cf_v_sad_l", "r": "cf_v_sad_r"}, "tongue": {"base": "cf_e_tongue", "talk": "cf_v_tongue_talk", "l": "cf_v_tongue_l", "r": "cf_v_tongue_r"}, "puffed": {"base": "cf_e_puffed", "talk": "cf_v_puffed_talk", "l": "cf_v_puffed_l", "r": "cf_v_puffed_r"}, "determined": {"base": "cf_e_determined", "talk": "cf_v_determined_talk", "l": "cf_v_determined_l", "r": "cf_v_determined_r"}, "evil": {"base": "cf_e_evil", "talk": "cf_v_evil_talk", "l": "cf_v_evil_l", "r": "cf_v_evil_r"}, "smug": {"base": "cf_e_smug", "talk": "cf_v_smug_talk", "l": "cf_v_smug_l", "r": "cf_v_smug_r"}, "confused": {"base": "cf_e_confused", "talk": "cf_v_confused_talk", "l": "cf_v_confused_l", "r": "cf_v_confused_r"}, "disgusted": {"base": "cf_e_disgusted", "talk": "cf_v_disgusted_talk", "l": "cf_v_disgusted_l", "r": "cf_v_disgusted_r"}, "nervous": {"base": "cf_e_nervous", "talk": "cf_v_nervous_talk", "l": "cf_v_nervous_l", "r": "cf_v_nervous_r"}, "kissy": {"base": "cf_e_kissy", "talk": "cf_v_kissy_talk", "l": "cf_v_kissy_l", "r": "cf_v_kissy_r"}, "bored": {"base": "cf_e_bored", "talk": "cf_v_bored_talk", "l": "cf_v_bored_l", "r": "cf_v_bored_r"}, "excited": {"base": "cf_e_excited", "talk": "cf_v_excited_talk", "l": "cf_v_excited_l", "r": "cf_v_excited_r"}, "thinking": {"base": "cf_e_thinking", "talk": "cf_v_thinking_talk", "l": "cf_v_thinking_l", "r": "cf_v_thinking_r"}, "scared": {"base": "cf_e_scared", "talk": "cf_v_scared_talk", "l": "cf_v_scared_l", "r": "cf_v_scared_r"}},
   mood: (() => { try { return localStorage.getItem("kz_face_mood") || "neutral"; } catch { return "neutral"; } })(),
-  setMood(m) { if (!this.MOODS[m] && !ChefArt.sprites["cf_x_" + m]) return; this.mood = m; try { localStorage.setItem("kz_face_mood", m); } catch {} },
+  setMood(m) { if (!this.EXPR[m]) return; this.mood = m; try { localStorage.setItem("kz_face_mood", m); } catch {} },
   rain: false,
   toggleRain() { this.rain = !this.rain; if (this.rain && !this.on) this.toggle(); },     // rain brings the cloud out if it's away
-  /* anyone in chat can type !rain: the cloud rains for 5 to 15 seconds (more !rain while it's raining keeps it going).
-     If the cloud was away, it comes out for the rain and goes away again after. */
+  /* anyone in chat can type !rain: if the cloud is out, it rains for 5 to 15 seconds (more !rain while it's raining
+     keeps it going). If the cloud isn't out, nothing happens. */
   rainTill: 0,
-  chatRain() {
-    const now = performance.now(), end = now + rand(5000, 15000);
-    if (!this.on) { this.toggle(); this.rainBrought = true; }
-    this.rainTill = Math.max(this.rainTill, end);
-  },
-  /* the cloud made in the Art screen: a whole cloud-face picture for each expression (neutral, talking, wide open,
-     smile, grin, "oo", blinking, brows up, angry, looking left/right). The closest one to your expression is shown,
-     with a quick cross-fade between them. */
+  chatRain() { if (!this.on) return; this.rainTill = Math.max(this.rainTill, performance.now() + rand(5000, 15000)); },
+  /* a sound spike on the video capture device: the eyes look toward the middle of the screen for a while */
+  attendUntil: 0, centerDir: 0,
+  attend() { const now = performance.now(); if (now < this.attendUntil - 1500) return; this.attendUntil = now + rand(4000, 7000); },
+  /* the cloud made in the Art screen: for each expression (picked by hand) a whole cloud-face picture, plus its own
+     talking picture and looking-left/right pictures. The eyes pick the looking picture, and the talking picture fades
+     in over it as your mouth opens (for the neutral face, a wide-open one when you're loud). */
   ART_W: 600, ART_H: 600, ART_EYE_Y: .42,
   drawArtCloud(lg, AS, t) {
-    const E = this.E, has = n => !!AS[n], base = this.MOODS[this.mood] || "cf_x_" + this.mood;
-    let want = has(base) ? base : "cf_ref";
-    if (E.jaw > .5) want = this.mood === "smile" || this.mood === "grin" ? (has("cf_x_grin") ? "cf_x_grin" : "cf_x_wide") : has("cf_x_wide") ? "cf_x_wide" : "cf_x_talk";
-    else if (E.jaw > .16) want = this.mood === "grin" && has("cf_x_grin") ? "cf_x_grin" : this.mood === "oo" && has("cf_x_oo") ? "cf_x_oo" : "cf_x_talk";
-    else if (want === "cf_ref" && E.lx < -.5) want = "cf_x_look_l";       // looking around: only from the plain face
-    else if (want === "cf_ref" && E.lx > .5) want = "cf_x_look_r";
-    if (!has(want)) want = "cf_ref";
-    if (want !== this.xNow) { this.xPrev = this.xNow; this.xNow = want; this.xAt = t; }
-    const k = Math.min(1, (t - (this.xAt || 0)) / 120), draw = (n, a) => { const sp = AS[n]; if (!sp || a <= 0) return;
+    const E = this.E, has = n => n && !!AS[n], X = this.EXPR[this.mood] || this.EXPR.neutral, N = this.EXPR.neutral;
+    const base = has(X.base) ? X.base : "cf_ref";
+    let eyes = base;
+    if (base === X.base) { if (E.lx < -.45 && has(X.l)) eyes = X.l; else if (E.lx > .45 && has(X.r)) eyes = X.r; }
+    else if (E.lx < -.45 && has(N.l)) eyes = N.l; else if (E.lx > .45 && has(N.r)) eyes = N.r;
+    const talk = base === X.base ? (E.jaw > .6 && has(X.wide) ? X.wide : has(X.talk) ? X.talk : null) : (has(N.talk) ? N.talk : null);
+    if (eyes !== this.xNow) { this.xPrev = this.xNow; this.xNow = eyes; this.xAt = t; }
+    const draw = (n, a) => { const sp = AS[n]; if (!sp || a <= .01) return;
       const w = this.ART_W, h = w * sp.h / sp.w; this.ART_H = h; lg.globalAlpha = a; lg.drawImage(sp.img, 0, 0, sp.w, sp.h, -w / 2, -h / 2 - 30, w, h); };
+    const k = Math.min(1, (t - (this.xAt || 0)) / 140);
     if (this.xPrev && k < 1) draw(this.xPrev, 1 - k);
-    draw(this.xNow, k); lg.globalAlpha = 1;
+    draw(this.xNow, k);
+    const ta = Math.max(0, Math.min(1, (E.jaw - .12) / .18));
+    if (talk) draw(talk, ta);
+    lg.globalAlpha = 1;
   },
   // the cloud: a classic puffy cloud (flat-ish bottom, big bumps on top), each puff breathing a little
   BLOBS: [[-215, 55, 72], [-140, 62, 82], [-55, 66, 86], [40, 66, 86], [125, 62, 80], [205, 55, 70],
@@ -3612,6 +3621,7 @@ const Face = {
       want = { jaw: lv, smile: Math.abs(m) < .5 ? .25 : 0, frown: 0, browUp: lv * .7 + (m > 1.5 ? .6 : 0), bdL: Math.abs(m + 1) < .5 ? .6 : 0, bdR: Math.abs(m + 1) < .5 ? .6 : 0,
         bouL: 0, bouR: Math.abs(m - 1) < .5 ? .8 : 0, blinkL: b, blinkR: b, squint: Math.abs(m + 1) < .5 ? .6 : 0, wide: m > 1.5 ? .7 : lv * .4, lx: this.gazeTo[0], ly: this.gazeTo[1], pucker: 0 };
     }
+    if (performance.now() < this.attendUntil) { want.lx = this.centerDir; want.ly = 0; this.nextLook = t + rand(1500, 3000); this.gazeTo = [0, 0]; }
     for (const key in E) E[key] += ((want[key] || 0) - E[key]) * (key.startsWith("blink") ? .6 : k);
     return { cam: !!cam, present: !!(cam && cam.p) };
   },
@@ -3648,6 +3658,7 @@ const Face = {
         px = fromX + (toX - fromX) * e; py = fromY + (toY - fromY) * e; moving = k < 1 ? 1 : 0;
         if (k >= 1) { hoverUntil = t + (wasLow ? rand(4000, 8000) : rand(4000, 11000)); moveAt = 0; } }
       const dir = moving ? Math.sign(toX - fromX) : 0;
+      this.centerDir = Math.abs(1280 - px) < 220 ? 0 : Math.sign(1280 - px);   // which way the middle of the screen is
       const sq = 1 + E.jaw * .12, x = px + Math.sin(t / 2300) * 18, y = py + Math.sin(t / 900) * 12 + Math.sin(t / 2700) * 9;
       // ---- the cloud body, with the logo's green and purple glowing inside and soft lightning flickers
       lg.setTransform(1, 0, 0, 1, 0, 0); lg.clearRect(0, 0, LW, LH); lg.translate(LW / 2, LH / 2 + 30); lg.scale(sq, 1 / Math.sqrt(sq));
@@ -3738,7 +3749,6 @@ const Face = {
         return true;
       });
       // ---- rain, while it's switched on (Rain on/off button)
-      if (this.rainBrought && performance.now() > this.rainTill + 1500) { this.rainBrought = false; if (!this.rain && this.on) this.on = false; }   // chat's rain is over: back away
       if (this.on && (this.rain || performance.now() < this.rainTill)) for (let i = 0; i < 3; i++) this.drops.push({ x: x + rand(-200, 200), y: y + 95 + rand(0, 20), v: rand(14, 20), c: Math.random() < .2 ? "rgba(190,150,255,.7)" : Math.random() < .2 ? "rgba(190,240,150,.7)" : "rgba(185,205,235,.65)" });
       g.lineCap = "round"; g.lineWidth = 2.5;
       this.drops = this.drops.filter(d => { d.y += d.v * dt / 16; if (d.y > H + 20) return false; g.strokeStyle = d.c; g.beginPath(); g.moveTo(d.x, d.y); g.lineTo(d.x - 2, d.y - 18); g.stroke(); return true; });
@@ -4030,7 +4040,7 @@ window.onRemote = c => {
   else if (c.cmd === "effect" && c.name === "kazul") Kazul.run();
   else if (c.cmd === "effect" && c.name === "jinx") Jinx.run();
   else if (c.cmd === "effect" && c.name === "smoke") Smoke.run();
-  else if (c.cmd === "effect" && c.name === "face") { Face.rainBrought = false; Face.toggle(); }
+  else if (c.cmd === "effect" && c.name === "face") Face.toggle();
   else if (c.cmd === "effect" && c.name === "rain") Face.toggleRain();
   else if (c.cmd === "faceMood") Face.setMood(c.name);
   if (c.cmd === "faceMood") { const sel = $("#facemood"); if (sel) sel.value = Face.mood; }
@@ -4148,7 +4158,7 @@ document.querySelectorAll("#testbar [data-t]").forEach(b => b.onclick = () => {
   else if (t === "kazul") Kazul.run();
   else if (t === "jinx") Jinx.run();
   else if (t === "smoke") Smoke.run();
-  else if (t === "face") { Face.rainBrought = false; Face.toggle(); }
+  else if (t === "face") Face.toggle();
   else if (t === "rain") Face.toggleRain();
   else if (t === "chat") Lurk.leave(name);
 });
@@ -4617,7 +4627,7 @@ window.KZRelay = function (topic, onMessage, servers) {
 (() => {
   const qs = new URLSearchParams(location.search), key = qs.get("ctl");
   if (!key || !window.WebSocket) return;
-  const PAGE = "html3", VERSION = "85ba0f9";
+  const PAGE = "html3", VERSION = "e6e48e7";
   let said = false;
   const relay = KZRelay("kzctl/" + key, c => {
     if (!c || c.from === "overlay" || (c.to && c.to !== "all" && c.to !== PAGE)) return;
