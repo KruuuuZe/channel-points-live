@@ -543,7 +543,7 @@ body.fit #stage{background:radial-gradient(1200px 700px at 30% 20%,#1a103322,tra
   <button class="b-tank" data-t="tank">💥 Silverhand</button><button class="snd" data-snd="tank" title="Add a sound for this effect">🔊+</button>
   <button class="b-kaz" data-t="kazul">💣 Kazul123</button><button class="snd" data-snd="kazul" title="Add a sound for this effect">🔊+</button>
   <button class="b-jinx" data-t="jinx">🔥 JINX</button><button class="snd" data-snd="jinx" title="Add a sound for this effect">🔊+</button>
-  <button class="b-smoke" data-t="smoke">💨 Smoke on/off</button><button class="b-smoke" data-t="face">😶 Face on/off</button><button class="b-smoke" data-t="rain">🌧 Rain on/off</button><button class="snd" data-snd="smoke" title="Add a sound for this effect">🔊+</button>
+  <button class="b-smoke" data-t="smoke">💨 Smoke on/off</button><button class="b-smoke" data-t="face">😶 Face on/off</button><button class="b-smoke" data-t="rain">🌧 Rain on/off</button><select id="facemood" title="Cloud face expression"><option value="neutral">😐</option><option value="smile">🙂</option><option value="grin">😁</option><option value="oo">😗</option><option value="closed">😌</option></select><button class="snd" data-snd="smoke" title="Add a sound for this effect">🔊+</button>
   <button class="b-chat" data-t="chat">Chat</button><button class="snd" data-snd="chat" title="Add a sound for this alert">🔊+</button>
 </div>
 
@@ -3553,11 +3553,16 @@ const Face = {
   on: false, a: 0, run: false, puffs: [], jets: [], drops: [], bolts: [], glows: [],
   cam: null,                                            // the latest face-tracking frame from the Voice & face page
   E: { jaw: 0, smile: 0, frown: 0, browUp: 0, bdL: 0, bdR: 0, bouL: 0, bouR: 0, blinkL: 0, blinkR: 0, squint: 0, wide: 0, lx: 0, ly: 0, pucker: 0 },
-  gazeTo: [0, 0], nextLook: 0, blinkAt: 2500, mood: 0, moodTo: 0, nextMood: 0,
+  gazeTo: [0, 0], nextLook: 0, blinkAt: 2500, rmood: 0, moodTo: 0, nextMood: 0,
   toggle() {
     if (!this.on) { this.on = true; if (!Voice.obsOk && !Voice.an) Voice.startMic(); if (!this.run) this.start(); }
     else this.on = false;
   },
+  /* the expression is picked by hand (from the app's Control screen); only the eyes looking around and the mouth
+     moving when you talk happen on their own */
+  MOODS: { neutral: "cf_ref", smile: "cf_x_smile", grin: "cf_x_grin", oo: "cf_x_oo", closed: "cf_x_blink" },
+  mood: (() => { try { return localStorage.getItem("kz_face_mood") || "neutral"; } catch { return "neutral"; } })(),
+  setMood(m) { if (!this.MOODS[m] && !ChefArt.sprites["cf_x_" + m]) return; this.mood = m; try { localStorage.setItem("kz_face_mood", m); } catch {} },
   rain: false,
   toggleRain() { this.rain = !this.rain; if (this.rain && !this.on) this.toggle(); },     // rain brings the cloud out if it's away
   /* anyone in chat can type !rain: the cloud rains for 5 to 15 seconds (more !rain while it's raining keeps it going).
@@ -3573,17 +3578,12 @@ const Face = {
      with a quick cross-fade between them. */
   ART_W: 600, ART_H: 600, ART_EYE_Y: .42,
   drawArtCloud(lg, AS, t) {
-    const E = this.E, has = n => !!AS[n];
-    const blink = (E.blinkL + E.blinkR) / 2, angry = (E.bdL + E.bdR) / 2;
-    let want = "cf_ref";
-    if (blink > .6 && has("cf_x_blink")) want = "cf_x_blink";
-    else if (E.jaw > .5) want = E.pucker > .4 && has("cf_x_oo") ? "cf_x_oo" : has("cf_x_wide") ? "cf_x_wide" : "cf_x_talk";
-    else if (E.jaw > .16) want = E.smile > .45 && has("cf_x_grin") ? "cf_x_grin" : E.pucker > .4 && has("cf_x_oo") ? "cf_x_oo" : "cf_x_talk";
-    else if (E.smile > .35) want = "cf_x_smile";
-    else if (angry > .45 || E.frown > .45) want = "cf_x_angry";
-    else if (E.browUp > .5 || E.wide > .5) want = "cf_x_brows";
-    else if (E.lx < -.5) want = "cf_x_look_l";
-    else if (E.lx > .5) want = "cf_x_look_r";
+    const E = this.E, has = n => !!AS[n], base = this.MOODS[this.mood] || "cf_x_" + this.mood;
+    let want = has(base) ? base : "cf_ref";
+    if (E.jaw > .5) want = this.mood === "smile" || this.mood === "grin" ? (has("cf_x_grin") ? "cf_x_grin" : "cf_x_wide") : has("cf_x_wide") ? "cf_x_wide" : "cf_x_talk";
+    else if (E.jaw > .16) want = this.mood === "grin" && has("cf_x_grin") ? "cf_x_grin" : this.mood === "oo" && has("cf_x_oo") ? "cf_x_oo" : "cf_x_talk";
+    else if (want === "cf_ref" && E.lx < -.5) want = "cf_x_look_l";       // looking around: only from the plain face
+    else if (want === "cf_ref" && E.lx > .5) want = "cf_x_look_r";
     if (!has(want)) want = "cf_ref";
     if (want !== this.xNow) { this.xPrev = this.xNow; this.xNow = want; this.xAt = t; }
     const k = Math.min(1, (t - (this.xAt || 0)) / 120), draw = (n, a) => { const sp = AS[n]; if (!sp || a <= 0) return;
@@ -3608,7 +3608,7 @@ const Face = {
     } else {
       if (t > this.nextLook) { this.nextLook = t + rand(700, 2600); const r = Math.random(); this.gazeTo = r < .45 ? [0, 0] : [rand(-1, 1), rand(-.7, .7)]; }
       if (t > this.nextMood) { this.nextMood = t + rand(2500, 6000); this.moodTo = [0, 0, 0, 1, -1, 2][Math.floor(Math.random() * 6)]; }
-      this.mood += (this.moodTo - this.mood) * .05; const m = this.mood, b = this.autoBlink(t);
+      this.rmood += (this.moodTo - this.rmood) * .05; const m = this.rmood, b = this.autoBlink(t);
       want = { jaw: lv, smile: Math.abs(m) < .5 ? .25 : 0, frown: 0, browUp: lv * .7 + (m > 1.5 ? .6 : 0), bdL: Math.abs(m + 1) < .5 ? .6 : 0, bdR: Math.abs(m + 1) < .5 ? .6 : 0,
         bouL: 0, bouR: Math.abs(m - 1) < .5 ? .8 : 0, blinkL: b, blinkR: b, squint: Math.abs(m + 1) < .5 ? .6 : 0, wide: m > 1.5 ? .7 : lv * .4, lx: this.gazeTo[0], ly: this.gazeTo[1], pucker: 0 };
     }
@@ -3620,22 +3620,34 @@ const Face = {
     this.run = true; Smoke.textures(); Sound.init();
     const cv = $("#facecv"), g = cv.getContext("2d"), W = 2560, H = 1440, t0 = performance.now();
     const LW = 760, LH = 660, layer = document.createElement("canvas"); layer.width = LW; layer.height = LH; const lg = layer.getContext("2d");
-    // it wanders the band around the edge of the screen: pauses and hovers in a spot, then glides somewhere else
-    const MX = 330, MY = 230, w = W - 2 * MX, h = H - 2 * MY, per = 2 * (w + h);
-    const along = d => { d = ((d % per) + per) % per;
-      if (d < w) return [MX + d, MY]; d -= w; if (d < h) return [W - MX, MY + d]; d -= h; if (d < w) return [W - MX - d, H - MY]; d -= w; return [MX, H - MY - d]; };
-    let p = per * .62, from = p, to = p, moveAt = 0, moveDur = 1, hoverUntil = 4000, last = t0;
+    // it likes the top of the screen: hovers a while, then glides to a new spot, usually along the top,
+    // but every so often it floats down to the bottom for a while
+    const MX = 330, CORNER = [W - 330, H - 260];
+    const pick = (low) => [rand(MX, W - MX), low ? rand(1020, H - 260) : rand(240, 470)];
+    let [px, py] = CORNER, fromX = px, fromY = py, toX = px, toY = py, moveAt = 0, moveDur = 1, hoverUntil = 0, last = t0, enterAt = -1e9, wasLow = false;
     let nextBolt = rand(6000, 14000), nextRain = rand(12000, 25000), rainUntil = 0, nextGlow = 0;
     const frame = now => {
       const t = now - t0, dt = Math.min(50, now - last); last = now; g.clearRect(0, 0, W, H);
       this.a += ((this.on ? 1 : 0) - this.a) * .05;
       const lv = Voice.sample(), st = this.expression(t, lv), E = this.E;
-      // ---- movement: hover a while, then glide (eased) to a new spot along the edge, in either direction
-      if (t > hoverUntil && moveAt <= hoverUntil) { from = p; to = p + (Math.random() < .5 ? -1 : 1) * rand(350, 1300); moveAt = t; moveDur = Math.max(2500, Math.min(8000, Math.abs(to - from) / .14)); }
+      // ---- entrance: when it comes out, it bursts out of the bottom-right corner as a poof of smoke and forms up
+      if (this.on && this.a < .06 && t - enterAt > 2500) {
+        enterAt = t; px = fromX = toX = CORNER[0]; py = fromY = toY = CORNER[1]; moveAt = 0; hoverUntil = t + 2600; this.a = .02;
+        for (let i = 0; i < 70; i++) { const a = rand(-Math.PI, 0) + rand(-.4, .4) - .5, sp = rand(4, 16);
+          this.puffs.push({ x: px + rand(-60, 60), y: py + rand(-40, 60), vx: Math.cos(a) * sp, vy: Math.sin(a) * sp * .8, r: rand(30, 70), born: t, life: rand(1400, 2600) }); }
+      }
+      const ek = Math.min(1, (t - enterAt) / 1300), es = .2 + .8 * (1 - Math.pow(1 - ek, 3));   // grows out of the poof
+      // ---- movement: hover a while, then glide (eased) to a new spot
+      if (t > hoverUntil && moveAt <= hoverUntil) {
+        const low = !wasLow && Math.random() < .2; wasLow = low;
+        fromX = px; fromY = py; [toX, toY] = pick(low); if (Math.hypot(toX - fromX, toY - fromY) < 300) toX = fromX + (toX < fromX ? -1 : 1) * 500;
+        toX = Math.max(MX, Math.min(W - MX, toX)); moveAt = t; moveDur = Math.max(2500, Math.min(9000, Math.hypot(toX - fromX, toY - fromY) / .14));
+      }
       let moving = 0;
-      if (moveAt > hoverUntil) { const k = Math.min(1, (t - moveAt) / moveDur), e = k < .5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2; p = from + (to - from) * e; moving = Math.sign(to - from) * Math.sin(k * Math.PI);
-        if (k >= 1) { hoverUntil = t + rand(4000, 11000); moveAt = 0; } }
-      const [px, py] = along(p), [ax] = along(p + 30), dir = moving ? (ax > px ? 1 : ax < px ? -1 : 0) : 0;
+      if (moveAt > hoverUntil) { const k = Math.min(1, (t - moveAt) / moveDur), e = k < .5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2;
+        px = fromX + (toX - fromX) * e; py = fromY + (toY - fromY) * e; moving = k < 1 ? 1 : 0;
+        if (k >= 1) { hoverUntil = t + (wasLow ? rand(4000, 8000) : rand(4000, 11000)); moveAt = 0; } }
+      const dir = moving ? Math.sign(toX - fromX) : 0;
       const sq = 1 + E.jaw * .12, x = px + Math.sin(t / 2300) * 18, y = py + Math.sin(t / 900) * 12 + Math.sin(t / 2700) * 9;
       // ---- the cloud body, with the logo's green and purple glowing inside and soft lightning flickers
       lg.setTransform(1, 0, 0, 1, 0, 0); lg.clearRect(0, 0, LW, LH); lg.translate(LW / 2, LH / 2 + 30); lg.scale(sq, 1 / Math.sqrt(sq));
@@ -3651,7 +3663,7 @@ const Face = {
         const gr = lg.createRadialGradient(f.x, f.y, 0, f.x, f.y, 170); gr.addColorStop(0, `rgba(${r},${gg},${b},${.55 * env})`); gr.addColorStop(1, `rgba(${r},${gg},${b},0)`);
         lg.globalAlpha = 1; lg.fillStyle = gr; lg.fillRect(f.x - 170, f.y - 170, 340, 340); return true; });
       lg.globalCompositeOperation = "source-over"; lg.globalAlpha = 1;
-      g.globalAlpha = this.a; g.save(); g.filter = artCloud ? "blur(.4px)" : "blur(5px)"; g.drawImage(layer, x - LW / 2, y - LH / 2 - 30); g.restore();
+      g.globalAlpha = this.a; g.save(); g.filter = artCloud ? "blur(.4px)" : "blur(5px)"; g.drawImage(layer, x - LW / 2 * es, y - (LH / 2 + 30) * es, LW * es, LH * es); g.restore();
       // ---- the face: art from the Art screen if it's been made, otherwise drawn
       if (artCloud) {} else {
       g.save(); g.translate(x, y + 10); g.scale(sq, 1 / Math.sqrt(sq)); g.filter = "blur(.8px)";
@@ -3889,6 +3901,7 @@ const Personal = {
      ATT3NCHUN's plays the fish effect.
      ("Day" is the calendar day on this computer; remembered so a page reload doesn't play it twice.)
    - The lightning lap plays once an hour, at the top of the hour. */
+setTimeout(() => { const sel = $("#facemood"); if (sel) { sel.value = Face.mood; sel.onchange = () => Face.setMood(sel.value); } });
 const AutoFx = {
   KEY: "autoFxDay",
   FIRST_OF_DAY: { thenapalmer: () => Mango.run(), kapelan012: () => Banana.run(), att3nchun: () => Fishy.run(), anime_chef: () => Chef.run(), tassiethedevil: () => Tank.run(), kazul123: () => Kazul.run(), partisanherojinx: () => Jinx.run() },
@@ -4019,6 +4032,8 @@ window.onRemote = c => {
   else if (c.cmd === "effect" && c.name === "smoke") Smoke.run();
   else if (c.cmd === "effect" && c.name === "face") { Face.rainBrought = false; Face.toggle(); }
   else if (c.cmd === "effect" && c.name === "rain") Face.toggleRain();
+  else if (c.cmd === "faceMood") Face.setMood(c.name);
+  if (c.cmd === "faceMood") { const sel = $("#facemood"); if (sel) sel.value = Face.mood; }
   else if (c.cmd === "voice") Voice.remote(+c.l || 0, c.s == null ? .5 : +c.s);
   else if (c.cmd === "face") Face.face(c);
   else if (c.cmd === "art") ChefArt.receive(c);
@@ -4602,7 +4617,7 @@ window.KZRelay = function (topic, onMessage, servers) {
 (() => {
   const qs = new URLSearchParams(location.search), key = qs.get("ctl");
   if (!key || !window.WebSocket) return;
-  const PAGE = "html3", VERSION = "332d89a";
+  const PAGE = "html3", VERSION = "85ba0f9";
   let said = false;
   const relay = KZRelay("kzctl/" + key, c => {
     if (!c || c.from === "overlay" || (c.to && c.to !== "all" && c.to !== PAGE)) return;
