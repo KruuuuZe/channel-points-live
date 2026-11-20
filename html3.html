@@ -3504,11 +3504,11 @@ const Voice = {
   fromObs(inputs) {
     // your mic: an input named like a mic, otherwise the loudest input that isn't desktop/game/music audio
     const lvl = i => Math.max(0, ...(i.inputLevelsMul || []).map(ch => ch[1] || 0));
-    const CAP = /video capture|capture device|capture card|elgato|avermedia|hdmi|cam link/i;
+    const CAP = /video capture|capture device|capture card|elgato|avermedia|hdmi|cam link/i, CAP2 = /video capture device 2\b/i;
     let mic = inputs.filter(i => !CAP.test(i.inputName) && /mic|aux|voice|wave|yeti|shure|rode|headset|focusrite|goxlr|input/i.test(i.inputName));
     if (!mic.length) mic = inputs.filter(i => !CAP.test(i.inputName) && !/desktop|game|music|browser|spotify|discord|media|alert|overlay/i.test(i.inputName));
-    // a sudden loud sound on the video capture device: the cloud's eyes look toward the middle of the screen
-    const cap = inputs.filter(i => CAP.test(i.inputName));
+    // a sudden loud sound on "Video Capture Device 2": the cloud's eyes look toward the middle of the screen
+    const cap = inputs.filter(i => CAP2.test(i.inputName));
     if (cap.length) { const c = Math.max(0, ...cap.map(lvl)), cdb = c > 0 ? 20 * Math.log10(c) : -100;
       if (this.capAvg === undefined) this.capAvg = cdb;
       if (cdb > -32 && cdb - this.capAvg > 10 && Face.on) Face.attend();
@@ -3614,24 +3614,13 @@ const Face = {
   /* where the expression comes from: your face on camera (if the Voice & face page is open and sees you), a blank
      face if the camera can't see you, or (with no camera at all) your voice plus a few random moods */
   expression(t, lv) {
-    const E = this.E, cam = this.cam && performance.now() - this.cam.at < 1000 ? this.cam : null, k = .35;
-    let want;
-    if (cam && cam.p) {
-      const v = cam.v; want = { jaw: v[0], smile: v[1], frown: v[2], browUp: v[3], bdL: v[4], bdR: v[5], bouL: v[6], bouR: v[7], blinkL: v[8], blinkR: v[9], squint: v[10], wide: v[11], lx: v[12], ly: v[13], pucker: v[14] };
-      want.jaw = Math.max(want.jaw, lv * .5);                        // voice helps the mouth keep up
-    } else if (cam) {
-      want = { jaw: 0, smile: 0, frown: 0, browUp: 0, bdL: 0, bdR: 0, bouL: 0, bouR: 0, blinkL: 0, blinkR: 0, squint: 0, wide: 0, lx: 0, ly: 0, pucker: 0 };   // can't see you: blank face
-      const b = this.autoBlink(t); want.blinkL = want.blinkR = b;
-    } else {
-      if (t > this.nextLook) { this.nextLook = t + rand(700, 2600); const r = Math.random(); this.gazeTo = r < .45 ? [0, 0] : [rand(-1, 1), rand(-.7, .7)]; }
-      if (t > this.nextMood) { this.nextMood = t + rand(2500, 6000); this.moodTo = [0, 0, 0, 1, -1, 2][Math.floor(Math.random() * 6)]; }
-      this.rmood += (this.moodTo - this.rmood) * .05; const m = this.rmood, b = this.autoBlink(t);
-      want = { jaw: lv, smile: Math.abs(m) < .5 ? .25 : 0, frown: 0, browUp: lv * .7 + (m > 1.5 ? .6 : 0), bdL: Math.abs(m + 1) < .5 ? .6 : 0, bdR: Math.abs(m + 1) < .5 ? .6 : 0,
-        bouL: 0, bouR: Math.abs(m - 1) < .5 ? .8 : 0, blinkL: b, blinkR: b, squint: Math.abs(m + 1) < .5 ? .6 : 0, wide: m > 1.5 ? .7 : lv * .4, lx: this.gazeTo[0], ly: this.gazeTo[1], pucker: 0 };
-    }
-    if (performance.now() < this.attendUntil) { want.lx = this.centerDir; want.ly = 0; this.nextLook = t + rand(1500, 3000); this.gazeTo = [0, 0]; }
+    // no camera tracking: the mouth follows your voice, and the eyes look straight ahead, except right after a sudden
+    // loud sound on Video Capture Device 2, when they look toward the middle of the screen for a while
+    const E = this.E, k = .35, att = performance.now() < this.attendUntil;
+    const want = { jaw: lv, smile: 0, frown: 0, browUp: lv * .5, bdL: 0, bdR: 0, bouL: 0, bouR: 0, blinkL: 0, blinkR: 0, squint: 0, wide: lv * .3, lx: att ? this.centerDir : 0, ly: 0, pucker: 0 };
+    if (!ChefArt.sprites.cf_ref) { const b = this.autoBlink(t); want.blinkL = want.blinkR = b; }     // the drawn stand-in face still blinks
     for (const key in E) E[key] += ((want[key] || 0) - E[key]) * (key.startsWith("blink") ? .6 : k);
-    return { cam: !!cam, present: !!(cam && cam.p) };
+    return { cam: false, present: false };
   },
   autoBlink(t) { if (t > this.blinkAt + 150) this.blinkAt = t + rand(2200, 5500); return t > this.blinkAt ? Math.sin(Math.min(1, (t - this.blinkAt) / 150) * Math.PI) : 0; },
   start() {
@@ -4138,7 +4127,7 @@ window.onRemote = c => {
   else if (c.cmd === "faceTalk") Face.setNeutralTalk(c.name);
   if (c.cmd === "faceMood") { const sel = $("#facemood"); if (sel) sel.value = Face.mood; }
   else if (c.cmd === "voice") Voice.remote(+c.l || 0, c.s == null ? .5 : +c.s);
-  else if (c.cmd === "face") Face.face(c);
+  // (face tracking from the camera is switched off: the eyes look straight ahead unless the capture device gets loud)
   else if (c.cmd === "art") ChefArt.receive(c);
   else if (c.cmd === "scroop") {
     if (c.action === "spawn") { if (!Scrap.piles.some(p => p.state !== "none")) { clearTimeout(Scrap.timer); Scrap.timer = 0; Scrap.spawn(); } }
@@ -4721,7 +4710,7 @@ window.KZRelay = function (topic, onMessage, servers) {
 (() => {
   const qs = new URLSearchParams(location.search), key = qs.get("ctl");
   if (!key || !window.WebSocket) return;
-  const PAGE = "html3", VERSION = "803773a";
+  const PAGE = "html3", VERSION = "b562f7a";
   let said = false;
   const relay = KZRelay("kzctl/" + key, c => {
     if (!c || c.from === "overlay" || (c.to && c.to !== "all" && c.to !== PAGE)) return;
