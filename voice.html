@@ -3,25 +3,31 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Channel Points · Voice</title>
+<title>Channel Points · Face & voice</title>
 <style>
-body{margin:0;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;font-family:"Segoe UI",system-ui,Roboto,sans-serif;color:#f5f2ff;background:#05040a}
+body{margin:0;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;font-family:"Segoe UI",system-ui,Roboto,sans-serif;color:#f5f2ff;background:#05040a;padding:20px;box-sizing:border-box}
 h1{margin:0;font-size:22px;letter-spacing:.06em}
-p{color:#a59cc4;max-width:520px;text-align:center;line-height:1.45;margin:0}
+p{color:#a59cc4;max-width:560px;text-align:center;line-height:1.45;margin:0}
 button{font:inherit;font-weight:800;font-size:18px;color:#0b0a12;background:#a3e635;border:0;border-radius:14px;padding:14px 22px}
-select{font:inherit;color:#f5f2ff;background:#1a1530;border:1px solid #2a2342;border-radius:10px;padding:8px 10px;max-width:520px}
-#meter{width:420px;max-width:90vw;height:22px;border-radius:12px;background:#1a1530;overflow:hidden;border:1px solid #2a2342}
-#bar{height:100%;width:0;background:linear-gradient(90deg,#a3e635,#a855f7);transition:width .05s}
-#st{font-weight:700}
-.ok{color:#a3e635}.bad{color:#ff8fc8}
+select{font:inherit;color:#f5f2ff;background:#1a1530;border:1px solid #2a2342;border-radius:10px;padding:8px 10px;max-width:420px}
+label{display:flex;gap:8px;align-items:center;color:#d9d2f5}
+.row{display:flex;gap:12px;flex-wrap:wrap;justify-content:center;align-items:center}
+video{width:320px;border-radius:14px;transform:scaleX(-1);background:#111;border:2px solid #2a2342}
+#meter{width:320px;height:14px;border-radius:8px;background:#1a1530;overflow:hidden;border:1px solid #2a2342}
+#bar{height:100%;width:0;background:linear-gradient(90deg,#a3e635,#a855f7)}
+#st,#fs{font-weight:700;text-align:center}
+.ok{color:#a3e635}.bad{color:#ff8fc8}.muted{color:#a59cc4}
 </style>
 </head>
 <body>
-<h1>🎙 Voice for the smoke face</h1>
-<p>Keep this page open in a browser on the PC while the face is on. It listens to your mic and sends only how loud you are and the shape of the sound to your overlay (no audio is sent anywhere).</p>
-<select id="mic"><option value="">Default microphone</option></select>
+<h1>😶 Face & voice for the smoke cloud</h1>
+<p>Keep this page open in a browser on the PC while the cloud is on. It watches your face with your webcam and copies your expressions onto the cloud (it sends only numbers like "mouth half open", never video or audio). If it can't see you, the cloud shows a blank face.</p>
+<div class="row"><label><input type="checkbox" id="useCam" checked> 📷 Copy my face</label><select id="cam"><option value="">Default camera</option></select></div>
+<div class="row"><label><input type="checkbox" id="useMic"> 🎙 Also send my mic (only if OBS can't)</label><select id="mic"><option value="">Default microphone</option></select></div>
 <button id="go">Start</button>
-<div id="meter"><div id="bar"></div></div>
+<video id="vid" autoplay muted playsinline hidden></video>
+<div id="fs" class="muted"></div>
+<div id="meter" hidden><div id="bar"></div></div>
 <div id="st">Not started</div>
 <script>
 /* ================= KZRelay: instant messages between the app and the overlays =================
@@ -104,32 +110,72 @@ window.KZRelay = function (topic, onMessage, servers) {
 };
 
 const $ = s => document.querySelector(s), key = new URLSearchParams(location.search).get("ctl");
-if (!key) { $("#st").innerHTML = '<span class="bad">This link is missing your pairing key. Copy the Voice link from the app\'s Control screen.</span>'; $("#go").disabled = true; }
+if (!key) { $("#st").innerHTML = '<span class="bad">This link is missing your pairing key. Copy the link from the app\'s Control screen.</span>'; $("#go").disabled = true; }
 const relay = key ? KZRelay("kzctl/" + key, () => {}) : null;
-navigator.mediaDevices && navigator.mediaDevices.enumerateDevices().then(ds => ds.filter(d => d.kind === "audioinput").forEach(d => { const o = document.createElement("option"); o.value = d.deviceId; o.textContent = d.label || "Microphone"; $("#mic").append(o); })).catch(() => {});
-$("#go").onclick = async () => {
-  try {
-    const st = await navigator.mediaDevices.getUserMedia({ audio: { deviceId: $("#mic").value || undefined, echoCancellation: false, noiseSuppression: false } });
-    const c = new (window.AudioContext || window.webkitAudioContext)(), an = c.createAnalyser(); an.fftSize = 1024; an.smoothingTimeConstant = .4;
-    c.createMediaStreamSource(st).connect(an);
-    const buf = new Float32Array(an.fftSize), fb = new Uint8Array(an.frequencyBinCount), hz = c.sampleRate / 2 / fb.length;
-    let level = 0, shape = .5, sent = 0, lastL = -1;
-    $("#go").textContent = "Listening…"; $("#go").disabled = true;
-    setInterval(() => {
-      an.getFloatTimeDomainData(buf); let sum = 0; for (const v of buf) sum += v * v;
-      const lv = Math.max(0, Math.min(1, (Math.sqrt(sum / buf.length) - .012) * 9));
-      an.getByteFrequencyData(fb); let w = 0, tot = 0; for (let i = 2; i < fb.length; i++) { const f = i * hz; if (f > 4000) break; w += f * fb[i]; tot += fb[i]; }
-      const sh = tot ? Math.max(0, Math.min(1, (w / tot - 700) / 1600)) : .5;
-      level += (lv - level) * (lv > level ? .55 : .22); shape += (sh - shape) * .2;
-      $("#bar").style.width = (level * 100) + "%";
-      const now = Date.now(), q = Math.round(level * 20) / 20;
-      // about 12 times a second while you talk; once a second when quiet
-      if ((q !== lastL || now - sent > 1000) && now - sent > 80 && relay) { relay.send({ from: "app", to: "html3", cmd: "voice", noack: true, t: now, l: +level.toFixed(2), s: +shape.toFixed(2) }); sent = now; lastL = q; }
-      const n = relay ? relay.connected() : 0;
-      $("#st").innerHTML = n ? '<span class="ok">● Sending to your overlay</span>' : '<span class="bad">○ Connecting…</span>';
-    }, 40);
-  } catch (e) { $("#st").innerHTML = '<span class="bad">Couldn\'t use the mic: ' + e.message + '</span>'; }
+const send = o => relay && relay.send(Object.assign({ from: "app", to: "html3", noack: true, t: Date.now() }, o));
+navigator.mediaDevices && navigator.mediaDevices.enumerateDevices().then(ds => ds.forEach(d => {
+  const o = document.createElement("option"); o.value = d.deviceId; o.textContent = d.label || (d.kind === "videoinput" ? "Camera" : "Microphone");
+  if (d.kind === "videoinput") $("#cam").append(o); if (d.kind === "audioinput") $("#mic").append(o); })).catch(() => {});
+setInterval(() => { const n = relay ? relay.connected() : 0; $("#st").innerHTML = n ? '<span class="ok">● Connected to your overlay</span>' : '<span class="bad">○ Connecting…</span>'; }, 1000);
+window.startMic = async () => {
+  const st = await navigator.mediaDevices.getUserMedia({ audio: { deviceId: $("#mic").value || undefined, echoCancellation: false, noiseSuppression: false } });
+  const c = new (window.AudioContext || window.webkitAudioContext)(), an = c.createAnalyser(); an.fftSize = 1024; an.smoothingTimeConstant = .4; c.createMediaStreamSource(st).connect(an);
+  const buf = new Float32Array(an.fftSize), fb = new Uint8Array(an.frequencyBinCount), hz = c.sampleRate / 2 / fb.length; let level = 0, shape = .5, sent = 0, lastL = -1;
+  $("#meter").hidden = false;
+  setInterval(() => {
+    an.getFloatTimeDomainData(buf); let sum = 0; for (const v of buf) sum += v * v;
+    const lv = Math.max(0, Math.min(1, (Math.sqrt(sum / buf.length) - .012) * 9));
+    an.getByteFrequencyData(fb); let w = 0, tot = 0; for (let i = 2; i < fb.length; i++) { const f = i * hz; if (f > 4000) break; w += f * fb[i]; tot += fb[i]; }
+    const sh = tot ? Math.max(0, Math.min(1, (w / tot - 700) / 1600)) : .5; level += (lv - level) * (lv > level ? .55 : .22); shape += (sh - shape) * .2;
+    $("#bar").style.width = (level * 100) + "%";
+    const now = Date.now(), q = Math.round(level * 20) / 20;
+    if ((q !== lastL || now - sent > 1000) && now - sent > 80) { send({ cmd: "voice", l: +level.toFixed(2), s: +shape.toFixed(2) }); sent = now; lastL = q; }
+  }, 40);
 };
 </script>
+<script type="module">
+// face tracking with Google's MediaPipe face landmarker (runs on this PC, in this browser)
+const $ = s => document.querySelector(s);
+const VER = "0.10.14", BASE = `https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@${VER}`;
+async function startFace() {
+  $("#fs").textContent = "Loading face tracking…";
+  const { FaceLandmarker, FilesetResolver } = await import(BASE + "/vision_bundle.mjs");
+  const files = await FilesetResolver.forVisionTasks(BASE + "/wasm");
+  const fl = await FaceLandmarker.createFromOptions(files, { baseOptions: { modelAssetPath: "https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task", delegate: "GPU" },
+    runningMode: "VIDEO", numFaces: 1, outputFaceBlendshapes: true });
+  const vid = $("#vid"); vid.hidden = false;
+  vid.srcObject = await navigator.mediaDevices.getUserMedia({ video: { deviceId: $("#cam").value || undefined, width: 640, height: 480 } });
+  await vid.play();
+  let lastSend = 0, lastSeen = 0, sentGone = false;
+  const tick = () => {
+    const now = performance.now();
+    if (vid.readyState >= 2) {
+      const r = fl.detectForVideo(vid, now), bs = r.faceBlendshapes && r.faceBlendshapes[0];
+      if (bs) {
+        lastSeen = now; sentGone = false;
+        const b = {}; bs.categories.forEach(c => b[c.categoryName] = c.score);
+        const lm = r.faceLandmarks[0], nose = lm[1], le = lm[33], re = lm[263], mid = { x: (le.x + re.x) / 2, y: (le.y + re.y) / 2 }, span = Math.abs(re.x - le.x) || .1;
+        // where you're looking: head turn plus eyes (mirrored, so the cloud moves like your reflection)
+        const lx = Math.max(-1, Math.min(1, -(nose.x - mid.x) / span * 3 + ((b.eyeLookOutLeft || 0) - (b.eyeLookInLeft || 0)) * .8));
+        const ly = Math.max(-1, Math.min(1, ((nose.y - mid.y) / span - .55) * 3 + ((b.eyeLookDownLeft || 0) - (b.eyeLookUpLeft || 0)) * .8));
+        const v = [b.jawOpen, (b.mouthSmileLeft + b.mouthSmileRight) / 2, (b.mouthFrownLeft + b.mouthFrownRight) / 2, b.browInnerUp, b.browDownLeft, b.browDownRight,
+          b.browOuterUpLeft, b.browOuterUpRight, b.eyeBlinkLeft, b.eyeBlinkRight, (b.eyeSquintLeft + b.eyeSquintRight) / 2, (b.eyeWideLeft + b.eyeWideRight) / 2, lx, ly, b.mouthPucker]
+          .map(x => +Math.max(-1, Math.min(1, x || 0)).toFixed(2));
+        if (now - lastSend > 66) { relaySend({ cmd: "face", p: 1, v }); lastSend = now; }
+        $("#fs").innerHTML = '<span class="ok">🙂 I can see you</span>';
+      } else if (now - lastSeen > 600 && (!sentGone || now - lastSend > 1000)) { relaySend({ cmd: "face", p: 0 }); sentGone = true; lastSend = now; $("#fs").innerHTML = '<span class="bad">I can\'t see your face (the cloud shows a blank face)</span>'; }
+    }
+    requestAnimationFrame(tick);
+  };
+  tick();
+}
+function relaySend(o) { window.__send ? window.__send(o) : null; }
+$("#go").onclick = async () => {
+  $("#go").disabled = true; $("#go").textContent = "Running…";
+  try { if ($("#useMic").checked) await window.startMic(); } catch (e) { $("#fs").innerHTML = '<span class="bad">Mic: ' + e.message + '</span>'; }
+  try { if ($("#useCam").checked) await startFace(); } catch (e) { $("#fs").innerHTML = '<span class="bad">Face tracking couldn\'t start: ' + e.message + '</span>'; }
+};
+</script>
+<script>window.__send = o => send(o);</script>
 </body>
 </html>
