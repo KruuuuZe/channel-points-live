@@ -129,6 +129,21 @@ body.fit #stage{background:radial-gradient(1200px 700px at 30% 20%,#1a103322,tra
 .fol-shine{position:absolute;top:-20%;bottom:-20%;left:-30%;width:18%;transform:skewX(-20deg);pointer-events:none;
   background:linear-gradient(90deg,transparent,#ffffff40,transparent);animation:folShine 2.4s ease-in-out .8s infinite}
 @keyframes folShine{to{left:120%}}
+/* raid: an aurora glow that hugs the outline of every letter and keeps shifting color, plus a shifting ring */
+.fol-bar.aurora{animation:folIn .7s cubic-bezier(.2,1.4,.4,1) forwards,aurRing 5s linear infinite}
+.fol-bar.aurora.leave{animation:folOut .7s ease-in forwards}
+.fol-bar.aurora .fol-t,.fol-bar.aurora .fol-n{animation:aurGlow 5s linear infinite}
+.fol-bar.aurora .fol-n{animation-delay:-2.5s}
+@keyframes aurGlow{
+  0%,100%{filter:drop-shadow(0 4px 0 #0c1a10) drop-shadow(0 0 3px #4ade80) drop-shadow(0 0 14px #22c55e) drop-shadow(0 0 30px #22c55e88)}
+  25%{filter:drop-shadow(0 4px 0 #0c1a10) drop-shadow(0 0 3px #67e8f9) drop-shadow(0 0 14px #06b6d4) drop-shadow(0 0 30px #06b6d488)}
+  50%{filter:drop-shadow(0 4px 0 #0c1a10) drop-shadow(0 0 3px #c084fc) drop-shadow(0 0 14px #a855f7) drop-shadow(0 0 30px #a855f788)}
+  75%{filter:drop-shadow(0 4px 0 #0c1a10) drop-shadow(0 0 3px #f0abfc) drop-shadow(0 0 14px #ec4899) drop-shadow(0 0 30px #ec489988)}}
+@keyframes aurRing{
+  0%,100%{box-shadow:0 0 0 3px #0a2e14,0 0 34px #22c55e,0 0 80px #22c55e66,inset 0 0 30px #22c55e44}
+  25%{box-shadow:0 0 0 3px #0a2e14,0 0 34px #06b6d4,0 0 80px #06b6d466,inset 0 0 30px #06b6d444}
+  50%{box-shadow:0 0 0 3px #0a2e14,0 0 34px #a855f7,0 0 80px #a855f766,inset 0 0 30px #a855f744}
+  75%{box-shadow:0 0 0 3px #0a2e14,0 0 34px #ec4899,0 0 80px #ec489966,inset 0 0 30px #ec489944}}
 
 /* ---------- bits: announcement + cannon ---------- */
 .bits-head{top:120px;font-size:96px;text-transform:none;letter-spacing:.02em;background:none;color:#fff;filter:drop-shadow(0 6px 0 #000) drop-shadow(0 0 30px #a855f7aa)}
@@ -1016,8 +1031,8 @@ function doSub(name, color) {
 }
 /* the logo-themed line across the top (follows and raids): a starry night pill with the logo's green ring,
    the words in lime green and the name in purple, with a light sweep. Long lines shrink to fit. */
-function logoLine(words, name, ms) {
-  const bar = el("div", "fol-bar");
+function logoLine(words, name, ms, extra) {
+  const bar = el("div", "fol-bar" + (extra ? " " + extra : ""));
   bar.innerHTML = `<span class="fol-t"></span><span class="fol-n"></span><span class="fol-shine"></span>`;
   bar.querySelector(".fol-t").textContent = words; bar.querySelector(".fol-n").textContent = name;
   layer.append(bar);
@@ -1170,9 +1185,7 @@ function doStreak(name, value, login, color) {
   return 1300 + 6000 + 1500;
 }
 function doRaid(name) {
-  const aur = el("div", "aur"); aur.innerHTML = "<i></i><i></i><i></i><i></i><b></b>";
-  addTo(aur, 7600);
-  logoLine("Thank you for the raid", name, 7300);           // one logo-themed line across the top
+  logoLine("Thank you for the raid", name, 7300, "aurora");   // one logo-themed line across the top, with aurora light around the letters
   setTimeout(() => { fireworks([163, 230, 53], 5, 3000); fireworks([168, 85, 247], 5, 3000); }, 700);
   return 8400;
 }
@@ -3786,7 +3799,7 @@ window.KZRelay = function (topic, onMessage, servers) {
 (() => {
   const qs = new URLSearchParams(location.search), key = qs.get("ctl");
   if (!key || !window.WebSocket) return;
-  const PAGE = "html3", VERSION = "46f235c";
+  const PAGE = "html3", VERSION = "417fb5f";
   let said = false;
   const relay = KZRelay("kzctl/" + key, c => {
     if (!c || c.from === "overlay" || (c.to && c.to !== "all" && c.to !== PAGE)) return;
