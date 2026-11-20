@@ -3623,19 +3623,33 @@ const Face = {
       const ink = "rgba(42,38,58,.92)";
       [-1, 1].forEach(d => {
         const L = d < 0, blink = L ? E.blinkL : E.blinkR, bd = L ? E.bdL : E.bdR, bou = L ? E.bouL : E.bouR;
-        // eyes: soft rounded ovals, a little taller than wide; they squint, widen and blink; a highlight and a glowing pupil
-        const ex = d * 70, ey = -26, ew = 22, eh = Math.max(2.5, (27 + E.wide * 9 - E.squint * 9) * (1 - Math.min(1, blink) * .92));
-        g.fillStyle = ink; g.beginPath(); g.ellipse(ex, ey, ew, eh, 0, 0, 6.283); g.fill();
-        if (eh > 8) {
-          const gx = ex + E.lx * 9 + (dir * 4), gy = ey + E.ly * 9;
-          const gr = g.createRadialGradient(gx, gy, 0, gx, gy, 10); gr.addColorStop(0, "rgba(232,255,200,.95)"); gr.addColorStop(.6, "rgba(163,230,53,.55)"); gr.addColorStop(1, "rgba(163,230,53,0)");
-          g.save(); g.beginPath(); g.ellipse(ex, ey, ew, eh, 0, 0, 6.283); g.clip(); g.fillStyle = gr; g.beginPath(); g.arc(gx, gy, 10, 0, 6.283); g.fill();
-          g.fillStyle = "rgba(255,255,255,.9)"; g.beginPath(); g.ellipse(ex - 8 + E.lx * 4, ey - eh * .45, 5, 6, 0, 0, 6.283); g.fill(); g.restore();
+        // "hunter eyes": narrow almond eyes with a low, nearly straight hooded upper lid, the outer corners tilted up,
+        // a fuller curve underneath; a dark iris with a glowing green ring and a highlight that follows your gaze
+        const ex = d * 70, ey = -26;
+        const o = Math.max(0, (1 + E.wide * .45 - E.squint * .5) * (1 - Math.min(1, blink)));
+        const ew = 34, ix = ex - d * ew, iy = ey + 4, ox = ex + d * ew, oy = ey - 6;
+        const upper = () => { g.moveTo(ix, iy); g.quadraticCurveTo(ex - d * 4, ey - 12 * o - 2, ox, oy); };
+        const lower = () => { g.quadraticCurveTo(ex + d * 2, ey + 15 * o + 1, ix, iy); };
+        g.beginPath(); upper(); lower(); g.closePath();
+        if (o > .08) {
+          g.fillStyle = "rgba(240,240,248,.95)"; g.fill();
+          g.save(); g.clip();
+          const gx = ex + E.lx * 10 + dir * 4, gy = ey + 1 + E.ly * 5;
+          const ir = g.createRadialGradient(gx, gy, 0, gx, gy, 12); ir.addColorStop(0, "#14101e"); ir.addColorStop(.45, "#2a2240"); ir.addColorStop(.75, "#65a30d"); ir.addColorStop(1, "#a3e635");
+          g.fillStyle = ir; g.beginPath(); g.arc(gx, gy, 12, 0, 6.283); g.fill();
+          g.fillStyle = "#0a0712"; g.beginPath(); g.arc(gx, gy, 5, 0, 6.283); g.fill();
+          g.fillStyle = "rgba(255,255,255,.95)"; g.beginPath(); g.arc(gx - 4, gy - 4, 2.6, 0, 6.283); g.fill();
+          const hs = g.createLinearGradient(0, ey - 14, 0, ey + 2); hs.addColorStop(0, "rgba(40,30,60,.45)"); hs.addColorStop(1, "rgba(40,30,60,0)");
+          g.fillStyle = hs; g.fillRect(ex - ew - 4, ey - 20, ew * 2 + 8, 22);                                       // the hood's shadow over the top of the eye
+          g.restore();
         }
-        // brows: soft, tapered arcs (thick in the middle) that lift, knit and tilt with the expression
-        const lift = E.browUp * 20 + bou * 12 - bd * 12, inner = -E.browUp * 6 + bd * 10, outer = -bou * 10;
-        const bx0 = ex - d * 30, bx1 = ex + d * 30, by0 = ey - 44 - lift + inner, by1 = ey - 44 - lift + outer, cx = ex, cy = ey - 56 - lift * 1.15;
-        g.fillStyle = "rgba(48,42,68,.92)"; g.beginPath(); g.moveTo(bx0, by0); g.quadraticCurveTo(cx, cy - 14, bx1, by1); g.quadraticCurveTo(cx, cy + 6, bx0, by0); g.fill();
+        // the upper lid: a strong dark line that runs a little past the outer corner (a slight wing)
+        g.strokeStyle = ink; g.lineWidth = 5; g.lineCap = "round"; g.beginPath(); upper(); g.lineTo(ox + d * 6, oy - 3); g.stroke();
+        g.lineWidth = 2; g.strokeStyle = "rgba(42,38,58,.5)"; g.beginPath(); g.moveTo(ix + d * 4, iy - 1); g.quadraticCurveTo(ex + d * 2, ey + 15 * o + 1, ox - d * 2, oy + 1); g.stroke();
+        // brows: low, heavy and fairly straight, sitting close above the eye; they still lift, knit and cock with the expression
+        const lift = E.browUp * 18 + bou * 12 - bd * 9, inner = -E.browUp * 4 + bd * 8 + 3, outer = -bou * 10 - 2;
+        const bx0 = ex - d * 36, bx1 = ex + d * 38, by0 = ey - 22 - lift + inner, by1 = ey - 26 - lift + outer, cx = ex, cy = ey - 30 - lift * 1.1;
+        g.fillStyle = "rgba(44,38,62,.94)"; g.beginPath(); g.moveTo(bx0, by0 + 4); g.quadraticCurveTo(cx, cy - 9, bx1, by1); g.quadraticCurveTo(cx, cy + 4, bx0, by0 + 4); g.fill();
       });
       // mouth: real lips. Corners lift with a smile and drop with a frown; it opens with your jaw; pucker makes it small and round
       const open = Math.min(1, E.jaw) * 46, mw = 46 * (1 + E.smile * .3 - E.pucker * .45), cyc = 56 - E.smile * 12 + E.frown * 12, my = 56;
@@ -4539,7 +4553,7 @@ window.KZRelay = function (topic, onMessage, servers) {
 (() => {
   const qs = new URLSearchParams(location.search), key = qs.get("ctl");
   if (!key || !window.WebSocket) return;
-  const PAGE = "html3", VERSION = "0c4f18c";
+  const PAGE = "html3", VERSION = "2b9db97";
   let said = false;
   const relay = KZRelay("kzctl/" + key, c => {
     if (!c || c.from === "overlay" || (c.to && c.to !== "all" && c.to !== PAGE)) return;

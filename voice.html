@@ -177,9 +177,9 @@ async function startFace() {
         // where you're looking: head turn plus eyes (mirrored, so the cloud moves like your reflection)
         const lx = Math.max(-1, Math.min(1, -(nose.x - mid.x) / span * 3 + ((b.eyeLookOutLeft || 0) - (b.eyeLookInLeft || 0)) * .8));
         const ly = Math.max(-1, Math.min(1, ((nose.y - mid.y) / span - .55) * 3 + ((b.eyeLookDownLeft || 0) - (b.eyeLookUpLeft || 0)) * .8));
-        const v = [b.jawOpen, (b.mouthSmileLeft + b.mouthSmileRight) / 2, (b.mouthFrownLeft + b.mouthFrownRight) / 2, b.browInnerUp, b.browDownLeft, b.browDownRight,
-          b.browOuterUpLeft, b.browOuterUpRight, b.eyeBlinkLeft, b.eyeBlinkRight, (b.eyeSquintLeft + b.eyeSquintRight) / 2, (b.eyeWideLeft + b.eyeWideRight) / 2, lx, ly, b.mouthPucker]
-          .map(x => +Math.max(-1, Math.min(1, x || 0)).toFixed(2));
+        const raw = [b.jawOpen, (b.mouthSmileLeft + b.mouthSmileRight) / 2, (b.mouthFrownLeft + b.mouthFrownRight) / 2, b.browInnerUp, b.browDownLeft, b.browDownRight,
+          b.browOuterUpLeft, b.browOuterUpRight, b.eyeBlinkLeft, b.eyeBlinkRight, (b.eyeSquintLeft + b.eyeSquintRight) / 2, (b.eyeWideLeft + b.eyeWideRight) / 2, lx, ly, b.mouthPucker];
+        const v = raw.map((x, i) => +calibrate(i, x || 0).toFixed(2));
         if (now - lastSend > 66) { relaySend({ cmd: "face", p: 1, v }); lastSend = now; }
         $("#fs").innerHTML = '<span class="ok">🙂 I can see you</span>';
       } else if (now - lastSeen > 600 && (!sentGone || now - lastSend > 1000)) { relaySend({ cmd: "face", p: 0 }); sentGone = true; lastSend = now; $("#fs").innerHTML = '<span class="bad">I can\'t see your face (the cloud shows a blank face)</span>'; }
@@ -187,6 +187,20 @@ async function startFace() {
     requestAnimationFrame(tick);
   };
   tick();
+}
+/* everyone's face is different, and real expressions only move the tracker's numbers a little. So each number is
+   measured against your own resting face (learned as you go) and stretched to your own range: your neutral face
+   gives 0, your biggest smile/raise/open so far gives about 1. Looking direction is re-centred the same way. */
+const CAL = [];
+const GAIN = [1.6, 2.2, 3, 2.6, 2.6, 2.6, 2.6, 2.6, 1.3, 1.3, 2.2, 3, 1.6, 1.6, 2.4];
+function calibrate(i, x) {
+  const c = CAL[i] || (CAL[i] = { base: x, top: x + .2, mid: x });
+  if (i === 12 || i === 13) { c.mid += (x - c.mid) * .003; return Math.max(-1, Math.min(1, (x - c.mid) * GAIN[i])); }   // where you look
+  if (i === 8 || i === 9) return Math.max(0, Math.min(1, (x - .15) * 1.6));                                               // blinks are already clear
+  if (x < c.base) c.base += (x - c.base) * .2; else c.base += (x - c.base) * .0015;      // the resting level drifts down quickly, up slowly
+  c.top = Math.max(x, c.top - .0006);                                                   // your strongest so far, fading slowly
+  const range = Math.max(.12, c.top - c.base);
+  return Math.max(0, Math.min(1, (x - c.base) / range * (GAIN[i] / 2) * 1.4));
 }
 function relaySend(o) { window.__send ? window.__send(o) : null; }
 $("#go").onclick = async () => {
