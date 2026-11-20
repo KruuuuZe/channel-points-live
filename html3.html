@@ -1742,14 +1742,15 @@ const Gifts = {
   },
   // the chest sound plays, then waits until it has finished plus 2 seconds before it can play again (never overlaps)
   chestFree: 0,
-  chestSfx() {
-    const now = performance.now(); if (now < this.chestFree) return;
+  chestSfx() {   // returns true if it played
+    const now = performance.now(); if (now < this.chestFree) return false;
     if (MySounds.urls.chest) {
-      const a = MySounds.play("chest"); if (!a) return;
+      const a = MySounds.play("chest"); if (!a) return false;
       this.chestFree = Infinity;
       const done = () => { if (this.chestFree === Infinity) this.chestFree = performance.now() + 2000; };
       a.addEventListener("ended", done); a.addEventListener("error", done); setTimeout(done, 30000);
     } else { this.chestSound(); this.chestFree = now + 600 + 2000; }
+    return true;
   },
   chestSound() {   // a creak and a jingle (used when no sound file is added for chests)
     if (!Sound.ctx) return; const t = Sound.ctx.currentTime;
@@ -1759,7 +1760,17 @@ const Gifts = {
   open(b, spot) {
     b.opened = true;
     const s = b.s; s.opens = (s.opens || 0) + 1;
-    this.chestSfx();
+    // the chest sound plays 1-3 times for every 10 chests (at random chests in each group of 10). If it's still
+    // playing (or in its 2-second rest) when one is due, it plays at the next chest instead.
+    if (!s.sfxPlan) {
+      const n = Math.min(s.total, 200); s.sfxPlan = new Array(n).fill(false); s.sfxDue = 0;
+      for (let g0 = 0; g0 < n; g0 += 10) {
+        const size = Math.min(10, n - g0), k = Math.min(size, 1 + Math.floor(Math.random() * 3)), idx = [...Array(size).keys()].sort(() => Math.random() - .5).slice(0, k);
+        idx.forEach(j => s.sfxPlan[g0 + j] = true);
+      }
+    }
+    if (s.sfxPlan[s.opens - 1]) s.sfxDue++;
+    if (s.sfxDue > 0 && this.chestSfx()) s.sfxDue--;
     const c = soft(bright(b.c1)), cx = b.cx, cy = b.cy, topY = cy - b.h * .3;
     const L = b.lane, it = { base: spot, w: L.w, crispAt: Infinity };
     it.pts = L.pts.map(([x, y]) => [x - L.mid, y]);
@@ -3795,7 +3806,7 @@ window.KZRelay = function (topic, onMessage, servers) {
 (() => {
   const qs = new URLSearchParams(location.search), key = qs.get("ctl");
   if (!key || !window.WebSocket) return;
-  const PAGE = "html3", VERSION = "3f47d34";
+  const PAGE = "html3", VERSION = "7d82d01";
   let said = false;
   const relay = KZRelay("kzctl/" + key, c => {
     if (!c || c.from === "overlay" || (c.to && c.to !== "all" && c.to !== PAGE)) return;
