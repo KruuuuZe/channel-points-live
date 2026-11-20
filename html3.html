@@ -192,7 +192,9 @@ body.fit #stage{background:radial-gradient(1200px 700px at 30% 20%,#1a103322,tra
 /* the test bar tucks itself away; tap the bottom of the screen to bring it back */
 #testbar{transition:transform .35s ease}
 #testbar.tuck{transform:translateY(110%)}
-#secretCorner{position:fixed;right:0;bottom:0;width:90px;height:90px;z-index:30;cursor:pointer;background:transparent}
+#secretCorner{position:fixed;right:0;bottom:0;width:90px;height:90px;z-index:30;cursor:pointer;background:transparent;display:flex;align-items:center;justify-content:center}
+#secretCorner::after{content:"⚙";font-size:58px;line-height:1;color:#e9e3ff;opacity:0;transition:opacity .2s;text-shadow:0 0 10px #000,0 0 18px #a855f7}
+#secretCorner:hover::after{opacity:.9}
 #testbar.live{padding-right:100px}
 #tapzone{position:fixed;left:0;right:0;bottom:0;height:56px;z-index:19;display:none}
 #tapzone.on{display:block}
@@ -490,32 +492,32 @@ body.fit #stage{background:radial-gradient(1200px 700px at 30% 20%,#1a103322,tra
   <input id="tName" type="text" value="NebulaNacho" aria-label="Name">
   <input id="tColor" type="color" value="#ff69b4" aria-label="Name color">
   <button id="tRand" title="Random name and color">🎲</button>
-  <button class="b-sub" data-t="sub">Sub</button><button class="snd" data-snd="sub" title="Add a sound for this alert">+</button>
+  <button class="b-sub" data-t="sub">Sub</button><button class="snd" data-snd="sub" title="Add a sound for this alert">🔊+</button>
   <select id="tGifts" aria-label="Gifted subs"><option>1</option><option selected>5</option><option>10</option><option>20</option><option>50</option><option>100</option><option>200</option></select>
-  <button class="b-gift" data-t="gift">Gift subs</button><button class="snd" data-snd="gift" title="Add a sound for this alert">+</button><button class="snd" data-snd="chest" data-label="🗝" title="Add a sound for chests opening">🗝+</button>
-  <button class="b-fol" data-t="follow">Follow</button><button class="snd" data-snd="follow" title="Add a sound for this alert">+</button>
+  <button class="b-gift" data-t="gift">Gift subs</button><button class="snd" data-snd="gift" title="Add a sound for this alert">🔊+</button><button class="snd" data-snd="chest" data-label="🗝" title="Add a sound for chests opening">🗝+</button>
+  <button class="b-fol" data-t="follow">Follow</button><button class="snd" data-snd="follow" title="Add a sound for this alert">🔊+</button>
   <select id="tBits" aria-label="Bits"><option>1</option><option>50</option><option selected>100</option><option>500</option><option>1000</option><option>5000</option><option>10000</option></select>
   <select id="tBitSound" aria-label="Bit sound"></select>
-  <button class="b-bit" data-t="bits">Bits</button><button class="snd" data-snd="bits" title="Add a sound for this alert">+</button>
+  <button class="b-bit" data-t="bits">Bits</button><button class="snd" data-snd="bits" title="Add a sound for this alert">🔊+</button>
   <input id="tStreak" type="number" min="1" value="5" aria-label="Streak" style="width:64px">
-  <button class="b-str" data-t="streak">Streak</button><button class="snd" data-snd="streak" title="Add a sound for this alert">+</button>
+  <button class="b-str" data-t="streak">Streak</button><button class="snd" data-snd="streak" title="Add a sound for this alert">🔊+</button>
   <select id="tRaider" aria-label="Raider"><option value="">Raid as: name above</option></select>
-  <button class="b-raid" data-t="raid">Raid</button><button class="snd" data-snd="raid" title="Add a sound for this alert">+</button>
-  <button class="b-lurk" data-t="lurk">!lurk</button><button class="snd" data-snd="lurk" title="Add a sound for this alert">+</button>
+  <button class="b-raid" data-t="raid">Raid</button><button class="snd" data-snd="raid" title="Add a sound for this alert">🔊+</button>
+  <button class="b-lurk" data-t="lurk">!lurk</button><button class="snd" data-snd="lurk" title="Add a sound for this alert">🔊+</button>
   <select id="tStars" aria-label="Wanted level"><option value="">Wanted stars…</option><option value="0">!staroff</option><option value="1">!star1</option><option value="2">!star2</option><option value="3">!star3</option><option value="4">!star4</option><option value="5">!star5</option><option value="6">!star6</option></select>
   <select id="tTeam" aria-label="Stream Avatars team"><option value="green">Green team</option><option value="blue">Blue team</option><option value="">No team</option></select>
-  <button class="b-scrap" data-t="scroop">!scroop</button><button class="snd" data-snd="scroop" title="Add a sound for this alert">+</button>
+  <button class="b-scrap" data-t="scroop">!scroop</button><button class="snd" data-snd="scroop" title="Add a sound for this alert">🔊+</button>
   <button class="b-scrap" data-t="scroopboard">!scroopleaderboard</button>
-  <button class="b-bolt" data-t="bolt">⚡ Bolt</button><button class="snd" data-snd="bolt" title="Add a sound for this effect">+</button>
-  <button class="b-mango" data-t="mango">🥭 Mango</button><button class="snd" data-snd="mango" title="Add a sound for this effect">+</button>
-  <button class="b-banana" data-t="banana">🍌 Banana</button><button class="snd" data-snd="banana" title="Add a sound for this effect">+</button>
-  <button class="b-turkey" data-t="turkey">🦃 Turkey</button><button class="snd" data-snd="turkey" title="Add a sound for this effect">+</button>
-  <button class="b-penguin" data-t="penguin">🐧 Penguin</button><button class="snd" data-snd="penguin" title="Add a sound for this effect">+</button>
-  <button class="b-fish" data-t="fish">🐟 ATT3NCHUN</button><button class="snd" data-snd="fish" title="Add a sound for this effect">+</button>
-  <button class="b-eagle" data-t="eagle">🦅 Eagle</button><button class="snd" data-snd="eagle" title="Add a sound for this effect">+</button>
-  <button class="b-chef" data-t="chef">👨‍🍳 anime_chef</button><button class="snd" data-snd="anime_chef" title="Add a sound for this effect">+</button>
-  <button class="b-tank" data-t="tank">💥 Silverhand</button><button class="snd" data-snd="tank" title="Add a sound for this effect">+</button>
-  <button class="b-chat" data-t="chat">Chat</button><button class="snd" data-snd="chat" title="Add a sound for this alert">+</button>
+  <button class="b-bolt" data-t="bolt">⚡ Bolt</button><button class="snd" data-snd="bolt" title="Add a sound for this effect">🔊+</button>
+  <button class="b-mango" data-t="mango">🥭 Mango</button><button class="snd" data-snd="mango" title="Add a sound for this effect">🔊+</button>
+  <button class="b-banana" data-t="banana">🍌 Banana</button><button class="snd" data-snd="banana" title="Add a sound for this effect">🔊+</button>
+  <button class="b-turkey" data-t="turkey">🦃 Turkey</button><button class="snd" data-snd="turkey" title="Add a sound for this effect">🔊+</button>
+  <button class="b-penguin" data-t="penguin">🐧 Penguin</button><button class="snd" data-snd="penguin" title="Add a sound for this effect">🔊+</button>
+  <button class="b-fish" data-t="fish">🐟 ATT3NCHUN</button><button class="snd" data-snd="fish" title="Add a sound for this effect">🔊+</button>
+  <button class="b-eagle" data-t="eagle">🦅 Eagle</button><button class="snd" data-snd="eagle" title="Add a sound for this effect">🔊+</button>
+  <button class="b-chef" data-t="chef">👨‍🍳 anime_chef</button><button class="snd" data-snd="anime_chef" title="Add a sound for this effect">🔊+</button>
+  <button class="b-tank" data-t="tank">💥 Silverhand</button><button class="snd" data-snd="tank" title="Add a sound for this effect">🔊+</button>
+  <button class="b-chat" data-t="chat">Chat</button><button class="snd" data-snd="chat" title="Add a sound for this alert">🔊+</button>
 </div>
 
 <script>
@@ -1682,6 +1684,17 @@ const Gifts = {
     ctx.restore();
     return true;
   },
+  // the chest sound plays, then waits until it has finished plus 2 seconds before it can play again (never overlaps)
+  chestFree: 0,
+  chestSfx() {
+    const now = performance.now(); if (now < this.chestFree) return;
+    if (MySounds.urls.chest) {
+      const a = MySounds.play("chest"); if (!a) return;
+      this.chestFree = Infinity;
+      const done = () => { if (this.chestFree === Infinity) this.chestFree = performance.now() + 2000; };
+      a.addEventListener("ended", done); a.addEventListener("error", done); setTimeout(done, 30000);
+    } else { this.chestSound(); this.chestFree = now + 600 + 2000; }
+  },
   chestSound() {   // a creak and a jingle (used when no sound file is added for chests)
     if (!Sound.ctx) return; const t = Sound.ctx.currentTime;
     Sound.tone(t, .16, .04, 210, 140, "sawtooth"); Sound.burst(t, .12, .03, "bandpass", 500, 900);
@@ -1690,14 +1703,14 @@ const Gifts = {
   open(b, spot) {
     b.opened = true;
     const s = b.s; s.opens = (s.opens || 0) + 1;
-    if (s.opens % 2 === 1) { if (MySounds.urls.chest) MySounds.play("chest"); else this.chestSound(); }   // every couple of chests
+    this.chestSfx();
     const c = bright(b.c1), cx = b.cx, cy = b.cy, topY = cy - b.h * .3;
-    const life = 700 + 2000 + 800 + 400;
+    const life = 700 + 4000 + 800 + 400;
     this.sky.push({ x0: spot.x0, x1: spot.x1, y0: spot.y0, y1: spot.y1, until: performance.now() + life });
     P.push({ type: "homing", x: cx, y: topY, sx: cx, sy: topY, tx: spot.x, ty: spot.y, t: 0, dur: 700, curve: rand(-140, 140), c,
       onPop: (x, y) => {
         burst(x, y, c, 46);
-        const foAt = performance.now() + 2000;
+        const foAt = performance.now() + 4000;
         const pts = textPoints(b.name, spot.x, spot.y, 900, 750, { size: this.NAME_SIZE });
         pts.forEach(([tx, ty]) => P.push({ type: "form", sx: x, sy: y, tx, ty, x, y, age: -rand(0, 100), dur: rand(450, 700),
           hold: 1e9, foAt, curl: rand(-60, 60), ph: rand(0, 6.28), c: Math.random() < .82 ? c : [255, 255, 255] }));
@@ -1713,8 +1726,8 @@ const Gifts = {
     b.state = "gone"; b.goneAt = performance.now();
     this.restack();
     if (!this.boxes.some(x => x.s === s && !x.opened) && s.dropped >= Math.min(s.total, 200)) {
-      setTimeout(() => this.headOut(s), 2400);
-      if (!s.finale) { s.finale = true; setTimeout(() => this.finale(s), 700 + 2000 + 1300); }   // after the last name has faded
+      setTimeout(() => this.headOut(s), 4400);
+      if (!s.finale) { s.finale = true; setTimeout(() => this.finale(s), 700 + 4000 + 1300); }   // after the last name has faded
     }
   },
   /* grand finale: "Thank you!" and the gifter's name in fireworks; after 3 s the letters become a
@@ -1836,9 +1849,12 @@ const MySounds = {
     try { await this.tx("readwrite", st => st.put(v, type)); } catch (e) { toast("Couldn't save that sound file.", true); } this.mark(); },
   async del(type) { if (this.urls[type]) URL.revokeObjectURL(this.urls[type]); delete this.urls[type]; delete this.names[type];
     try { await this.tx("readwrite", st => st.delete(type)); } catch (e) {} this.mark(); },
-  play(type) { const u = this.urls[type]; if (!u) return; try { const a = new Audio(u); a.volume = 1; a.play().catch(() => {}); } catch (e) {} },
+  // a sound never plays over itself: if it's still playing, this play is skipped. Returns the Audio (or null).
+  playing: {},
+  play(type) { const u = this.urls[type]; if (!u) return null; const cur = this.playing[type]; if (cur && !cur.ended && !cur.paused) return null;
+    try { const a = new Audio(u); a.volume = 1; this.playing[type] = a; a.play().catch(() => {}); return a; } catch (e) { return null; } },
   mark() { document.querySelectorAll("#testbar .snd").forEach(b => { const has = !!this.urls[b.dataset.snd];
-    b.classList.toggle("has", has); b.textContent = (b.dataset.label || "") + (has ? "♪" : "+"); b.title = has ? "Sound: " + this.names[b.dataset.snd] : b.dataset.snd === "chest" ? "Add a sound for chests opening" : "Add a sound for this alert"; }); }
+    b.classList.toggle("has", has); b.textContent = (b.dataset.label || "🔊") + (has ? "♪" : "+"); b.title = has ? "Sound: " + this.names[b.dataset.snd] : b.dataset.snd === "chest" ? "Add a sound for chests opening" : "Add a sound for this alert"; }); }
 };
 MySounds.load();
 function edgeGlow(c1, c2) { const e = el("div", "edge"); e.style.setProperty("--ec", c1); e.style.setProperty("--ec2", c2); $("#stage").append(e); setTimeout(() => e.remove(), 5400); }
@@ -3717,7 +3733,7 @@ window.KZRelay = function (topic, onMessage, servers) {
 (() => {
   const qs = new URLSearchParams(location.search), key = qs.get("ctl");
   if (!key || !window.WebSocket) return;
-  const PAGE = "html3", VERSION = "712316e";
+  const PAGE = "html3", VERSION = "42f1ccc";
   let said = false;
   const relay = KZRelay("kzctl/" + key, c => {
     if (!c || c.from === "overlay" || (c.to && c.to !== "all" && c.to !== PAGE)) return;
