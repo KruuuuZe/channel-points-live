@@ -3711,12 +3711,11 @@ const Face = {
       let moving = 0;
       if (moveAt > hoverUntil) { const k = Math.min(1, (t - moveAt) / moveDur), e = k < .5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2;
         px = fromX + (toX - fromX) * e; py = fromY + (toY - fromY) * e; moving = k < 1 ? 1 : 0;
-        if (k >= 1) { hoverUntil = t + (route.length ? (snowTo !== null || goingHome ? 60 : 250) : wasLow ? rand(4000, 8000) : rand(4000, 11000)); moveAt = 0; } }
+        if (k >= 1) { hoverUntil = t + (route.length ? (snowTo !== null || goingHome ? 60 : 250) : rand(20000, 60000)); moveAt = 0; } }
       const dir = moving ? Math.sign(toX - fromX) : 0;
       this.pos = [px, py];
-      // where "toward the middle of the screen" is from here: from the left or right part of the screen, sideways;
-      // from the top middle, down; from the bottom, straight ahead
-      { const side = px < W * .25 ? 1 : px > W * .75 ? -1 : 0; this.lookTo = py > H / 2 ? [0, 0] : side ? [side, 0] : [0, 1]; }
+      // where the eyes look on a sound spike: down while it's along the top, straight ahead at the bottom
+      this.lookTo = py > H / 2 ? [0, 0] : [0, 1];
       const sq = 1 + E.jaw * .12, x = px + Math.sin(t / 2300) * 18, y = py + Math.sin(t / 900) * 12 + Math.sin(t / 2700) * 9;
       // ---- snowflakes falling from the cloud, and the snowmen at the bottom
       // each flake has its own size (bigger ones are "closer": brighter and a bit faster), its own gentle sway, and the
@@ -4825,7 +4824,7 @@ window.KZRelay = function (topic, onMessage, servers) {
 (() => {
   const qs = new URLSearchParams(location.search), key = qs.get("ctl");
   if (!key || !window.WebSocket) return;
-  const PAGE = "html3", VERSION = "ba0abd3";
+  const PAGE = "html3", VERSION = "24e086d";
   let said = false;
   const relay = KZRelay("kzctl/" + key, c => {
     if (!c || c.from === "overlay" || (c.to && c.to !== "all" && c.to !== PAGE)) return;
