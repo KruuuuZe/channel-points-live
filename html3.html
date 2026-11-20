@@ -272,6 +272,8 @@ body.fit #stage{background:radial-gradient(1200px 700px at 30% 20%,#1a103322,tra
 .loot svg{width:54px;height:54px;filter:drop-shadow(0 0 10px var(--lc))}
 .loot.rare{font-size:40px}
 .loot.rare svg{width:76px;height:76px}
+.loot img.gb{width:96px;height:96px;object-fit:contain;filter:drop-shadow(0 0 14px #facc15)}
+.gb-fly{position:absolute;width:150px;height:150px;object-fit:contain;pointer-events:none;filter:drop-shadow(0 0 18px #facc15);z-index:6}
 #scrapboard{position:absolute;right:40px;bottom:650px;padding:10px 16px 12px;border-radius:14px;background:#0d0b17cc;border:2px solid #8b6b3d;
   font-size:22px;font-weight:800;color:#f5f2ff;min-width:250px;opacity:0;transition:opacity .6s}
 #scrapboard.on{opacity:1}
@@ -1931,6 +1933,23 @@ const LOOT = [
   { k: "rare", name: "Rare Metal", w: 5, min: 1, max: 3, pts: 15, c: "#c084fc", rare: true,
     svg: `<svg viewBox="0 0 60 60"><path d="M8 40 L18 22 L50 22 L56 40 Z" fill="#7c3aed" stroke="#e9d5ff" stroke-width="3"/><path d="M18 22 L14 40 M50 22 L52 40" stroke="#c4b5fd" stroke-width="2"/><path d="M20 27 L46 27" stroke="#f5f3ff" stroke-width="3" stroke-linecap="round"/></svg>` }
 ];
+// the Golden Banana: a 10% chance on any pile, worth 50 points, with golden banana fireworks
+const GOLD_BANANA = { k: "gban", name: "Golden Banana", min: 1, max: 1, pts: 50, c: "#facc15", rare: true, gold: true,
+  svg: `<svg viewBox="0 0 60 60"><defs><linearGradient id="gbG" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fff7c2"/><stop offset=".45" stop-color="#facc15"/><stop offset="1" stop-color="#b8860b"/></linearGradient></defs>
+    <path d="M10 18 C12 40 30 52 50 44 C54 42 54 38 50 38 C34 42 20 34 16 16 C15 12 10 13 10 18 Z" fill="url(#gbG)" stroke="#7a5800" stroke-width="2.5"/>
+    <path d="M11 14 L9 8 L14 9 Z" fill="#7a5800"/><path d="M18 22 C22 34 32 40 44 40" stroke="#fffbe0" stroke-width="2.5" fill="none" stroke-linecap="round" opacity=".8"/></svg>` };
+// points along a banana shape (a fat crescent), for the fireworks
+function bananaPoints(cx, cy, size, n) {
+  // a crescent opening upward (a smile), tilted a little: inside a big circle but outside a slightly raised one
+  const pts = [], tilt = rand(-.35, .35), c = Math.cos(tilt), sn = Math.sin(tilt);
+  while (pts.length < n) {
+    const x = rand(-1, 1), y = rand(-1, 1);
+    if (x * x + y * y > 1 || x * x + (y + .42) * (y + .42) < .82) continue;
+    const X = x * size * 1.15, Y = y * size * .8;
+    pts.push([cx + X * c - Y * sn, cy + X * sn + Y * c]);
+  }
+  return pts;
+}
 /* Every pile is drawn fresh: a heap of scrap metal (overlapping steel and rusty sheets, no dirt) with a random
    mix of parts on top (girders, gears, tires, plates, pipes, barrels, panels, shards, nuts), so no two look the same. */
 function heapSVG() {
@@ -2063,7 +2082,29 @@ const Scrap = {
     this.next();
     return p;
   },
+  /* golden banana fireworks: rockets that burst into glittering golden bananas (and the banana art, if it's made) */
+  goldenBanana(ox) {
+    Sound.init(); Sound.loot(true);
+    const gold = [[255, 214, 60], [255, 240, 150], [255, 184, 28]], art = ChefArt.sprites.golden_banana;
+    for (let i = 0; i < 7; i++) setTimeout(() => {
+      const x = Math.max(260, Math.min(2300, ox - 1100 + i * 220 + rand(-60, 60))), y = rand(260, 620);
+      rocket(x, y, (px, py) => {
+        burst(px, py, gold[i % 3], 30);
+        const size = rand(90, 130);
+        bananaPoints(px, py, size, 130).forEach(([tx, ty], j) => P.push({ type: "form", sx: px, sy: py, tx, ty, x: px, y: py, age: -rand(0, 80),
+          dur: rand(380, 560), hold: rand(1100, 1500), curl: rand(-30, 30), ph: rand(0, 6.28), c: gold[j % 3] }));
+        if (art) {          // the golden banana itself pops out of the burst, spins and fades
+          const im = document.createElement("img"); im.src = art.img.src; im.className = "gb-fly"; im.style.left = px + "px"; im.style.top = py + "px"; layer.append(im);
+          im.animate([{ transform: "translate(-50%,-50%) scale(.2) rotate(-40deg)", opacity: 0 }, { transform: "translate(-50%,-50%) scale(1.1) rotate(10deg)", opacity: 1, offset: .25 },
+            { transform: "translate(-50%,-50%) scale(1) rotate(-6deg)", opacity: 1, offset: .7 }, { transform: "translate(-50%,-30%) scale(.9) rotate(20deg)", opacity: 0 }],
+            { duration: 2000, easing: "ease-out", fill: "forwards" });
+          setTimeout(() => im.remove(), 2100);
+        }
+      }, .34);
+    }, i * 260);
+  },
   roll() {
+    if (Math.random() < .1) return { l: GOLD_BANANA, n: 1 };            // 10%: the Golden Banana
     let r = Math.random() * LOOT.reduce((t, l) => t + l.w, 0);
     const l = LOOT.find(x => (r -= x.w) < 0) || LOOT[0];
     return { l, n: Math.round(rand(l.min, l.max + .999) - .5) };
@@ -2155,7 +2196,9 @@ const Scrap = {
     this.save();
     const sx = ox + 95, sy = 1440 - 90, ex = ox + 40, ey = 1440 - (l.rare ? 400 : 330);
     const o = el("div", "loot" + (l.rare ? " rare" : "")); o.style.setProperty("--lc", l.c);
-    o.innerHTML = l.svg; o.append("+" + n + " " + l.name); o.style.left = sx + "px"; o.style.top = sy + "px"; layer.append(o);
+    const art = l.gold && ChefArt.sprites.golden_banana;
+    if (art) { const im = document.createElement("img"); im.src = art.img.src; im.className = "gb"; o.append(im); } else o.innerHTML = l.svg;
+    o.append((l.gold ? "" : "+" + n + " ") + l.name + (l.gold ? "!" : "")); o.style.left = sx + "px"; o.style.top = sy + "px"; layer.append(o);
     o.animate([{ transform: "translate(-50%,-50%) scale(.3)", left: sx + "px", top: sy + "px", opacity: 0 },
       { transform: "translate(-50%,-50%) scale(1.15)", left: (sx + ex) / 2 + "px", top: (ey - 60) + "px", opacity: 1, offset: .3 },
       { transform: "translate(-50%,-50%) scale(1)", left: ex + "px", top: ey + "px", opacity: 1, offset: .45 },
@@ -2163,7 +2206,8 @@ const Scrap = {
       { transform: "translate(-50%,-50%) scale(.95)", left: ex + "px", top: (ey - 50) + "px", opacity: 0 }],
       { duration: l.rare ? 4200 : 3000, easing: "ease-out", fill: "forwards" });
     setTimeout(() => o.remove(), l.rare ? 4300 : 3100);
-    if (l.rare) fireworks(l.c, 5, 1800, ox - 700, ox + 100);
+    if (l.gold) this.goldenBanana(ox);
+    else if (l.rare) fireworks(l.c, 5, 1800, ox - 700, ox + 100);
     setTimeout(() => { p.state = "none"; this.next(); }, 3000);
   }
 };
@@ -2788,7 +2832,7 @@ const ChefArt = {
   use(name, a) { const img = new Image(); img.onload = () => { this.sprites[name] = Object.assign({ img }, a); if (name === "tower" && Lurk.up) Lurk.paint(); }; img.src = a.url; },
   async load() {
     try { const db = await this.open();
-      ["tower", "eagle_roll", "tank_drive", "soldier_run", "soldier_throw", "grenade", "explosion", "eagle_glide", "eagle_flap", "plane", "title", "chef_parachute", "chef_chop", "chef_jump", "chef_fly", "chef_truck"].forEach(n => { const r = db.transaction("a").objectStore("a").get(n); r.onsuccess = () => { if (r.result) this.use(n, r.result); }; });
+      ["golden_banana", "tower", "eagle_roll", "tank_drive", "soldier_run", "soldier_throw", "grenade", "explosion", "eagle_glide", "eagle_flap", "plane", "title", "chef_parachute", "chef_chop", "chef_jump", "chef_fly", "chef_truck"].forEach(n => { const r = db.transaction("a").objectStore("a").get(n); r.onsuccess = () => { if (r.result) this.use(n, r.result); }; });
     } catch (e) {}
   },
   // a piece of art arriving from the app (sent in parts)
@@ -3871,7 +3915,7 @@ window.KZRelay = function (topic, onMessage, servers) {
 (() => {
   const qs = new URLSearchParams(location.search), key = qs.get("ctl");
   if (!key || !window.WebSocket) return;
-  const PAGE = "html3", VERSION = "e4cc8a3";
+  const PAGE = "html3", VERSION = "c892fab";
   let said = false;
   const relay = KZRelay("kzctl/" + key, c => {
     if (!c || c.from === "overlay" || (c.to && c.to !== "all" && c.to !== PAGE)) return;
