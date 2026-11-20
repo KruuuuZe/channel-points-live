@@ -3237,7 +3237,7 @@ const Kazul = {
     let lx = CX - total / 2; const slots = letters.map((ch, i) => { const x = lx + widths[i] / 2; lx += widths[i] + gap; return { ch, x, y: CY }; });
     // gun spots around the edges (2 left, 2 right, 2 top, 2 bottom), shuffled so letters come from everywhere
     const spots = [[-10, 470], [-10, 1010], [W + 10, 470], [W + 10, 1010], [820, -10], [1740, -10], [820, H + 10], [1740, H + 10]].sort(() => Math.random() - .5);
-    const GUN_W = 300, IN = 650, FIRE0 = 900, GAP_F = 430, FLY = 650, HOLD_END = FIRE0 + GAP_F * (letters.length - 1) + FLY + 1500, BOOM = HOLD_END, OUT = BOOM + 900, END = OUT + 1400;
+    const GUN_W = 300, IN = 650, FIRE0 = 900, GAP_F = 430, FLY = 650, HOLD_END = FIRE0 + GAP_F * (letters.length - 1) + FLY + 1500, BOOM = HOLD_END, OUT = BOOM + 900, END = OUT + 1500;
     const guns = letters.map((_, i) => {
       const [ex, ey] = spots[i % spots.length], a = Math.atan2(CY - ey, CX - ex), dx = Math.cos(a), dy = Math.sin(a);
       return { ex, ey, a, dx, dy, fireAt: FIRE0 + i * GAP_F, inAt: i * 60 };
@@ -3246,9 +3246,11 @@ const Kazul = {
     const once = (k, fn) => { if (!sfx[k]) { sfx[k] = 1; fn(); } };
     const boomSnd = big => { if (!Sound.ctx) return; const c = Sound.ctx.currentTime; Sound.burst(c, big ? 1.6 : .5, big ? .35 : .16, "lowpass", big ? 1200 : 900, 60); Sound.tone(c, big ? 1 : .35, big ? .3 : .12, big ? 80 : 120, 35); };
     const gunPos = (gn, t) => {     // slides in from just off its edge, recoils when firing, pulls back out at the end
-      const k = Math.max(0, Math.min(1, (t - gn.inAt) / IN)), e = 1 - Math.pow(1 - k, 3), out = t > OUT ? Math.min(1, (t - OUT) / 700) : 0;
+      const k = Math.max(0, Math.min(1, (t - gn.inAt) / IN)), e = 1 - Math.pow(1 - k, 3);
+      const ko = t > OUT ? Math.min(1, (t - OUT) / 900) : 0, eo = ko * ko * (3 - 2 * ko);          // smooth start and finish
       const recoil = t > gn.fireAt && t < gn.fireAt + 260 ? Math.sin((t - gn.fireAt) / 260 * Math.PI) * 40 : 0;
-      const d = (GUN_W * .55) * (e - out * out) - 220 * (1 - e) - recoil;
+      const dIn = GUN_W * .55, dOff = -GUN_W * .75 - 80;                                         // dOff: the whole gun is past the edge
+      const d = dOff + (dIn - dOff) * e - (dIn - dOff) * eo - recoil;
       return [gn.ex + gn.dx * d, gn.ey + gn.dy * d];
     };
     const drawGun = (gn, t) => {
@@ -4029,7 +4031,7 @@ window.KZRelay = function (topic, onMessage, servers) {
 (() => {
   const qs = new URLSearchParams(location.search), key = qs.get("ctl");
   if (!key || !window.WebSocket) return;
-  const PAGE = "html3", VERSION = "8245faf";
+  const PAGE = "html3", VERSION = "6830160";
   let said = false;
   const relay = KZRelay("kzctl/" + key, c => {
     if (!c || c.from === "overlay" || (c.to && c.to !== "all" && c.to !== PAGE)) return;
