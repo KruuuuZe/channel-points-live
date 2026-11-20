@@ -337,6 +337,7 @@ body.fit #stage{background:radial-gradient(1200px 700px at 30% 20%,#1a103322,tra
 /* ---------- smoke screen (bottom-right corner) ---------- */
 #smokecv{position:absolute;inset:0;width:2560px;height:1440px;pointer-events:none;z-index:8}
 #facecv{position:absolute;inset:0;width:2560px;height:1440px;pointer-events:none;z-index:8}
+#discocv{position:absolute;inset:0;width:2560px;height:1440px;pointer-events:none;z-index:7}
 /* ---------- Kazul123: artillery from every side ---------- */
 #kazcv{position:absolute;inset:0;width:2560px;height:1440px;pointer-events:none;z-index:7}
 /* ---------- Silverhand (canvas + a red shade over the whole screen) ---------- */
@@ -424,6 +425,7 @@ body.fit #stage{background:radial-gradient(1200px 700px at 30% 20%,#1a103322,tra
   <canvas id="jinxcv" width="2560" height="1440"></canvas>
   <canvas id="smokecv" width="2560" height="1440"></canvas>
   <canvas id="facecv" width="2560" height="1440"></canvas>
+  <canvas id="discocv" width="2560" height="1440"></canvas>
   <canvas id="tankcv" width="2560" height="1440"></canvas>
   <div id="pane"></div>
   <canvas id="holes" width="2560" height="1440"></canvas>
@@ -543,7 +545,7 @@ body.fit #stage{background:radial-gradient(1200px 700px at 30% 20%,#1a103322,tra
   <button class="b-tank" data-t="tank">💥 Silverhand</button><button class="snd" data-snd="tank" title="Add a sound for this effect">🔊+</button>
   <button class="b-kaz" data-t="kazul">💣 Kazul123</button><button class="snd" data-snd="kazul" title="Add a sound for this effect">🔊+</button>
   <button class="b-jinx" data-t="jinx">🔥 JINX</button><button class="snd" data-snd="jinx" title="Add a sound for this effect">🔊+</button>
-  <button class="b-smoke" data-t="smoke">💨 Smoke on/off</button><button class="b-smoke" data-t="face">😶 Face on/off</button><button class="b-smoke" data-t="rain">🌧 Rain on/off</button><select id="facemood" title="Cloud face expression"><option value="neutral">😐 Neutral</option><option value="smile">🙂 Smile</option><option value="grin">😁 Big grin</option><option value="oo">😗 Oo</option><option value="closed">😌 Eyes closed</option><option value="smirk">😏 Smirk</option><option value="wink">😉 Wink</option><option value="laugh">😆 Laughing</option><option value="shocked">😲 Shocked</option><option value="sleepy">😪 Sleepy</option><option value="sideeye">🤨 Side-eye</option><option value="sad">😢 Sad</option><option value="tongue">😛 Tongue out</option><option value="puffed">🐡 Cheeks puffed</option><option value="determined">😤 Determined</option><option value="evil">😈 Evil grin</option><option value="smug">😌 Smug</option><option value="confused">😕 Confused</option><option value="disgusted">🤢 Disgusted</option><option value="nervous">😬 Nervous</option><option value="kissy">😘 Kissy face</option><option value="bored">😑 Bored</option><option value="excited">🤩 Excited</option><option value="thinking">🤔 Thinking</option><option value="scared">😨 Scared</option></select><button class="snd" data-snd="smoke" title="Add a sound for this effect">🔊+</button>
+  <button class="b-smoke" data-t="smoke">💨 Smoke on/off</button><button class="b-smoke" data-t="face">😶 Face on/off</button><button class="b-smoke" data-t="rain">🌧 Rain on/off</button><button class="b-smoke" data-t="disco">🪩 Disco on/off</button><button class="snd" data-snd="disco" title="Add a sound for the disco ball">🔊+</button><select id="facemood" title="Cloud face expression"><option value="neutral">😐 Neutral</option><option value="smile">🙂 Smile</option><option value="grin">😁 Big grin</option><option value="oo">😗 Oo</option><option value="closed">😌 Eyes closed</option><option value="smirk">😏 Smirk</option><option value="wink">😉 Wink</option><option value="laugh">😆 Laughing</option><option value="shocked">😲 Shocked</option><option value="sleepy">😪 Sleepy</option><option value="sideeye">🤨 Side-eye</option><option value="sad">😢 Sad</option><option value="tongue">😛 Tongue out</option><option value="puffed">🐡 Cheeks puffed</option><option value="determined">😤 Determined</option><option value="evil">😈 Evil grin</option><option value="smug">😌 Smug</option><option value="confused">😕 Confused</option><option value="disgusted">🤢 Disgusted</option><option value="nervous">😬 Nervous</option><option value="kissy">😘 Kissy face</option><option value="bored">😑 Bored</option><option value="excited">🤩 Excited</option><option value="thinking">🤔 Thinking</option><option value="scared">😨 Scared</option></select><button class="snd" data-snd="smoke" title="Add a sound for this effect">🔊+</button>
   <button class="b-chat" data-t="chat">Chat</button><button class="snd" data-snd="chat" title="Add a sound for this alert">🔊+</button>
 </div>
 
@@ -2865,7 +2867,7 @@ const ChefArt = {
   use(name, a) { const img = new Image(); img.onload = () => { this.sprites[name] = Object.assign({ img }, a); if (name === "tower" && Lurk.up) Lurk.paint(); }; img.src = a.url; },
   async load() {
     try { const db = await this.open();
-      ["cf_x_talk_me", "sm_hat", "sm_face", "sm_nose", "sm_arm", "sm_ball", "sm_ball_melt", "sm_puddle", "cf_ref", "cf_x_talk", "cf_x_wide", "cf_x_look_l", "cf_x_look_r", "cf_x_smile", "cf_x_grin", "cf_x_oo", "cf_x_blink", "cf_v_smile_talk", "cf_v_smile_l", "cf_v_smile_r", "cf_v_grin_talk", "cf_v_grin_l", "cf_v_grin_r", "cf_v_oo_talk", "cf_v_oo_l", "cf_v_oo_r", "cf_v_closed_talk", "cf_e_smirk", "cf_v_smirk_talk", "cf_v_smirk_l", "cf_v_smirk_r", "cf_e_wink", "cf_v_wink_talk", "cf_e_laugh", "cf_v_laugh_talk", "cf_e_shocked", "cf_v_shocked_talk", "cf_v_shocked_l", "cf_v_shocked_r", "cf_e_sleepy", "cf_v_sleepy_talk", "cf_v_sleepy_l", "cf_v_sleepy_r", "cf_e_sideeye", "cf_v_sideeye_talk", "cf_v_sideeye_l", "cf_v_sideeye_r", "cf_e_sad", "cf_v_sad_talk", "cf_v_sad_l", "cf_v_sad_r", "cf_e_tongue", "cf_v_tongue_talk", "cf_v_tongue_l", "cf_v_tongue_r", "cf_e_puffed", "cf_v_puffed_talk", "cf_v_puffed_l", "cf_v_puffed_r", "cf_e_determined", "cf_v_determined_talk", "cf_v_determined_l", "cf_v_determined_r", "cf_e_evil", "cf_v_evil_talk", "cf_v_evil_l", "cf_v_evil_r", "cf_e_smug", "cf_v_smug_talk", "cf_v_smug_l", "cf_v_smug_r", "cf_e_confused", "cf_v_confused_talk", "cf_v_confused_l", "cf_v_confused_r", "cf_e_disgusted", "cf_v_disgusted_talk", "cf_v_disgusted_l", "cf_v_disgusted_r", "cf_e_nervous", "cf_v_nervous_talk", "cf_v_nervous_l", "cf_v_nervous_r", "cf_e_kissy", "cf_v_kissy_talk", "cf_v_kissy_l", "cf_v_kissy_r", "cf_e_bored", "cf_v_bored_talk", "cf_v_bored_l", "cf_v_bored_r", "cf_e_excited", "cf_v_excited_talk", "cf_v_excited_l", "cf_v_excited_r", "cf_e_thinking", "cf_v_thinking_talk", "cf_v_thinking_l", "cf_v_thinking_r", "cf_e_scared", "cf_v_scared_talk", "cf_v_scared_l", "cf_v_scared_r", "jinx_flip", "jinx_spin", "jinx_fire", "jinx_launch", "artillery", "golden_banana", "golden_mango", "tower", "eagle_roll", "tank_drive", "soldier_run", "soldier_throw", "grenade", "explosion", "eagle_glide", "eagle_flap", "plane", "title", "chef_parachute", "chef_chop", "chef_jump", "chef_fly", "chef_truck", "cf_x_look_d", "cf_v_smile_d", "cf_v_grin_d", "cf_v_oo_d", "cf_v_smirk_d", "cf_v_shocked_d", "cf_v_sleepy_d", "cf_v_sideeye_d", "cf_v_sad_d", "cf_v_tongue_d", "cf_v_puffed_d", "cf_v_determined_d", "cf_v_evil_d", "cf_v_smug_d", "cf_v_confused_d", "cf_v_disgusted_d", "cf_v_nervous_d", "cf_v_kissy_d", "cf_v_bored_d", "cf_v_excited_d", "cf_v_thinking_d", "cf_v_scared_d"].forEach(n => { const r = db.transaction("a").objectStore("a").get(n); r.onsuccess = () => { if (r.result) this.use(n, r.result); }; });
+      ["disco_spin", "disco_glint", "cf_x_talk_me", "sm_hat", "sm_face", "sm_nose", "sm_arm", "sm_ball", "sm_ball_melt", "sm_puddle", "cf_ref", "cf_x_talk", "cf_x_wide", "cf_x_look_l", "cf_x_look_r", "cf_x_smile", "cf_x_grin", "cf_x_oo", "cf_x_blink", "cf_v_smile_talk", "cf_v_smile_l", "cf_v_smile_r", "cf_v_grin_talk", "cf_v_grin_l", "cf_v_grin_r", "cf_v_oo_talk", "cf_v_oo_l", "cf_v_oo_r", "cf_v_closed_talk", "cf_e_smirk", "cf_v_smirk_talk", "cf_v_smirk_l", "cf_v_smirk_r", "cf_e_wink", "cf_v_wink_talk", "cf_e_laugh", "cf_v_laugh_talk", "cf_e_shocked", "cf_v_shocked_talk", "cf_v_shocked_l", "cf_v_shocked_r", "cf_e_sleepy", "cf_v_sleepy_talk", "cf_v_sleepy_l", "cf_v_sleepy_r", "cf_e_sideeye", "cf_v_sideeye_talk", "cf_v_sideeye_l", "cf_v_sideeye_r", "cf_e_sad", "cf_v_sad_talk", "cf_v_sad_l", "cf_v_sad_r", "cf_e_tongue", "cf_v_tongue_talk", "cf_v_tongue_l", "cf_v_tongue_r", "cf_e_puffed", "cf_v_puffed_talk", "cf_v_puffed_l", "cf_v_puffed_r", "cf_e_determined", "cf_v_determined_talk", "cf_v_determined_l", "cf_v_determined_r", "cf_e_evil", "cf_v_evil_talk", "cf_v_evil_l", "cf_v_evil_r", "cf_e_smug", "cf_v_smug_talk", "cf_v_smug_l", "cf_v_smug_r", "cf_e_confused", "cf_v_confused_talk", "cf_v_confused_l", "cf_v_confused_r", "cf_e_disgusted", "cf_v_disgusted_talk", "cf_v_disgusted_l", "cf_v_disgusted_r", "cf_e_nervous", "cf_v_nervous_talk", "cf_v_nervous_l", "cf_v_nervous_r", "cf_e_kissy", "cf_v_kissy_talk", "cf_v_kissy_l", "cf_v_kissy_r", "cf_e_bored", "cf_v_bored_talk", "cf_v_bored_l", "cf_v_bored_r", "cf_e_excited", "cf_v_excited_talk", "cf_v_excited_l", "cf_v_excited_r", "cf_e_thinking", "cf_v_thinking_talk", "cf_v_thinking_l", "cf_v_thinking_r", "cf_e_scared", "cf_v_scared_talk", "cf_v_scared_l", "cf_v_scared_r", "jinx_flip", "jinx_spin", "jinx_fire", "jinx_launch", "artillery", "golden_banana", "golden_mango", "tower", "eagle_roll", "tank_drive", "soldier_run", "soldier_throw", "grenade", "explosion", "eagle_glide", "eagle_flap", "plane", "title", "chef_parachute", "chef_chop", "chef_jump", "chef_fly", "chef_truck", "cf_x_look_d", "cf_v_smile_d", "cf_v_grin_d", "cf_v_oo_d", "cf_v_smirk_d", "cf_v_shocked_d", "cf_v_sleepy_d", "cf_v_sideeye_d", "cf_v_sad_d", "cf_v_tongue_d", "cf_v_puffed_d", "cf_v_determined_d", "cf_v_evil_d", "cf_v_smug_d", "cf_v_confused_d", "cf_v_disgusted_d", "cf_v_nervous_d", "cf_v_kissy_d", "cf_v_bored_d", "cf_v_excited_d", "cf_v_thinking_d", "cf_v_scared_d"].forEach(n => { const r = db.transaction("a").objectStore("a").get(n); r.onsuccess = () => { if (r.result) this.use(n, r.result); }; });
     } catch (e) {}
   },
   // a piece of art arriving from the app (sent in parts)
@@ -4000,6 +4002,85 @@ const Snowman = {
   }
 };
 
+/* ================= Disco ball (on/off) =================
+   Turning it on drops a mirror ball down from the top of the screen on a cord; it bounces to a stop and spins,
+   throwing coloured beams of light out across the screen and little spots of reflected light that sweep around
+   the stream, with glints flashing on the ball. Turning it off fades the light and pulls the ball back up.
+   The ball is art from the Art screen (DISCO BALL ART: a spinning animation and a glint), or drawn if it isn't made. */
+const Disco = {
+  on: false, run: false, X: 1280, REST: 300, R: 120,
+  COLS: [[163, 230, 53], [168, 85, 247], [236, 72, 153], [34, 211, 238], [250, 204, 21], [255, 255, 255]],
+  toggle() { this.on = !this.on; if (this.on) { this.dropAt = performance.now(); Sound.init(); MySounds.play("disco"); if (!this.run) this.start(); } else this.upAt = performance.now(); },
+  start() {
+    this.run = true;
+    const cv = $("#discocv"), g = cv.getContext("2d"), W = 2560, H = 1440, S = ChefArt.sprites;
+    // the reflected light spots: each sits at an angle around the ball and sweeps across the screen as it spins
+    const spots = Array.from({ length: 70 }, () => ({ a: rand(0, 6.283), y: rand(120, H - 60), r: rand(10, 26), c: this.COLS[Math.floor(Math.random() * this.COLS.length)], sp: rand(.8, 1.2), tw: rand(0, 6.3) }));
+    const beams = Array.from({ length: 9 }, (_, i) => ({ a: i / 9 * 6.283, c: this.COLS[i % this.COLS.length], w: rand(.035, .07), sp: rand(.7, 1.3) }));
+    const glints = [];
+    let light = 0, last = performance.now();
+    const frame = now => {
+      const dt = Math.min(50, now - last); last = now; g.clearRect(0, 0, W, H);
+      // where the ball is: dropping in with a bounce, or being pulled back up
+      let y;
+      if (this.on) { const k = Math.min(1, (now - this.dropAt) / 1400); y = -this.R - 60 + (this.REST + this.R + 60) * this.bounce(k); }
+      else { const k = Math.min(1, (now - this.upAt) / 1300); const from = this.REST; y = from - (from + this.R + 120) * (k * k); if (k >= 1 && light <= .01) { g.clearRect(0, 0, W, H); this.run = false; return; } }
+      const settled = this.on && now - this.dropAt > 1100;
+      light += ((settled ? 1 : 0) - light) * (this.on ? .03 : .08);
+      const rot = now / 1000 * .9, X = this.X, R = this.R;
+      // a slight dim of the screen so the light shows up
+      if (light > .01) { g.fillStyle = `rgba(5,3,15,${.22 * light})`; g.fillRect(0, 0, W, H); }
+      g.save(); g.globalCompositeOperation = "lighter";
+      // beams of light shooting out of the ball
+      if (light > .01) beams.forEach(b => { const a = b.a + rot * b.sp, len = 2600, [r, gg, bb] = b.c;
+        const gr = g.createLinearGradient(X, y, X + Math.cos(a) * len, y + Math.sin(a) * len);
+        gr.addColorStop(0, `rgba(${r},${gg},${bb},${.32 * light})`); gr.addColorStop(.5, `rgba(${r},${gg},${bb},${.1 * light})`); gr.addColorStop(1, `rgba(${r},${gg},${bb},0)`);
+        g.fillStyle = gr; g.beginPath(); g.moveTo(X, y); g.lineTo(X + Math.cos(a - b.w) * len, y + Math.sin(a - b.w) * len); g.lineTo(X + Math.cos(a + b.w) * len, y + Math.sin(a + b.w) * len); g.closePath(); g.fill(); });
+      // spots of reflected light sweeping across the screen
+      if (light > .01) spots.forEach(s => { const u = ((s.a + rot * s.sp) % 6.283) / 6.283, x = u * (W + 200) - 100, tw = .6 + .4 * Math.sin(now / 300 + s.tw), [r, gg, bb] = s.c;
+        const gr = g.createRadialGradient(x, s.y, 0, x, s.y, s.r * 2.2); gr.addColorStop(0, `rgba(${r},${gg},${bb},${.85 * light * tw})`); gr.addColorStop(.4, `rgba(${r},${gg},${bb},${.35 * light * tw})`); gr.addColorStop(1, `rgba(${r},${gg},${bb},0)`);
+        g.fillStyle = gr; g.beginPath(); g.ellipse(x, s.y, s.r * 2.2, s.r * 1.6, 0, 0, 6.283); g.fill(); });
+      // a soft glow around the ball
+      if (light > .01) { const gr = g.createRadialGradient(X, y, R * .6, X, y, R * 2.6); gr.addColorStop(0, `rgba(255,255,255,${.25 * light})`); gr.addColorStop(1, "rgba(255,255,255,0)"); g.fillStyle = gr; g.fillRect(X - R * 3, y - R * 3, R * 6, R * 6); }
+      g.restore();
+      // the cord and the ball
+      g.strokeStyle = "#9ca3af"; g.lineWidth = 4; g.beginPath(); g.moveTo(X, 0); g.lineTo(X, y - R + 6); g.stroke();
+      g.fillStyle = "#6b7280"; g.fillRect(X - 14, y - R - 10, 28, 20);
+      const sp = S.disco_spin;
+      if (sp) { const fr = Math.floor(now / (sp.ms || 90)) % sp.frames, w = R * 2.25, h = w * sp.h / sp.w; g.drawImage(sp.img, fr * sp.w, 0, sp.w, sp.h, X - w / 2, y - h / 2, w, h); }
+      else this.drawBall(g, X, y, R, rot, now);
+      // glints flashing on the ball
+      if (light > .3 && Math.random() < .08 * light) glints.push({ x: X + rand(-.7, .7) * R, y: y + rand(-.7, .7) * R, at: now, s: rand(.5, 1.1) });
+      for (let i = glints.length - 1; i >= 0; i--) { const q = glints[i], k = (now - q.at) / 450; if (k >= 1) { glints.splice(i, 1); continue; }
+        const env = Math.sin(k * Math.PI), sz = 60 * q.s * env; g.save(); g.globalCompositeOperation = "lighter"; g.globalAlpha = env;
+        if (S.disco_glint) { const gw = sz * 2.2; g.drawImage(S.disco_glint.img, 0, 0, S.disco_glint.w, S.disco_glint.h, q.x - gw / 2, q.y - gw / 2, gw, gw); }
+        else { g.fillStyle = "#fff"; g.beginPath(); g.moveTo(q.x, q.y - sz); g.lineTo(q.x + sz * .12, q.y - sz * .12); g.lineTo(q.x + sz, q.y); g.lineTo(q.x + sz * .12, q.y + sz * .12); g.lineTo(q.x, q.y + sz); g.lineTo(q.x - sz * .12, q.y + sz * .12); g.lineTo(q.x - sz, q.y); g.lineTo(q.x - sz * .12, q.y - sz * .12); g.closePath(); g.fill(); }
+        g.restore(); }
+      requestAnimationFrame(frame);
+    };
+    requestAnimationFrame(frame);
+  },
+  bounce(k) { const n = 7.5625, d = 2.75; if (k < 1 / d) return n * k * k; if (k < 2 / d) return n * (k -= 1.5 / d) * k + .75; if (k < 2.5 / d) return n * (k -= 2.25 / d) * k + .9375; return n * (k -= 2.625 / d) * k + .984375; },
+  // the drawn stand-in: a sphere of little mirror tiles that turns
+  drawBall(g, X, y, R, rot, now) {
+    const rows = 14, cols = 28;
+    g.save(); g.beginPath(); g.arc(X, y, R, 0, 6.283); g.clip(); g.fillStyle = "#2b2f3a"; g.fillRect(X - R, y - R, R * 2, R * 2);
+    for (let i = 0; i < rows; i++) { const p0 = -Math.PI / 2 + i / rows * Math.PI, p1 = p0 + Math.PI / rows;
+      for (let j = 0; j < cols; j++) { const t0 = j / cols * 6.283 + rot, t1 = t0 + 6.283 / cols, tm = (t0 + t1) / 2, pm = (p0 + p1) / 2;
+        if (Math.cos(tm) <= 0) continue;
+        const P = (p, t) => [X + R * Math.cos(p) * Math.sin(t), y + R * Math.sin(p)];
+        const nx = Math.cos(pm) * Math.sin(tm), ny = Math.sin(pm), nz = Math.cos(pm) * Math.cos(tm);
+        const lit = Math.max(0, -nx * .4 - ny * .5 + nz * .75), flick = Math.sin(i * 7.1 + j * 3.3 + now / 140) > .93 ? .5 : 0;
+        const v = Math.min(255, 70 + lit * 170 + flick * 255);
+        g.fillStyle = `rgb(${v},${v},${Math.min(255, v + 12)})`;
+        const a = P(p0, t0), b = P(p0, t1), c = P(p1, t1), d = P(p1, t0);
+        g.beginPath(); g.moveTo(...a); g.lineTo(...b); g.lineTo(...c); g.lineTo(...d); g.closePath(); g.fill();
+        g.strokeStyle = "rgba(20,22,30,.6)"; g.lineWidth = 1.2; g.stroke(); } }
+    const sh = g.createRadialGradient(X - R * .35, y - R * .4, R * .1, X, y, R); sh.addColorStop(0, "rgba(255,255,255,.18)"); sh.addColorStop(.7, "rgba(0,0,0,0)"); sh.addColorStop(1, "rgba(0,0,0,.45)");
+    g.fillStyle = sh; g.fillRect(X - R, y - R, R * 2, R * 2); g.restore();
+  }
+};
+
 /* ================= Kazul123 =================
    Artillery guns roll in from every side of the screen (left, right, top and bottom), all aimed at the middle.
    One by one they fire, each shooting one letter of KAZUL123 into the center, where the letters slam into place.
@@ -4265,6 +4346,7 @@ window.onRemote = c => {
   else if (c.cmd === "effect" && c.name === "smoke") Smoke.run();
   else if (c.cmd === "effect" && c.name === "face") Face.toggle();
   else if (c.cmd === "effect" && c.name === "rain") Face.toggleRain();
+  else if (c.cmd === "effect" && c.name === "disco") Disco.toggle();
   else if (c.cmd === "faceMood") Face.setMood(c.name);
   else if (c.cmd === "faceTalk") Face.setNeutralTalk(c.name);
   if (c.cmd === "faceMood") { const sel = $("#facemood"); if (sel) sel.value = Face.mood; }
@@ -4384,6 +4466,7 @@ document.querySelectorAll("#testbar [data-t]").forEach(b => b.onclick = () => {
   else if (t === "smoke") Smoke.run();
   else if (t === "face") Face.toggle();
   else if (t === "rain") Face.toggleRain();
+  else if (t === "disco") Disco.toggle();
   else if (t === "chat") Lurk.leave(name);
 });
 
@@ -4852,7 +4935,7 @@ window.KZRelay = function (topic, onMessage, servers) {
 (() => {
   const qs = new URLSearchParams(location.search), key = qs.get("ctl");
   if (!key || !window.WebSocket) return;
-  const PAGE = "html3", VERSION = "bef6abf";
+  const PAGE = "html3", VERSION = "82ca9d8";
   let said = false;
   const relay = KZRelay("kzctl/" + key, c => {
     if (!c || c.from === "overlay" || (c.to && c.to !== "all" && c.to !== PAGE)) return;
