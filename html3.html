@@ -3330,6 +3330,22 @@ const Kazul = {
   }
 };
 
+/* ================= personal effects on demand =================
+   The "Play my Effect" channel point reward plays the redeemer's own effect, if they have one. Viewers without
+   one just don't get an effect. (The same people as the first-chat-of-the-day effects, plus custom raiders.) */
+const Personal = {
+  REWARD: /^\s*play my effect/i,
+  redeem(ev) {
+    const title = (ev.reward && ev.reward.title) || "";
+    if (!this.REWARD.test(title)) return;
+    const k = (ev.user_login || "").toLowerCase();
+    const fx = AutoFx.FIRST_OF_DAY[k];
+    if (fx) { fx(); return; }
+    const raid = Object.keys(CUSTOM_RAIDS).find(x => x.toLowerCase() === k);
+    if (raid) { Queue.push(() => doRaidCustom(ev.user_name || ev.user_login)); return; }
+  }
+};
+
 /* ================= automatic effects =================
    - TheNapalmer's first chat message of the day plays the mango tree; Kapelan012's plays the banana tree;
      ATT3NCHUN's plays the fish effect.
@@ -3658,7 +3674,8 @@ const Live = {
     const subs = [
       ["channel.follow", "2", { broadcaster_user_id: this.uid, moderator_user_id: this.uid }],
       ["channel.subscribe", "1", b], ["channel.subscription.message", "1", b], ["channel.subscription.gift", "1", b],
-      ["channel.cheer", "1", b], ["channel.raid", "1", { to_broadcaster_user_id: this.uid }]
+      ["channel.cheer", "1", b], ["channel.raid", "1", { to_broadcaster_user_id: this.uid }],
+      ["channel.channel_points_custom_reward_redemption.add", "1", b]
     ];
     if (!retry) await this.cleanStale();
     const todo = retry || subs, failed = [], full = []; let why = "";
@@ -3669,7 +3686,9 @@ const Live = {
           body: JSON.stringify({ type, version, condition, transport: { method: "websocket", session_id: sessionId } }) });
         if (!r.ok && r.status !== 409) {
           let msg = ""; try { msg = (await r.json()).message || ""; } catch (x) {}
-          if (r.status === 429 || /maximum subscriptions/i.test(msg)) full.push(sub); else { failed.push(type.replace("channel.", "")); if (!why) why = msg; }
+          if (r.status === 429 || /maximum subscriptions/i.test(msg)) full.push(sub);
+          else if (type.includes("redemption")) toast("To play effects from the “Play my Effect” channel point reward, this overlay needs one more Twitch permission: open overlay.html, go to the Connect tab, log in again and approve, then put the new token in your OBS links (the app's Control screen makes them).", true, 30000);
+          else { failed.push(type.replace("channel.", "")); if (!why) why = msg; }
         }
       } catch (e) { failed.push(type.replace("channel.", "")); }
     }
@@ -3687,6 +3706,7 @@ const Live = {
   },
   async handle(type, ev) {
     const who = (n, l, anon) => anon ? "Anonymous" : (n || l || "someone");
+    if (type === "channel.channel_points_custom_reward_redemption.add") { Personal.redeem(ev); return; }
     if (type === "channel.follow") Alerts.follow(who(ev.user_name, ev.user_login), await colorOf(ev.user_id));
     // new subs and resubs get the plane; gifted subs are skipped so a big gift drop doesn't launch 50 planes
     else if (type === "channel.subscribe") {
@@ -4031,7 +4051,7 @@ window.KZRelay = function (topic, onMessage, servers) {
 (() => {
   const qs = new URLSearchParams(location.search), key = qs.get("ctl");
   if (!key || !window.WebSocket) return;
-  const PAGE = "html3", VERSION = "6830160";
+  const PAGE = "html3", VERSION = "537ffcd";
   let said = false;
   const relay = KZRelay("kzctl/" + key, c => {
     if (!c || c.from === "overlay" || (c.to && c.to !== "all" && c.to !== PAGE)) return;

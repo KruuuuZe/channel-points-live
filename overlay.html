@@ -333,7 +333,7 @@ const RESULT_MS = Math.max(5, +qs.get("results") || 30) * 1000;
 const CANCEL_MS = 8000;
 const EXPECTED_LOGIN = "kruuuuze";
 // one token works for both overlay.html (predictions) and html2.html (followers, subs, bits)
-const SCOPES = ["channel:read:predictions", "moderator:read:followers", "channel:read:subscriptions", "bits:read"];
+const SCOPES = ["channel:read:predictions", "moderator:read:followers", "channel:read:subscriptions", "bits:read", "channel:read:redemptions"];
 const store = {
   get(k, d) { try { const v = localStorage.getItem("cpo_" + k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } },
   set(k, v) { try { localStorage.setItem("cpo_" + k, JSON.stringify(v)); } catch (e) {} }
@@ -951,7 +951,7 @@ window.KZRelay = function (topic, onMessage, servers) {
 (() => {
   const qs = new URLSearchParams(location.search), key = qs.get("ctl");
   if (!key || !window.WebSocket) return;
-  const PAGE = "overlay", VERSION = "6830160";
+  const PAGE = "overlay", VERSION = "537ffcd";
   let said = false;
   const relay = KZRelay("kzctl/" + key, c => {
     if (!c || c.from === "overlay" || (c.to && c.to !== "all" && c.to !== PAGE)) return;
