@@ -347,8 +347,8 @@ body.fit #stage{background:radial-gradient(1200px 700px at 30% 20%,#1a103322,tra
 
 /* ---------- eagle soar (side view, across the top, random direction, barrel roll midway) ---------- */
 .eagle{position:absolute;left:0;top:0;width:560px;height:374px;pointer-events:none;z-index:5}
-.eagle .dir{position:absolute;inset:0}
-.eagle.rtl .dir{transform:scaleX(-1)}
+.eagle .dir{position:absolute;inset:0;transform:scale(.6)}          /* 40% smaller than the original */
+.eagle.rtl .dir{transform:scale(-.6,.6)}
 .eagle .roll{position:absolute;inset:0;transform-origin:52% 56%}
 .eagle .eagleArt{position:absolute;left:0;top:-163px;width:560px;height:700px;filter:drop-shadow(0 16px 14px #0005)}
 .eagle svg{width:100%;height:100%;overflow:visible;filter:drop-shadow(0 16px 14px #0005)}
@@ -3356,15 +3356,17 @@ const Jinx = {
 };
 
 /* ================= smoke screen =================
-   A thick smoke screen rolls up in the bottom-right corner (about 600 px in from the right side and 400 px up from
-   the bottom, with faint hints of the logo's lime green and purple drifting through it), completely covering that corner, keeps slowly rolling for 30 seconds, then thins out and drifts away.
+   A thick smoke screen rolls up in the bottom-right corner (about 800 px in from the right side and 600 px up from
+   the bottom, with faint hints of the logo's lime green and purple drifting through it and soft, slow lightning glowing
+   deep inside it), completely covering that corner, keeps slowly rolling for 30 seconds, then thins out and drifts away.
    Built from big overlapping smoke puffs that are solid in the middle, so every pixel in the corner is covered. */
 const Smoke = {
-  on: false, RISE: 5000, HOLD: 30000, FADE: 5000, SIZE: 400, WIDE: 600,
+  on: false, RISE: 5000, HOLD: 30000, FADE: 5000, SIZE: 600, WIDE: 800,
   puff: null,
-  makePuff() {   // a smoke puff that is solid in the middle and soft at the edge
+  makePuff() {   // a smoke puff that is solid in the middle and fades very gradually at the edge (no hard circle)
     const c = document.createElement("canvas"); c.width = c.height = 256; const g = c.getContext("2d");
-    const gr = g.createRadialGradient(128, 128, 0, 128, 128, 128); gr.addColorStop(0, "rgba(255,255,255,1)"); gr.addColorStop(.55, "rgba(255,255,255,1)"); gr.addColorStop(.8, "rgba(255,255,255,.55)"); gr.addColorStop(1, "rgba(255,255,255,0)");
+    const gr = g.createRadialGradient(128, 128, 0, 128, 128, 128); gr.addColorStop(0, "rgba(255,255,255,1)"); gr.addColorStop(.4, "rgba(255,255,255,1)");
+    gr.addColorStop(.6, "rgba(255,255,255,.75)"); gr.addColorStop(.78, "rgba(255,255,255,.38)"); gr.addColorStop(.9, "rgba(255,255,255,.12)"); gr.addColorStop(1, "rgba(255,255,255,0)");
     g.fillStyle = gr; g.fillRect(0, 0, 256, 256); return c;
   },
   tinted(col) { const c = document.createElement("canvas"); c.width = c.height = 256; const g = c.getContext("2d"); g.drawImage(this.puff, 0, 0); g.globalCompositeOperation = "source-in"; g.fillStyle = col; g.fillRect(0, 0, 256, 256); return c; },
@@ -3378,29 +3380,56 @@ const Smoke = {
     this.t0 = performance.now();
     // the solid body: a grid of big puffs over the corner (and a bit past its edges), each rolling slowly in its own small circle
     const body = [];
-    for (let y = 0; y <= S + 60; y += 85) for (let x = 0; x <= SW + 60; x += 85)
-      body.push({ x: W - x, y: H - y, r: rand(110, 150), ph: rand(0, 6.28), sp: rand(.25, .5), rad: rand(10, 22), row: y / S, tex: Math.random() < .5 ? this.base : this.mid });
+    for (let y = 0; y <= S + 60; y += 80) for (let x = 0; x <= SW + 60; x += 80)
+      body.push({ x: W - x + rand(-25, 25), y: H - y + rand(-25, 25), r: rand(120, 165), ph: rand(0, 6.28), sp: rand(.25, .5), rad: rand(10, 22), row: y / S, tex: Math.random() < .5 ? this.base : this.mid, sx: 1 });
+    // the top edge: wide, flat, uneven billows that slowly swell and sink, so it rolls like a real smoke bank
+    for (let x = -40; x <= SW + 140; x += rand(70, 120))
+      body.push({ x: W - x, y: H - S - rand(-20, 70), r: rand(90, 150), ph: rand(0, 6.28), sp: rand(.15, .35), rad: rand(18, 34), row: 1, tex: Math.random() < .6 ? this.mid : this.base, sx: rand(1.5, 2.3), top: true });
     // lighter curls on top, rolling across the surface
     // lighter curls, plus a few hints of the logo's lime green and purple glowing through the smoke
     const curls = []; for (let i = 0; i < 34; i++) { const c = i % 6 === 0 ? "lime" : i % 6 === 3 ? "purple" : "hi";
-      curls.push({ x: W - rand(0, SW + 40), y: H - rand(0, S + 40), r: rand(50, 95) * (c === "hi" ? 1 : 1.6), ph: rand(0, 6.28), sp: rand(.2, .45), drift: rand(-.012, .012), row: Math.random(), c }); }
+      curls.push({ x: W - rand(0, SW + 40), y: H - rand(0, S + 40), r: rand(60, 110) * (c === "hi" ? 1.2 : 1.8), ph: rand(0, 6.28), sp: rand(.2, .45), drift: rand(-.012, .012), row: Math.random(), c }); }
+    // everything is drawn into its own layer first: the lightning only shows inside the smoke, and a blur melts
+    // the puffs together so the edges look like smoke instead of circles
+    const LW = SW + 520, LH = S + 640, OX = W - LW + 60, OY = H - LH + 60;   // the layer reaches a little past the screen edges
+    const layer = document.createElement("canvas"); layer.width = LW; layer.height = LH; const main = g;
+    const flashes = []; let nextFlash = 2500;
+    const bolt = (x, y) => { const pts = [[x, y]]; let px = x, py = y; for (let i = 0; i < 6; i++) { px += rand(-40, 40); py += rand(25, 55); pts.push([px, py]); } return pts; };
     const frame = now => {
-      const t = now - this.t0; g.clearRect(W - SW - 400, H - S - 520, SW + 400, S + 520);
+      const t = now - this.t0; main.clearRect(OX - 40, OY - 40, LW + 80, LH + 80);
+      const g = layer.getContext("2d"); g.setTransform(1, 0, 0, 1, -OX, -OY); g.clearRect(OX, OY, LW, LH);
       const rise = Math.min(1, t / this.RISE), er = 1 - Math.pow(1 - rise, 3), fadeT = t - this.RISE - this.HOLD, fade = fadeT > 0 ? Math.max(0, 1 - fadeT / this.FADE) : 1;
       const lift = fadeT > 0 ? fadeT * .05 : 0;                 // dissipating: it drifts up as it thins
       for (const p of body) {
         const k = Math.max(0, Math.min(1, er * 1.25 - p.row * .25)), a = t / 1000 * p.sp + p.ph;
-        const x = p.x + Math.cos(a) * p.rad, y = p.y + (1 - k) * (S + 260) + Math.sin(a) * p.rad * .6 - lift * (.5 + p.row), r = p.r * (1 + lift / 600);
-        g.globalAlpha = fade * (fadeT > 0 ? 1 - p.row * .3 * (1 - fade) : 1); g.drawImage(p.tex, x - r, y - r, r * 2, r * 2);
+        const x = p.x + Math.cos(a) * p.rad, y = p.y + (1 - k) * (S + 260) + Math.sin(a) * p.rad * (p.top ? 1.2 : .6) - lift * (.5 + p.row), r = p.r * (1 + lift / 600) * (p.top ? .9 + .1 * Math.sin(a * 1.3) : 1);
+        g.globalAlpha = fade * (fadeT > 0 ? 1 - p.row * .3 * (1 - fade) : 1) * (p.top ? .85 : 1); g.drawImage(p.tex, x - r * p.sx, y - r, r * 2 * p.sx, r * 2);
       }
       for (const c of curls) {
         const k = Math.max(0, Math.min(1, er * 1.25 - c.row * .25)), a = t / 1000 * c.sp + c.ph;
         c.x += c.drift * 16; if (c.x < W - SW - 40) c.drift = Math.abs(c.drift); if (c.x > W + 20) c.drift = -Math.abs(c.drift);
         const x = c.x + Math.cos(a) * 26, y = c.y + (1 - k) * (S + 260) + Math.sin(a) * 18 - lift * 1.3;
-        g.globalAlpha = (c.c === "hi" ? .35 : .14 + .06 * Math.sin(t / 900 + c.ph)) * fade * k; g.drawImage(this[c.c], x - c.r, y - c.r, c.r * 2, c.r * 2);
+        g.globalAlpha = (c.c === "hi" ? .2 : .08 + .04 * Math.sin(t / 900 + c.ph)) * fade * k; g.drawImage(this[c.c], x - c.r, y - c.r, c.r * 2, c.r * 2);
       }
       g.globalAlpha = 1;
-      if (fade > 0) requestAnimationFrame(frame); else { g.clearRect(0, 0, W, H); this.on = false; }
+      // soft, slow lightning deep inside the cloud: a gentle glow that swells and fades, sometimes with a faint thin bolt
+      if (t > nextFlash && fadeT < 0 && rise >= 1) {
+        nextFlash = t + rand(1600, 3400);
+        const fx = W - rand(80, SW - 60), fy = H - rand(120, S - 80);
+        flashes.push({ x: fx, y: fy, born: t, dur: rand(900, 1500), col: Math.random() < .5 ? [190, 140, 255] : Math.random() < .5 ? [190, 240, 140] : [200, 215, 255], bolt: Math.random() < .6 ? bolt(fx + rand(-30, 30), fy - 90) : null });
+      }
+      g.globalCompositeOperation = "source-atop";
+      for (let i = flashes.length - 1; i >= 0; i--) {
+        const f = flashes[i], a = (t - f.born) / f.dur; if (a >= 1) { flashes.splice(i, 1); continue; }
+        const env = Math.sin(a * Math.PI) * (.85 + .15 * Math.sin(a * 40)) * fade, [r, gg, b] = f.col;
+        const gr = g.createRadialGradient(f.x, f.y, 0, f.x, f.y, 260); gr.addColorStop(0, `rgba(${r},${gg},${b},${.42 * env})`); gr.addColorStop(.5, `rgba(${r},${gg},${b},${.16 * env})`); gr.addColorStop(1, `rgba(${r},${gg},${b},0)`);
+        g.fillStyle = gr; g.fillRect(f.x - 260, f.y - 260, 520, 520);
+        if (f.bolt && a > .15 && a < .7) { g.lineWidth = 2.5; g.lineJoin = "round"; g.strokeStyle = `rgba(245,240,255,${.45 * env})`; g.shadowColor = `rgb(${r},${gg},${b})`; g.shadowBlur = 14;
+          g.beginPath(); f.bolt.forEach(([x, y], j) => j ? g.lineTo(x, y) : g.moveTo(x, y)); g.stroke(); g.shadowBlur = 0; }
+      }
+      g.globalCompositeOperation = "source-over";
+      main.save(); main.filter = "blur(12px)"; main.drawImage(layer, OX, OY); main.restore();
+      if (fade > 0) requestAnimationFrame(frame); else { main.clearRect(0, 0, W, H); this.on = false; }
     };
     requestAnimationFrame(frame);
   }
@@ -4246,7 +4275,7 @@ window.KZRelay = function (topic, onMessage, servers) {
 (() => {
   const qs = new URLSearchParams(location.search), key = qs.get("ctl");
   if (!key || !window.WebSocket) return;
-  const PAGE = "html3", VERSION = "4bd996d";
+  const PAGE = "html3", VERSION = "9e93ef4";
   let said = false;
   const relay = KZRelay("kzctl/" + key, c => {
     if (!c || c.from === "overlay" || (c.to && c.to !== "all" && c.to !== PAGE)) return;
