@@ -75,13 +75,6 @@ body.fit #stage{background:radial-gradient(1200px 700px at 30% 20%,#1a103322,tra
   text-shadow:0 4px 0 #000,0 0 18px var(--gc),0 0 36px var(--gc);animation:pop .6s cubic-bezier(.2,1.5,.3,1) both;pointer-events:none}
 .gift-line b{color:var(--gc)}
 .gift-line.out{animation:out .8s ease forwards}
-/* a gift recipient's name in the sky: crisp letters with a dark edge, taking over from the firework that formed it */
-.sky-name{position:absolute;white-space:nowrap;color:var(--gc);opacity:0;transform:translate(-50%,-50%) scale(.94);
-  text-shadow:0 0 2px #000,0 0 2px #000,0 0 4px #000,0 4px 0 rgba(0,0,0,.75),0 0 22px color-mix(in srgb,var(--gc) 55%,transparent);
-  animation:skyIn .4s ease .35s forwards}
-@keyframes skyIn{to{opacity:1;transform:translate(-50%,-50%) scale(1)}}
-.sky-name.out{opacity:1;transform:translate(-50%,-50%);animation:skyOut .8s ease forwards}
-@keyframes skyOut{to{opacity:0;transform:translate(-50%,calc(-50% - 30px)) scale(.96)}}
 .gift-head{position:absolute;left:0;top:22px;width:2560px;text-align:center;font-size:72px;font-weight:900;color:#fff;line-height:1.05;
   text-shadow:0 6px 0 #000,0 0 30px #f472b6aa}
 .gift-head .who{display:inline-block;color:var(--uc);text-shadow:0 6px 0 #000,0 0 34px var(--uc)}
@@ -616,9 +609,20 @@ function loop(t) {
       if (p.vy >= -.5) { P.splice(i, 1); p.onPop(p.x, p.y); }
       continue;
     }
+    if (p.type === "lanef") {    // a spark flying into a name on the scrolling line at the top (which keeps moving)
+      p.age += 16.67 * k;
+      const it = p.it, now = performance.now(), tx = Lane.x(it) + p.dx, ty = Lane.Y + p.dy;
+      if (now > it.crispAt + 220) { P.splice(i, 1); continue; }
+      const a = now > it.crispAt ? 1 - (now - it.crispAt) / 220 : 1;
+      if (p.age < 0) continue;
+      const e = Math.min(1, p.age / p.dur), ee = 1 - Math.pow(1 - e, 3);
+      dot(p.sx + (tx - p.sx) * ee + Math.sin(ee * Math.PI) * p.curl, p.sy + (ty - p.sy) * ee, e < 1 ? 3.4 : 3, p.c, .9 * a);
+      continue;
+    }
     if (p.type === "form") {     // light flying into place to spell a name
       p.age += 16.67 * k;
       const now = performance.now();
+      if (p.H && p.H.crispFrom && now > p.H.crispFrom + 200 && now < p.H.m0) continue;   // the clean picture is showing
       if (p.foAt && now >= p.foAt) {   // fade out in place, in step with the "Gifted" / "a Subscription!" lines
         const e = Math.min(1, (now - p.foAt) / 800), a = Math.pow(1 - e, 2.5), y = p.ty - 30 * (1 - Math.pow(1 - e, 2));
         if (e >= 1) { P.splice(i, 1); continue; }
@@ -674,9 +678,24 @@ function loop(t) {
     dot(p.x, p.y, p.s * (p.twinkle ? .6 + .4 * Math.sin(p.life / 40) : 1), p.c, a);
   }
   g.globalCompositeOperation = "source-over";
+  for (let i = CRISP.length - 1; i >= 0; i--) { const c = CRISP[i], a = c.a(); if (a < 0) { CRISP.splice(i, 1); continue; } if (a > 0) { g.globalAlpha = a; g.drawImage(c.cv, c.x(), c.y()); } }
+  g.globalAlpha = 1;
   drawGems(k);
-  if (P.length || GEMS.length) requestAnimationFrame(loop); else { running = false; g.clearRect(0, 0, 2560, 1440); }
+  if (P.length || GEMS.length || CRISP.length) requestAnimationFrame(loop); else { running = false; g.clearRect(0, 0, 2560, 1440); }
 }
+/* bake firework-letter dots into one clean picture: a dark edge around every dot, then the dots in a calm,
+   even color with a soft glow. Same dots as the firework, so the switch from sparks to this is seamless. */
+function bakeDots(pts, step, c) {
+  let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9; pts.forEach(([x, y]) => { x0 = Math.min(x0, x); y0 = Math.min(y0, y); x1 = Math.max(x1, x); y1 = Math.max(y1, y); });
+  const pad = 22, cv = document.createElement("canvas"); cv.width = Math.ceil(x1 - x0 + pad * 2); cv.height = Math.ceil(y1 - y0 + pad * 2);
+  const b = cv.getContext("2d"), ox = pad - x0, oy = pad - y0, ro = step * .66, ri = step * .5, col = `rgb(${c[0]},${c[1]},${c[2]})`;
+  b.fillStyle = "rgba(8,4,18,.92)"; b.beginPath(); pts.forEach(([x, y]) => { b.moveTo(x + ox + ro, y + oy); b.arc(x + ox, y + oy, ro, 0, 6.283); }); b.fill();
+  b.shadowColor = col; b.shadowBlur = 10; b.fillStyle = col; b.beginPath(); pts.forEach(([x, y]) => { b.moveTo(x + ox + ri, y + oy); b.arc(x + ox, y + oy, ri, 0, 6.283); }); b.fill();
+  b.shadowBlur = 0; b.fillStyle = "rgba(255,255,255,.28)"; b.beginPath(); pts.forEach(([x, y]) => { b.moveTo(x + ox - ri * .2 + ri * .35, y + oy - ri * .3); b.arc(x + ox - ri * .2, y + oy - ri * .3, ri * .35, 0, 6.283); }); b.fill();
+  return { cv, x0: x0 - pad, y0: y0 - pad };
+}
+// pictures drawn on top of the sparks each frame: { cv, x(), y(), a() } (a() returns opacity, or -1 when done)
+const CRISP = [];
 function dot(x, y, r, c, a) { g.fillStyle = `rgba(${c[0]},${c[1]},${c[2]},${a})`; g.beginPath(); g.arc(x, y, r, 0, 6.283); g.fill(); }
 
 function rocket(x, ty, onPop, gr = GRAV) {
@@ -715,7 +734,7 @@ function textPoints(text, cx, cy, maxW, maxPts = 1100, opt = {}) {
   c.font = `${wt} ${fs}px ${FONT}`; c.fillStyle = "#fff"; c.textBaseline = "middle";
   c.fillText(text, 10, oc.height / 2);
   const d = c.getImageData(0, 0, oc.width, oc.height).data, pts = [];
-  const step = opt.step ? Math.max(8, Math.round(opt.step * fs / (opt.size || 250))) : Math.max(7, Math.round(fs / 26));
+  const step = opt.fine ? Math.max(5, Math.round(fs / 17)) : opt.step ? Math.max(8, Math.round(opt.step * fs / (opt.size || 250))) : Math.max(7, Math.round(fs / 26));
   for (let y = 0; y < oc.height; y += step) for (let x = 0; x < oc.width; x += step)
     if (d[(y * oc.width + x) * 4 + 3] > 128) pts.push([cx - oc.width / 2 + x, cy - oc.height / 2 + y]);
   while (pts.length > maxPts) pts.splice(Math.floor(Math.random() * pts.length), 1);
@@ -1487,6 +1506,30 @@ const GIFT_COLORS = [["#ff2bd6", "#a3008a"], ["#39ff14", "#119c00"], ["#00f0ff",
   ["#ff6a00", "#bf3600"], ["#ccff00", "#6f9e00"], ["#ff1f5a", "#a0002c"], ["#00ffa3", "#00986a"], ["#ff5cf4", "#9b00b8"], ["#3d7bff", "#1b2fc4"]];
 const RIBBONS = ["#ffffff", "#fff01f", "#00f0ff", "#ff2bd6", "#39ff14", "#b026ff", "#ccff00"];
 const STAR_PATH = "M12 1.5l3.1 6.6 7.2.8-5.4 4.9 1.5 7.1L12 17.3 5.6 20.9l1.5-7.1L1.7 8.9l7.2-.8z";
+/* ================= the gift-name line along the top =================
+   Each name a chest shoots out flies to the top of the screen, forms in fireworks, and scrolls right, off the
+   right side. The next name forms just to the left of the one before, so they march across in a line.
+   The line speeds up when lots of chests are waiting. */
+const Lane = {
+  Y: 190, SIZE: 96, GAP: 110, O: 0, V: 360, items: [], last: 0,
+  x(it) { return it.base + this.O; },
+  tick() {
+    const now = performance.now(), dt = this.last ? Math.min(60, now - this.last) : 0; this.last = now;
+    const waiting = Gifts.boxes.filter(b => !b.opened).length;
+    this.V = Math.max(340, Math.min(780, 300 + waiting * 6));
+    this.O += this.V * dt / 1000;
+    this.items = this.items.filter(it => this.x(it) - it.w / 2 < 2600);
+    if (this.items.length) requestAnimationFrame(() => this.tick()); else this.last = 0;
+  },
+  // where a new name goes (in line coordinates), or null if there's no room on screen yet
+  place(w) {
+    const lead = this.V * .7, start = 50 + w / 2 - (this.O + lead), prev = this.items[this.items.length - 1];
+    if (!prev || this.x(prev) + lead - prev.w / 2 > 2560) return start;
+    const base = prev.base - prev.w / 2 - this.GAP - w / 2;
+    return base >= start ? base : null;
+  },
+  add(it) { this.items.push(it); if (!this.last) { this.last = performance.now(); requestAnimationFrame(() => this.tick()); } }
+};
 const Gifts = {
   sessions: [], waiting: [], boxes: [], H: new Float32Array(Math.ceil(2560 / 16) + 1), running: false, last: 0,
   // a gift event (from the gifter) starts a session; recipients may arrive just before or after it
@@ -1622,7 +1665,7 @@ const Gifts = {
     const [bw] = this.fp(b, a), l = Math.max(0, Math.floor((b.cx - bw * .28) / 16)), r = Math.min(this.H.length - 1, Math.floor((b.cx + bw * .28) / 16));
     let m = 0; for (let i = l; i <= r; i++) m = Math.max(m, this.H[i]); return m;
   },
-  ZONE: { x0: 40, x1: 2520, bottom: 920 },          // where the name fireworks appear: keep presents out
+  ZONE: { x0: 40, x1: 2520, bottom: 420 },          // where the name fireworks appear: keep presents out
   rest(b) {
     this.reserve(b, -1);
     const [bw, bh] = this.fp(b, b.ra), sink = Math.abs(Math.sin(2 * b.ra)) * Math.min(b.w, b.h) * .12;   // leaning boxes tuck their corner in
@@ -1658,24 +1701,14 @@ const Gifts = {
     if (!ready.length) { if (waiting || this.boxes.some(b => !b.opened && b.state !== "rest")) setTimeout(() => this.openNext(), 300); else this.opening = false; return; }
     if (Queue.busy) { setTimeout(() => this.openNext(), 600); return; }
     const b = ready[Math.floor(Math.random() * ready.length)];
-    const spot = this.skySpot(b.name);
-    if (!spot) { setTimeout(() => this.openNext(), 150); return; }      // the sky is full: wait for a name to fade
+    if (!b.lane) { const pts = textPoints(b.name, 0, 0, 1100, 1e9, { size: Lane.SIZE, fine: true });
+      let x0 = 1e9, x1 = -1e9; pts.forEach(([x]) => { x0 = Math.min(x0, x); x1 = Math.max(x1, x); });
+      b.lane = { pts, step: pts.step, w: x1 - x0 + 20, mid: (x0 + x1) / 2 }; }
+    const spot = Lane.place(b.lane.w);
+    if (spot == null) { setTimeout(() => this.openNext(), 90); return; }   // the line is full: wait for room
     this.open(b, spot);
     const left = this.boxes.filter(x => !x.opened).length;
-    setTimeout(() => this.openNext(), left > 80 ? 140 : left > 30 ? 200 : 280);
-  },
-  /* names go to random free places in the sky (up to 10 at once), never on top of each other (or the line at the top) */
-  sky: [], NAME_SIZE: 100, MAX_NAMES: 10,
-  skySpot(name) {
-    const now = performance.now(); this.sky = this.sky.filter(r => r.until > now);
-    if (this.sky.length >= this.MAX_NAMES) return null;
-    const c = this.mc || (this.mc = document.createElement("canvas").getContext("2d")); c.font = `900 ${this.NAME_SIZE}px ${FONT}`;
-    const w = Math.min(900, c.measureText(name).width) + 70, h = this.NAME_SIZE * 1.45;
-    for (let i = 0; i < 120; i++) {
-      const x = rand(w / 2 + 40, 2520 - w / 2), y = rand(170 + h / 2, 900 - h / 2);
-      if (!this.sky.some(r => x - w / 2 < r.x1 + 24 && x + w / 2 > r.x0 - 24 && y - h / 2 < r.y1 + 24 && y + h / 2 > r.y0 - 24)) return { x, y, x0: x - w / 2, x1: x + w / 2, y0: y - h / 2, y1: y + h / 2 };
-    }
-    return null;
+    setTimeout(() => this.openNext(), 120);
   },
   /* gems that pop out of an opened chest: Zelda-style rupees (a long six-sided gem with a lighter face) */
   gems: [],
@@ -1713,22 +1746,19 @@ const Gifts = {
     b.opened = true;
     const s = b.s; s.opens = (s.opens || 0) + 1;
     this.chestSfx();
-    const c = bright(b.c1), cx = b.cx, cy = b.cy, topY = cy - b.h * .3;
-    const life = 700 + 4000 + 800 + 400;
-    this.sky.push({ x0: spot.x0, x1: spot.x1, y0: spot.y0, y1: spot.y1, until: performance.now() + life });
-    P.push({ type: "homing", x: cx, y: topY, sx: cx, sy: topY, tx: spot.x, ty: spot.y, t: 0, dur: 700, curve: rand(-140, 140), c,
+    const c = soft(bright(b.c1)), cx = b.cx, cy = b.cy, topY = cy - b.h * .3;
+    const L = b.lane, it = { base: spot, w: L.w, crispAt: Infinity };
+    it.pts = L.pts.map(([x, y]) => [x - L.mid, y]);
+    const pic = bakeDots(it.pts, L.step, c);
+    Lane.add(it);
+    P.push({ type: "homing", x: cx, y: topY, sx: cx, sy: topY, tx: Lane.x(it) + Lane.V * .7, ty: Lane.Y, t: 0, dur: 700, curve: rand(-140, 140), c,
       onPop: (x, y) => {
-        burst(x, y, c, 46);
-        // the sparks fly into the letters, then the clean name fades in over them and the sparks melt away
-        const foAt = performance.now() + 950;
-        const pts = textPoints(b.name, spot.x, spot.y, 900, 650, { size: this.NAME_SIZE });
-        pts.forEach(([tx, ty]) => P.push({ type: "form", sx: x, sy: y, tx, ty, x, y, age: -rand(0, 100), dur: rand(400, 620),
-          hold: 1e9, foAt, curl: rand(-60, 60), ph: rand(0, 6.28), c }));
-        const mc = this.mc; mc.font = `900 ${this.NAME_SIZE}px ${FONT}`; const tw = mc.measureText(b.name).width;
-        const fs = tw > 900 ? Math.floor(this.NAME_SIZE * 900 / tw) : this.NAME_SIZE;
-        const n = el("div", "sky-name", b.name); n.style.font = `900 ${fs}px ${FONT}`; n.style.left = spot.x + "px"; n.style.top = spot.y + "px";
-        n.style.setProperty("--gc", css(soft(c))); layer.append(n);
-        setTimeout(() => { n.classList.add("out"); setTimeout(() => n.remove(), 900); }, 4000);
+        burst(x, y, c, 40);
+        const now = performance.now(); it.crispAt = now + 760;
+        it.pts.forEach(([dx, dy]) => P.push({ type: "lanef", it, dx, dy, sx: x, sy: y, age: -rand(0, 90), dur: rand(380, 600), curl: rand(-50, 50), c }));
+        CRISP.push({ cv: pic.cv, x: () => Lane.x(it) + pic.x0, y: () => Lane.Y + pic.y0,
+          a: () => { const t = performance.now(); if (Lane.x(it) + pic.x0 > 2600) return -1; return t < it.crispAt ? 0 : Math.min(1, (t - it.crispAt) / 220); } });
+        kick();
       } });
     // rupees pop out
     const sc = Math.max(.6, s.scale);
@@ -1740,9 +1770,11 @@ const Gifts = {
     kick();
     b.state = "gone"; b.goneAt = performance.now();
     this.restack();
-    if (!this.boxes.some(x => x.s === s && !x.opened) && s.dropped >= Math.min(s.total, 200)) {
-      setTimeout(() => this.headOut(s), 4400);
-      if (!s.finale) { s.finale = true; setTimeout(() => this.finale(s), 700 + 4000 + 1300); }   // after the last name has faded
+    if (!this.boxes.some(x => x.s === s && !x.opened) && s.dropped >= Math.min(s.total, 200) && !s.finale) {
+      s.finale = true;
+      // once the last name has scrolled off: the "has gifted" line goes, and the thank-you takes the top of the screen
+      const wait = () => { if (Lane.items.length) return setTimeout(wait, 300); this.headOut(s); setTimeout(() => this.finale(s), 900); };
+      setTimeout(wait, 1500);
     }
   },
   /* grand finale: "Thank you!" and the gifter's name in fireworks; after 3 s the letters become a
@@ -1750,8 +1782,8 @@ const Gifts = {
   finale(s) {
     if (Queue.busy) { setTimeout(() => this.finale(s), 700); return; }
     const gc = bright(s.color || "#f472b6"), green = [40, 230, 90], purple = [150, 50, 255];
-    const l1 = textPoints("Thank you!", 1280, 360, 1900, 1000, { size: 230 }).map(p => [...p, 0]);
-    const l2 = textPoints(s.gifter, 1280, 640, 1700, 750, { size: 170 }).map(p => [...p, 1]);
+    const t1 = textPoints("Thank you!", 1280, 150, 1900, 1e9, { size: 150, fine: true }), t2 = textPoints(s.gifter, 1280, 330, 1700, 1e9, { size: 120, fine: true });
+    const l1 = t1.map(p => [...p, 0]), l2 = t2.map(p => [...p, 1]);
     const all = [...l1, ...l2];
     // heart outline points, spread evenly along the curve; one side-to-side band of green, one of purple
     const N = all.length, S = 24, cx = 1280, cy = 540;
@@ -1774,7 +1806,11 @@ const Gifts = {
       const mx = mine.reduce((t, p) => t + p[0], 0) / mine.length, my = mine.reduce((t, p) => t + p[1], 0) / mine.length;
       setTimeout(() => rocket(mx + rand(-40, 40), Math.max(220, my - rand(40, 120)), (x, y) => {
         if (H.m0 === Infinity) {   // the words stay up for 3 s after they've formed, then turn into the heart
-          H.m0 = performance.now() + 1000 + 3000; H.d0 = H.m0 + H.mdur + 900;
+          H.m0 = performance.now() + 1000 + 3000; H.d0 = H.m0 + H.mdur + 900; H.crispFrom = performance.now() + 1100;
+          // while the words are up, a clean picture of the same dots shows (the sparks come back for the heart)
+          [[t1, [255, 236, 170]], [t2, soft(gc)]].forEach(([pts, col]) => { const pic = bakeDots(pts, pts.step, col);
+            CRISP.push({ cv: pic.cv, x: () => pic.x0, y: () => pic.y0, a: () => { const t = performance.now(); if (t > H.m0 + 250) return -1;
+              return t < H.crispFrom ? 0 : t < H.m0 ? Math.min(1, (t - H.crispFrom) / 220) : 1 - (t - H.m0) / 250; } }); });
           setTimeout(() => { for (let i = 0; i < 6; i++) setTimeout(() => burst(cx + rand(-420, 420), cy + rand(-300, 260), i % 2 ? purple : green, 60), i * 140); }, 4000 + H.mdur);
         }
         burst(x, y, cols[gi % cols.length], 40);
@@ -3749,7 +3785,7 @@ window.KZRelay = function (topic, onMessage, servers) {
 (() => {
   const qs = new URLSearchParams(location.search), key = qs.get("ctl");
   if (!key || !window.WebSocket) return;
-  const PAGE = "html3", VERSION = "d890ec1";
+  const PAGE = "html3", VERSION = "b1b690e";
   let said = false;
   const relay = KZRelay("kzctl/" + key, c => {
     if (!c || c.from === "overlay" || (c.to && c.to !== "all" && c.to !== PAGE)) return;
