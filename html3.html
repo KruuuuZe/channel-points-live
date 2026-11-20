@@ -3837,8 +3837,12 @@ const Snowman = {
     g.restore(); },
   /* places a part: centre (x, y) with rotation, squashed down onto the ground line `by` as it melts (sx wider, sy flatter) */
   place(g, x, by, r, rot, f, fn) { const sx = 1 + .35 * f, sy = 1 - .72 * f; g.save(); g.translate(x, by); g.scale(sx, sy); g.translate(0, -r); g.rotate(rot); fn(); g.restore(); },
-  arm(g, S, sc, flip) { if (S.sm_arm) { g.save(); g.scale(sc, sc); this.pic(g, S.sm_arm, 150, flip); g.restore(); return; }
-    g.save(); g.scale((flip ? -1 : 1) * sc, sc); g.strokeStyle = "#5b3a1e"; g.lineWidth = 7; g.lineCap = "round"; g.beginPath(); g.moveTo(-60, 25); g.lineTo(60, -25); g.moveTo(30, -12); g.lineTo(48, -44); g.moveTo(40, -16); g.lineTo(72, -14); g.stroke(); g.restore(); },
+  // an arm grows out of the origin (its shoulder end) toward the upper right (mirrored for the left arm)
+  ARM: 105,
+  arm(g, S, sc, flip) { g.save(); g.scale((flip ? -1 : 1) * sc, sc);
+    if (S.sm_arm) { const sp = S.sm_arm, w = this.ARM, h = w * sp.h / sp.w; g.drawImage(sp.img, 0, 0, sp.w, sp.h, -w * .06, -h * .94, w, h); }
+    else { g.strokeStyle = "#5b3a1e"; g.lineWidth = 6; g.lineCap = "round"; g.beginPath(); g.moveTo(0, 0); g.lineTo(80, -42); g.moveTo(58, -30); g.lineTo(70, -58); g.moveTo(66, -34); g.lineTo(94, -36); g.stroke(); }
+    g.restore(); },
   hat(g, S, sc) { if (S.sm_hat) { g.save(); g.scale(sc, sc); const h = this.pic(g, S.sm_hat, 120); g.restore(); return h * sc; }
     g.save(); g.scale(sc, sc); g.fillStyle = "#16141c"; g.fillRect(-60, 35, 120, 14); g.fillRect(-38, -45, 76, 82); g.fillStyle = "#b91c1c"; g.fillRect(-38, 18, 76, 14); g.restore(); return 98 * sc; },
   face(g, S, sc) { if (S.sm_face) { g.save(); g.scale(sc, sc); this.pic(g, S.sm_face, 78); g.restore(); return; }
@@ -3898,9 +3902,10 @@ const Snowman = {
       g.save(); g.translate(x, y); g.rotate(dh * (.4 + 1.2 * kNose)); this.nose(g, S, 1); g.restore(); }
     // stick arms: standing out from the middle ball, then drooping, then dropping to the ground
     if (sa) [-1, 1].forEach(d => {
-      const droop = this.e(kArmD) * 1.15, base = [X + d * (rm + 50), my - 18];
-      let [x, y] = base; let rot = d * (-.25 + droop);
-      if (kArmF > 0) { [x, y] = this.fall(kArmF, base[0] + d * 10, base[1] + 40, X + d * (rb + 95), G - 8); rot = d * (.9 - .9 * kArmF + .12); }
+      // the shoulder: just inside the edge of the middle ball (it sinks as the balls below slump)
+      const droop = this.e(kArmD) * 1.15, base = [X + d * rm * .8, my - 12 + rb * 2 * .72 * fB];
+      let [x, y] = base; let rot = d * (.3 + droop);
+      if (kArmF > 0) { [x, y] = this.fall(kArmF, base[0], base[1], X + d * (rb + 40), G - 6); rot = d * (1.15 - .75 * kArmF); }
       g.save(); g.translate(x, y); g.rotate(rot); this.arm(g, S, sa, d < 0); g.restore(); });
     // the hat (and the name on it): pops on top of the head, then tips off and tumbles to the ground
     if (sh) { const hx0 = X, hy0 = hy - rh - 22;
@@ -4775,7 +4780,7 @@ window.KZRelay = function (topic, onMessage, servers) {
 (() => {
   const qs = new URLSearchParams(location.search), key = qs.get("ctl");
   if (!key || !window.WebSocket) return;
-  const PAGE = "html3", VERSION = "503dc1c";
+  const PAGE = "html3", VERSION = "7de6535";
   let said = false;
   const relay = KZRelay("kzctl/" + key, c => {
     if (!c || c.from === "overlay" || (c.to && c.to !== "all" && c.to !== PAGE)) return;
