@@ -3464,15 +3464,53 @@ const Smoke = {
    puffs of smoke pop out all over the cloud. The voice comes from the microphone: either OBS itself (if it allows
    the browser source to use the mic) or the Voice page from the app's Control screen, open in a browser on the PC. */
 const Voice = {
-  level: 0, shape: .5, last: 0, an: null, buf: null, fbuf: null, tried: false,
+  level: 0, shape: .5, last: 0, an: null, buf: null, fbuf: null, tried: false, obsOk: false,
+  /* 1st choice: OBS itself. OBS has a built-in WebSocket server (Tools > WebSocket Server Settings); through it the
+     overlay gets the live volume of your mic straight from OBS, with no mic permission needed. */
+  obs() {
+    return new Promise(done => {
+      let ws, finished = false; const fin = ok => { if (!finished) { finished = true; done(ok); } };
+      const port = qs.get("obsport") || "4455", pw = qs.get("obspw") || "";
+      try { ws = new WebSocket("ws://127.0.0.1:" + port); } catch (e) { return fin(false); }
+      const timer = setTimeout(() => { try { ws.close(); } catch (e) {} fin(false); }, 4000);
+      const b64 = buf => btoa(String.fromCharCode(...new Uint8Array(buf))), sha = async txt => b64(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(txt)));
+      ws.onmessage = async e => {
+        let m; try { m = JSON.parse(e.data); } catch (x) { return; }
+        if (m.op === 0) {          // Hello: log in (with the password if OBS asks for one) and ask for volume meters
+          const id = { rpcVersion: 1, eventSubscriptions: 1 << 16 };
+          if (m.d.authentication) { if (!pw) { this.obsNeedsPw = true; } else id.authentication = await sha((await sha(pw + m.d.authentication.salt)) + m.d.authentication.challenge); }
+          ws.send(JSON.stringify({ op: 1, d: id }));
+        } else if (m.op === 2) { clearTimeout(timer); this.obsOk = true; fin(true); }
+        else if (m.op === 5 && m.d.eventType === "InputVolumeMeters") this.fromObs(m.d.eventData.inputs || []);
+      };
+      ws.onclose = () => { clearTimeout(timer); if (this.obsOk) { this.obsOk = false; setTimeout(() => this.obs(), 3000); } fin(false); };
+      ws.onerror = () => {};
+    });
+  },
+  fromObs(inputs) {
+    // your mic: an input named like a mic, otherwise the loudest input that isn't desktop/game/music audio
+    const lvl = i => Math.max(0, ...(i.inputLevelsMul || []).map(ch => ch[1] || 0));
+    let mic = inputs.filter(i => /mic|aux|voice|wave|yeti|shure|rode|headset|focusrite|goxlr|input/i.test(i.inputName));
+    if (!mic.length) mic = inputs.filter(i => !/desktop|game|music|browser|spotify|discord|media|alert|overlay/i.test(i.inputName));
+    const m = Math.max(0, ...mic.map(lvl)), db = m > 0 ? 20 * Math.log10(m) : -100;
+    const lv = Math.max(0, Math.min(1, (db + 48) / 34));
+    this.level += (lv - this.level) * (lv > this.level ? .6 : .25);
+    // OBS only sends loudness, so the mouth shape follows how the loudness moves (sharper changes look like "ee")
+    this.shape += ((Math.abs(lv - (this.prev || 0)) * 4 + .3 * Math.sin(performance.now() / 260)) + .35 - this.shape) * .15; this.prev = lv;
+    this.last = performance.now();
+  },
   async startMic() {
     if (this.tried) return; this.tried = true;
+    if (await this.obs()) { toast("😶 The face is listening to your mic through OBS", false, 4000); return; }
     try {
       const st = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: true } });
       const c = Sound.init(), src = c.createMediaStreamSource(st), an = c.createAnalyser(); an.fftSize = 1024; an.smoothingTimeConstant = .4;
       src.connect(an); this.an = an; this.buf = new Float32Array(an.fftSize); this.fbuf = new Uint8Array(an.frequencyBinCount);
     } catch (e) {
-      if (!this.last) toast("The face can't hear the mic from inside OBS. In the app's Control screen, open the Voice link in a browser on this PC and keep it open.", true, 12000);
+      if (!this.last) toast(this.obsNeedsPw
+        ? "The face needs your OBS WebSocket password: in OBS go to Tools > WebSocket Server Settings > Show Connect Info, copy the Server Password, and paste it in the app's Control screen (OBS WebSocket password), then update the HTML3 link."
+        : "The face can't hear your mic yet. One quick step: in OBS go to Tools > WebSocket Server Settings and tick Enable WebSocket server. Then turn the face off and on.", true, 15000);
+      this.tried = false;                                                 // try again next time the face is turned on
     }
   },
   // from the Voice page (over the relay): already-measured level and shape
@@ -3496,7 +3534,7 @@ const Voice = {
 const Face = {
   on: false, a: 0, gaze: [0, 0], gazeTo: [0, 0], nextLook: 0, blinkAt: 2000, open: 0, wide: .5, puffs: [],
   toggle() {
-    if (!this.on) { this.on = true; Voice.startMic(); if (!Smoke.on || Smoke.offAt != null) { if (Smoke.on) Smoke.offAt = null; else Smoke.run(); } }
+    if (!this.on) { this.on = true; if (!Voice.obsOk && !Voice.an) Voice.startMic(); if (!Smoke.on || Smoke.offAt != null) { if (Smoke.on) Smoke.offAt = null; else Smoke.run(); } }
     else this.on = false;
   },
   // dark smoky features inside the cloud layer (they get the same soft blur as the smoke)
@@ -4383,7 +4421,7 @@ window.KZRelay = function (topic, onMessage, servers) {
 (() => {
   const qs = new URLSearchParams(location.search), key = qs.get("ctl");
   if (!key || !window.WebSocket) return;
-  const PAGE = "html3", VERSION = "9cdc3ec";
+  const PAGE = "html3", VERSION = "72cde2c";
   let said = false;
   const relay = KZRelay("kzctl/" + key, c => {
     if (!c || c.from === "overlay" || (c.to && c.to !== "all" && c.to !== PAGE)) return;
