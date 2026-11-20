@@ -3563,8 +3563,11 @@ const Face = {
   gazeTo: [0, 0], nextLook: 0, blinkAt: 2500, rmood: 0, moodTo: 0, nextMood: 0,
   toggle() {
     if (!this.on) { this.on = true; if (!Voice.obsOk && !Voice.an) Voice.startMic(); if (!this.run) this.start(); }
-    else this.on = false;
+    else if (this.leaving) this.leaving = false;          // turned back on while heading home: carry on as normal
+    else if (this.a < .3) this.on = false;               // still forming: just go
+    else this.leaving = true;                            // goes back to where it came out, then vanishes in a poof
   },
+  leaving: false,
   /* the expression is picked by hand (from the app's Control screen); only the eyes looking around and the mouth
      moving when you talk happen on their own */
   EXPR: {"neutral": {"base": "cf_ref", "talk": "cf_x_talk", "wide": "cf_x_wide", "l": "cf_x_look_l", "r": "cf_x_look_r", "d": "cf_x_look_d"}, "smile": {"base": "cf_x_smile", "talk": "cf_v_smile_talk", "l": "cf_v_smile_l", "r": "cf_v_smile_r", "d": "cf_v_smile_d"}, "grin": {"base": "cf_x_grin", "talk": "cf_v_grin_talk", "l": "cf_v_grin_l", "r": "cf_v_grin_r", "d": "cf_v_grin_d"}, "oo": {"base": "cf_x_oo", "talk": "cf_v_oo_talk", "l": "cf_v_oo_l", "r": "cf_v_oo_r", "d": "cf_v_oo_d"}, "closed": {"base": "cf_x_blink", "talk": "cf_v_closed_talk"}, "smirk": {"base": "cf_e_smirk", "talk": "cf_v_smirk_talk", "l": "cf_v_smirk_l", "r": "cf_v_smirk_r", "d": "cf_v_smirk_d"}, "wink": {"base": "cf_e_wink", "talk": "cf_v_wink_talk"}, "laugh": {"base": "cf_e_laugh", "talk": "cf_v_laugh_talk"}, "shocked": {"base": "cf_e_shocked", "talk": "cf_v_shocked_talk", "l": "cf_v_shocked_l", "r": "cf_v_shocked_r", "d": "cf_v_shocked_d"}, "sleepy": {"base": "cf_e_sleepy", "talk": "cf_v_sleepy_talk", "l": "cf_v_sleepy_l", "r": "cf_v_sleepy_r", "d": "cf_v_sleepy_d"}, "sideeye": {"base": "cf_e_sideeye", "talk": "cf_v_sideeye_talk", "l": "cf_v_sideeye_l", "r": "cf_v_sideeye_r", "d": "cf_v_sideeye_d"}, "sad": {"base": "cf_e_sad", "talk": "cf_v_sad_talk", "l": "cf_v_sad_l", "r": "cf_v_sad_r", "d": "cf_v_sad_d"}, "tongue": {"base": "cf_e_tongue", "talk": "cf_v_tongue_talk", "l": "cf_v_tongue_l", "r": "cf_v_tongue_r", "d": "cf_v_tongue_d"}, "puffed": {"base": "cf_e_puffed", "talk": "cf_v_puffed_talk", "l": "cf_v_puffed_l", "r": "cf_v_puffed_r", "d": "cf_v_puffed_d"}, "determined": {"base": "cf_e_determined", "talk": "cf_v_determined_talk", "l": "cf_v_determined_l", "r": "cf_v_determined_r", "d": "cf_v_determined_d"}, "evil": {"base": "cf_e_evil", "talk": "cf_v_evil_talk", "l": "cf_v_evil_l", "r": "cf_v_evil_r", "d": "cf_v_evil_d"}, "smug": {"base": "cf_e_smug", "talk": "cf_v_smug_talk", "l": "cf_v_smug_l", "r": "cf_v_smug_r", "d": "cf_v_smug_d"}, "confused": {"base": "cf_e_confused", "talk": "cf_v_confused_talk", "l": "cf_v_confused_l", "r": "cf_v_confused_r", "d": "cf_v_confused_d"}, "disgusted": {"base": "cf_e_disgusted", "talk": "cf_v_disgusted_talk", "l": "cf_v_disgusted_l", "r": "cf_v_disgusted_r", "d": "cf_v_disgusted_d"}, "nervous": {"base": "cf_e_nervous", "talk": "cf_v_nervous_talk", "l": "cf_v_nervous_l", "r": "cf_v_nervous_r", "d": "cf_v_nervous_d"}, "kissy": {"base": "cf_e_kissy", "talk": "cf_v_kissy_talk", "l": "cf_v_kissy_l", "r": "cf_v_kissy_r", "d": "cf_v_kissy_d"}, "bored": {"base": "cf_e_bored", "talk": "cf_v_bored_talk", "l": "cf_v_bored_l", "r": "cf_v_bored_r", "d": "cf_v_bored_d"}, "excited": {"base": "cf_e_excited", "talk": "cf_v_excited_talk", "l": "cf_v_excited_l", "r": "cf_v_excited_r", "d": "cf_v_excited_d"}, "thinking": {"base": "cf_e_thinking", "talk": "cf_v_thinking_talk", "l": "cf_v_thinking_l", "r": "cf_v_thinking_r", "d": "cf_v_thinking_d"}, "scared": {"base": "cf_e_scared", "talk": "cf_v_scared_talk", "l": "cf_v_scared_l", "r": "cf_v_scared_r", "d": "cf_v_scared_d"}},
@@ -3640,7 +3643,19 @@ const Face = {
     // Every so often it goes down to the bottom, but only down the left or right edge (never through the middle),
     // stays there a while, then goes back up the same edge.
     const SC = this.SC, MX = 195, TOP = [205, 228], LOW = H - 180, CORNER = [W - 430, H - 260];
-    let route = [], snowing = null, snowTo = null;                      // waypoints still to glide through; the snowman being snowed
+    let route = [], snowing = null, snowTo = null, goingHome = false;
+    // the big poof of smoke the cloud appears in (and vanishes in when it's turned off)
+    const poof = (px, py, t) => {
+        for (let i = 0; i < 70; i++) { const a = rand(-Math.PI, 0) + rand(-.4, .4) - .5, sp = rand(4, 16);
+        this.puffs.push({ x: px + rand(-60, 60) * SC, y: py + rand(-40, 60) * SC, vx: Math.cos(a) * sp * .7, vy: Math.sin(a) * sp * .55, r: rand(30, 70) * .65, born: t, life: rand(1400, 2600) }); }
+      // a solid bank of smoke filling everything under the cloud down to the bottom of the screen, reaching about
+      // 100px past the cloud on each side, that billows a little and thins out as the cloud forms
+      const half = 150 * SC * 2 + 100;
+      for (let gx = px - half; gx <= px + half; gx += 34) for (let gy = py - 90; gy <= H + 30; gy += 34) {
+        const u = (gx - px) / half, top = py - 90 + u * u * 110 + rand(-25, 25);        // a rounded, lumpy top, not a box
+        if (gy < top) continue;
+        this.puffs.push({ x: gx + rand(-22, 22) + Math.sign(u) * (Math.abs(u) > .9 ? rand(-10, 30) : 0), y: gy + rand(-14, 14), vx: rand(-.8, .8) + (gx - px) * .004, vy: rand(-.9, .2), r: rand(34, 52), born: t, life: rand(1800, 2900) }); }
+    };
 
     let [px, py] = CORNER, fromX = px, fromY = py, toX = px, toY = py, moveAt = 0, moveDur = 1, hoverUntil = 0, last = t0, enterAt = -1e9, wasLow = false;
     let nextBolt = rand(6000, 14000), nextRain = rand(12000, 25000), rainUntil = 0, nextGlow = 0;
@@ -3651,13 +3666,25 @@ const Face = {
       // ---- entrance: when it comes out, it bursts out of the bottom-right corner as a poof of smoke and forms up
       if (this.on && this.a < .06 && t - enterAt > 2500) {
         enterAt = t; px = fromX = toX = CORNER[0]; py = fromY = toY = CORNER[1]; moveAt = 0; hoverUntil = t + 2600; this.a = .02;
-        for (let i = 0; i < 70; i++) { const a = rand(-Math.PI, 0) + rand(-.4, .4) - .5, sp = rand(4, 16);
-          this.puffs.push({ x: px + rand(-60, 60) * SC, y: py + rand(-40, 60) * SC, vx: Math.cos(a) * sp * .7, vy: Math.sin(a) * sp * .55, r: rand(30, 70) * .65, born: t, life: rand(1400, 2600) }); }
+        poof(px, py, t);
       }
       const ek = Math.min(1, (t - enterAt) / 1300), es = .2 + .8 * (1 - Math.pow(1 - ek, 3));   // grows out of the poof
+      // ---- turned off: go back to where it came out (along the top and straight down, or along the bottom from the
+      // right edge), then vanish in a poof
+      if (this.leaving && !goingHome) {
+        goingHome = true; this.snowQ.length = 0; snowTo = null;
+        if (snowing && snowing.at > 1e14) this.snowmen = this.snowmen.filter(m => m !== snowing);   // no snow had landed yet
+        snowing = null; const top = rand(...TOP);
+        route = py > H / 2 ? (px < W / 2 ? [[px, top], [CORNER[0], top], CORNER.slice()] : [CORNER.slice()]) : [[CORNER[0], top], CORNER.slice()];
+        moveAt = 0; hoverUntil = t;
+      }
+      if (!this.leaving && goingHome) { goingHome = false; route = []; hoverUntil = t; }   // turned back on on the way
+      if (goingHome && !route.length && moveAt <= hoverUntil && Math.hypot(px - CORNER[0], py - CORNER[1]) < 3) {
+        poof(px, py, t); goingHome = false; this.leaving = false; this.on = false; this.a = 0;
+      }
       // ---- snow: when someone types !snow the cloud drops what it's doing and heads straight for a random free spot
       // along the top (up its edge first if it's at the bottom); once it's there it starts snowing
-      if (this.snowQ.length && !snowing && snowTo === null) {
+      if (this.snowQ.length && !snowing && snowTo === null && !this.leaving) {
         const free = sx => this.snowmen.every(m => Math.abs(m.x - sx) > 220);
         let tx = null; for (let i = 0; i < 80 && tx === null; i++) { const c = rand(280, W - 280); if (free(c)) tx = c; }
         if (tx !== null) { snowTo = tx; route = py > H / 2 ? [[px, rand(...TOP)], [tx, rand(...TOP)]] : [[tx, rand(...TOP)]]; moveAt = 0; hoverUntil = t; }
@@ -3679,12 +3706,12 @@ const Face = {
           else { let nx = rand(MX, W - MX); if (Math.abs(nx - px) < 300) nx = px + (nx < px ? -1 : 1) * 500; route = [[Math.max(MX, Math.min(W - MX, nx)), rand(...TOP)]]; }
         }
         fromX = px; fromY = py; [toX, toY] = route.shift(); wasLow = toY > H / 2;
-        moveAt = t; moveDur = snowTo !== null ? Math.max(1200, Math.hypot(toX - fromX, toY - fromY) / .34) : Math.max(1800, Math.min(9000, Math.hypot(toX - fromX, toY - fromY) / .14));   // hurries when someone typed !snow
+        moveAt = t; moveDur = snowTo !== null || goingHome ? Math.max(1200, Math.hypot(toX - fromX, toY - fromY) / .34) : Math.max(1800, Math.min(9000, Math.hypot(toX - fromX, toY - fromY) / .14));   // hurries when someone typed !snow
       }
       let moving = 0;
       if (moveAt > hoverUntil) { const k = Math.min(1, (t - moveAt) / moveDur), e = k < .5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2;
         px = fromX + (toX - fromX) * e; py = fromY + (toY - fromY) * e; moving = k < 1 ? 1 : 0;
-        if (k >= 1) { hoverUntil = t + (route.length ? (snowTo !== null ? 60 : 250) : wasLow ? rand(4000, 8000) : rand(4000, 11000)); moveAt = 0; } }
+        if (k >= 1) { hoverUntil = t + (route.length ? (snowTo !== null || goingHome ? 60 : 250) : wasLow ? rand(4000, 8000) : rand(4000, 11000)); moveAt = 0; } }
       const dir = moving ? Math.sign(toX - fromX) : 0;
       this.pos = [px, py];
       // where "toward the middle of the screen" is from here: from the left or right part of the screen, sideways;
@@ -4798,7 +4825,7 @@ window.KZRelay = function (topic, onMessage, servers) {
 (() => {
   const qs = new URLSearchParams(location.search), key = qs.get("ctl");
   if (!key || !window.WebSocket) return;
-  const PAGE = "html3", VERSION = "7d9f3bd";
+  const PAGE = "html3", VERSION = "ba0abd3";
   let said = false;
   const relay = KZRelay("kzctl/" + key, c => {
     if (!c || c.from === "overlay" || (c.to && c.to !== "all" && c.to !== PAGE)) return;
