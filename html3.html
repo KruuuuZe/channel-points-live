@@ -3560,6 +3560,14 @@ const Face = {
   },
   rain: false,
   toggleRain() { this.rain = !this.rain; if (this.rain && !this.on) this.toggle(); },     // rain brings the cloud out if it's away
+  /* anyone in chat can type !rain: the cloud rains for 5 to 15 seconds (more !rain while it's raining keeps it going).
+     If the cloud was away, it comes out for the rain and goes away again after. */
+  rainTill: 0,
+  chatRain() {
+    const now = performance.now(), end = now + rand(5000, 15000);
+    if (!this.on) { this.toggle(); this.rainBrought = true; }
+    this.rainTill = Math.max(this.rainTill, end);
+  },
   /* the cloud made in the Art screen: a whole cloud-face picture for each expression (neutral, talking, wide open,
      smile, grin, "oo", blinking, brows up, angry, looking left/right). The closest one to your expression is shown,
      with a quick cross-fade between them. */
@@ -3718,7 +3726,8 @@ const Face = {
         return true;
       });
       // ---- rain, while it's switched on (Rain on/off button)
-      if (this.on && this.rain) for (let i = 0; i < 3; i++) this.drops.push({ x: x + rand(-200, 200), y: y + 95 + rand(0, 20), v: rand(14, 20), c: Math.random() < .2 ? "rgba(190,150,255,.7)" : Math.random() < .2 ? "rgba(190,240,150,.7)" : "rgba(185,205,235,.65)" });
+      if (this.rainBrought && performance.now() > this.rainTill + 1500) { this.rainBrought = false; if (!this.rain && this.on) this.on = false; }   // chat's rain is over: back away
+      if (this.on && (this.rain || performance.now() < this.rainTill)) for (let i = 0; i < 3; i++) this.drops.push({ x: x + rand(-200, 200), y: y + 95 + rand(0, 20), v: rand(14, 20), c: Math.random() < .2 ? "rgba(190,150,255,.7)" : Math.random() < .2 ? "rgba(190,240,150,.7)" : "rgba(185,205,235,.65)" });
       g.lineCap = "round"; g.lineWidth = 2.5;
       this.drops = this.drops.filter(d => { d.y += d.v * dt / 16; if (d.y > H + 20) return false; g.strokeStyle = d.c; g.beginPath(); g.moveTo(d.x, d.y); g.lineTo(d.x - 2, d.y - 18); g.stroke(); return true; });
       // ---- and once in a while it shoots a bolt of lightning out of the cloud
@@ -4008,7 +4017,7 @@ window.onRemote = c => {
   else if (c.cmd === "effect" && c.name === "kazul") Kazul.run();
   else if (c.cmd === "effect" && c.name === "jinx") Jinx.run();
   else if (c.cmd === "effect" && c.name === "smoke") Smoke.run();
-  else if (c.cmd === "effect" && c.name === "face") Face.toggle();
+  else if (c.cmd === "effect" && c.name === "face") { Face.rainBrought = false; Face.toggle(); }
   else if (c.cmd === "effect" && c.name === "rain") Face.toggleRain();
   else if (c.cmd === "voice") Voice.remote(+c.l || 0, c.s == null ? .5 : +c.s);
   else if (c.cmd === "face") Face.face(c);
@@ -4124,7 +4133,7 @@ document.querySelectorAll("#testbar [data-t]").forEach(b => b.onclick = () => {
   else if (t === "kazul") Kazul.run();
   else if (t === "jinx") Jinx.run();
   else if (t === "smoke") Smoke.run();
-  else if (t === "face") Face.toggle();
+  else if (t === "face") { Face.rainBrought = false; Face.toggle(); }
   else if (t === "rain") Face.toggleRain();
   else if (t === "chat") Lurk.leave(name);
 });
@@ -4294,6 +4303,7 @@ const Chat = {
         if ((tags.badges || "").includes("broadcaster/")) { const m = msg.match(/^!star([1-6])/i); Wanted.set(m ? +m[1] : 0); }
         Lurk.leave(login);
       }
+      else if (/^!rain\b/i.test(msg)) { Face.chatRain(); Lurk.leave(login); }
       else if (/^!scroopleaderboard\b/i.test(msg)) Scrap.showBoard();
       else if (/^!scroop\b/i.test(msg) || msg.includes("kruuuuCatch1")) Scrap.dig(tags["display-name"] || login, login, tags.color || chatColors[tags["user-id"]]);   // lurkers can scroop without leaving the tower
       else Lurk.leave(login);
@@ -4592,7 +4602,7 @@ window.KZRelay = function (topic, onMessage, servers) {
 (() => {
   const qs = new URLSearchParams(location.search), key = qs.get("ctl");
   if (!key || !window.WebSocket) return;
-  const PAGE = "html3", VERSION = "ae36134";
+  const PAGE = "html3", VERSION = "332d89a";
   let said = false;
   const relay = KZRelay("kzctl/" + key, c => {
     if (!c || c.from === "overlay" || (c.to && c.to !== "all" && c.to !== PAGE)) return;
