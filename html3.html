@@ -2867,7 +2867,7 @@ const ChefArt = {
   use(name, a) { const img = new Image(); img.onload = () => { this.sprites[name] = Object.assign({ img }, a); if (name === "tower" && Lurk.up) Lurk.paint(); }; img.src = a.url; },
   async load() {
     try { const db = await this.open();
-      ["disco_spin", "disco_glint", "cf_x_talk_me", "sm_hat", "sm_face", "sm_nose", "sm_arm", "sm_ball", "sm_ball_melt", "sm_puddle", "cf_ref", "cf_x_talk", "cf_x_wide", "cf_x_look_l", "cf_x_look_r", "cf_x_smile", "cf_x_grin", "cf_x_oo", "cf_x_blink", "cf_v_smile_talk", "cf_v_smile_l", "cf_v_smile_r", "cf_v_grin_talk", "cf_v_grin_l", "cf_v_grin_r", "cf_v_oo_talk", "cf_v_oo_l", "cf_v_oo_r", "cf_v_closed_talk", "cf_e_smirk", "cf_v_smirk_talk", "cf_v_smirk_l", "cf_v_smirk_r", "cf_e_wink", "cf_v_wink_talk", "cf_e_laugh", "cf_v_laugh_talk", "cf_e_shocked", "cf_v_shocked_talk", "cf_v_shocked_l", "cf_v_shocked_r", "cf_e_sleepy", "cf_v_sleepy_talk", "cf_v_sleepy_l", "cf_v_sleepy_r", "cf_e_sideeye", "cf_v_sideeye_talk", "cf_v_sideeye_l", "cf_v_sideeye_r", "cf_e_sad", "cf_v_sad_talk", "cf_v_sad_l", "cf_v_sad_r", "cf_e_tongue", "cf_v_tongue_talk", "cf_v_tongue_l", "cf_v_tongue_r", "cf_e_puffed", "cf_v_puffed_talk", "cf_v_puffed_l", "cf_v_puffed_r", "cf_e_determined", "cf_v_determined_talk", "cf_v_determined_l", "cf_v_determined_r", "cf_e_evil", "cf_v_evil_talk", "cf_v_evil_l", "cf_v_evil_r", "cf_e_smug", "cf_v_smug_talk", "cf_v_smug_l", "cf_v_smug_r", "cf_e_confused", "cf_v_confused_talk", "cf_v_confused_l", "cf_v_confused_r", "cf_e_disgusted", "cf_v_disgusted_talk", "cf_v_disgusted_l", "cf_v_disgusted_r", "cf_e_nervous", "cf_v_nervous_talk", "cf_v_nervous_l", "cf_v_nervous_r", "cf_e_kissy", "cf_v_kissy_talk", "cf_v_kissy_l", "cf_v_kissy_r", "cf_e_bored", "cf_v_bored_talk", "cf_v_bored_l", "cf_v_bored_r", "cf_e_excited", "cf_v_excited_talk", "cf_v_excited_l", "cf_v_excited_r", "cf_e_thinking", "cf_v_thinking_talk", "cf_v_thinking_l", "cf_v_thinking_r", "cf_e_scared", "cf_v_scared_talk", "cf_v_scared_l", "cf_v_scared_r", "jinx_flip", "jinx_spin", "jinx_fire", "jinx_launch", "artillery", "golden_banana", "golden_mango", "tower", "eagle_roll", "tank_drive", "soldier_run", "soldier_throw", "grenade", "explosion", "eagle_glide", "eagle_flap", "plane", "title", "chef_parachute", "chef_chop", "chef_jump", "chef_fly", "chef_truck", "cf_x_look_d", "cf_v_smile_d", "cf_v_grin_d", "cf_v_oo_d", "cf_v_smirk_d", "cf_v_shocked_d", "cf_v_sleepy_d", "cf_v_sideeye_d", "cf_v_sad_d", "cf_v_tongue_d", "cf_v_puffed_d", "cf_v_determined_d", "cf_v_evil_d", "cf_v_smug_d", "cf_v_confused_d", "cf_v_disgusted_d", "cf_v_nervous_d", "cf_v_kissy_d", "cf_v_bored_d", "cf_v_excited_d", "cf_v_thinking_d", "cf_v_scared_d"].forEach(n => { const r = db.transaction("a").objectStore("a").get(n); r.onsuccess = () => { if (r.result) this.use(n, r.result); }; });
+      ["disco_glint", "cf_x_talk_me", "sm_hat", "sm_face", "sm_nose", "sm_arm", "sm_ball", "sm_ball_melt", "sm_puddle", "cf_ref", "cf_x_talk", "cf_x_wide", "cf_x_look_l", "cf_x_look_r", "cf_x_smile", "cf_x_grin", "cf_x_oo", "cf_x_blink", "cf_v_smile_talk", "cf_v_smile_l", "cf_v_smile_r", "cf_v_grin_talk", "cf_v_grin_l", "cf_v_grin_r", "cf_v_oo_talk", "cf_v_oo_l", "cf_v_oo_r", "cf_v_closed_talk", "cf_e_smirk", "cf_v_smirk_talk", "cf_v_smirk_l", "cf_v_smirk_r", "cf_e_wink", "cf_v_wink_talk", "cf_e_laugh", "cf_v_laugh_talk", "cf_e_shocked", "cf_v_shocked_talk", "cf_v_shocked_l", "cf_v_shocked_r", "cf_e_sleepy", "cf_v_sleepy_talk", "cf_v_sleepy_l", "cf_v_sleepy_r", "cf_e_sideeye", "cf_v_sideeye_talk", "cf_v_sideeye_l", "cf_v_sideeye_r", "cf_e_sad", "cf_v_sad_talk", "cf_v_sad_l", "cf_v_sad_r", "cf_e_tongue", "cf_v_tongue_talk", "cf_v_tongue_l", "cf_v_tongue_r", "cf_e_puffed", "cf_v_puffed_talk", "cf_v_puffed_l", "cf_v_puffed_r", "cf_e_determined", "cf_v_determined_talk", "cf_v_determined_l", "cf_v_determined_r", "cf_e_evil", "cf_v_evil_talk", "cf_v_evil_l", "cf_v_evil_r", "cf_e_smug", "cf_v_smug_talk", "cf_v_smug_l", "cf_v_smug_r", "cf_e_confused", "cf_v_confused_talk", "cf_v_confused_l", "cf_v_confused_r", "cf_e_disgusted", "cf_v_disgusted_talk", "cf_v_disgusted_l", "cf_v_disgusted_r", "cf_e_nervous", "cf_v_nervous_talk", "cf_v_nervous_l", "cf_v_nervous_r", "cf_e_kissy", "cf_v_kissy_talk", "cf_v_kissy_l", "cf_v_kissy_r", "cf_e_bored", "cf_v_bored_talk", "cf_v_bored_l", "cf_v_bored_r", "cf_e_excited", "cf_v_excited_talk", "cf_v_excited_l", "cf_v_excited_r", "cf_e_thinking", "cf_v_thinking_talk", "cf_v_thinking_l", "cf_v_thinking_r", "cf_e_scared", "cf_v_scared_talk", "cf_v_scared_l", "cf_v_scared_r", "jinx_flip", "jinx_spin", "jinx_fire", "jinx_launch", "artillery", "golden_banana", "golden_mango", "tower", "eagle_roll", "tank_drive", "soldier_run", "soldier_throw", "grenade", "explosion", "eagle_glide", "eagle_flap", "plane", "title", "chef_parachute", "chef_chop", "chef_jump", "chef_fly", "chef_truck", "cf_x_look_d", "cf_v_smile_d", "cf_v_grin_d", "cf_v_oo_d", "cf_v_smirk_d", "cf_v_shocked_d", "cf_v_sleepy_d", "cf_v_sideeye_d", "cf_v_sad_d", "cf_v_tongue_d", "cf_v_puffed_d", "cf_v_determined_d", "cf_v_evil_d", "cf_v_smug_d", "cf_v_confused_d", "cf_v_disgusted_d", "cf_v_nervous_d", "cf_v_kissy_d", "cf_v_bored_d", "cf_v_excited_d", "cf_v_thinking_d", "cf_v_scared_d"].forEach(n => { const r = db.transaction("a").objectStore("a").get(n); r.onsuccess = () => { if (r.result) this.use(n, r.result); }; });
     } catch (e) {}
   },
   // a piece of art arriving from the app (sent in parts)
@@ -4006,7 +4006,7 @@ const Snowman = {
    Turning it on drops a mirror ball down from the top of the screen on a cord; it bounces to a stop and spins,
    throwing coloured beams of light out across the screen and little spots of reflected light that sweep around
    the stream, with glints flashing on the ball. Turning it off fades the light and pulls the ball back up.
-   The ball is art from the Art screen (DISCO BALL ART: a spinning animation and a glint), or drawn if it isn't made. */
+   The ball itself is drawn (so its spin is perfectly smooth); the glint is art from the Art screen (DISCO BALL ART). */
 const Disco = {
   on: false, run: false, X: 1280, REST: 300, R: 120,
   COLS: [[163, 230, 53], [168, 85, 247], [236, 72, 153], [34, 211, 238], [250, 204, 21], [255, 255, 255]],
@@ -4046,9 +4046,7 @@ const Disco = {
       // the cord and the ball
       g.strokeStyle = "#9ca3af"; g.lineWidth = 4; g.beginPath(); g.moveTo(X, 0); g.lineTo(X, y - R + 6); g.stroke();
       g.fillStyle = "#6b7280"; g.fillRect(X - 14, y - R - 10, 28, 20);
-      const sp = S.disco_spin;
-      if (sp) { const fr = Math.floor(now / (sp.ms || 90)) % sp.frames, w = R * 2.25, h = w * sp.h / sp.w; g.drawImage(sp.img, fr * sp.w, 0, sp.w, sp.h, X - w / 2, y - h / 2, w, h); }
-      else this.drawBall(g, X, y, R, rot, now);
+      this.drawBall(g, X, y, R, rot);                     // drawn every frame from the turning angle: perfectly smooth, endless loop
       // glints flashing on the ball
       if (light > .3 && Math.random() < .08 * light) glints.push({ x: X + rand(-.7, .7) * R, y: y + rand(-.7, .7) * R, at: now, s: rand(.5, 1.1) });
       for (let i = glints.length - 1; i >= 0; i--) { const q = glints[i], k = (now - q.at) / 450; if (k >= 1) { glints.splice(i, 1); continue; }
@@ -4061,23 +4059,39 @@ const Disco = {
     requestAnimationFrame(frame);
   },
   bounce(k) { const n = 7.5625, d = 2.75; if (k < 1 / d) return n * k * k; if (k < 2 / d) return n * (k -= 1.5 / d) * k + .75; if (k < 2.5 / d) return n * (k -= 2.25 / d) * k + .9375; return n * (k -= 2.625 / d) * k + .984375; },
-  // the drawn stand-in: a sphere of little mirror tiles that turns
-  drawBall(g, X, y, R, rot, now) {
-    const rows = 14, cols = 28;
-    g.save(); g.beginPath(); g.arc(X, y, R, 0, 6.283); g.clip(); g.fillStyle = "#2b2f3a"; g.fillRect(X - R, y - R, R * 2, R * 2);
-    for (let i = 0; i < rows; i++) { const p0 = -Math.PI / 2 + i / rows * Math.PI, p1 = p0 + Math.PI / rows;
-      for (let j = 0; j < cols; j++) { const t0 = j / cols * 6.283 + rot, t1 = t0 + 6.283 / cols, tm = (t0 + t1) / 2, pm = (p0 + p1) / 2;
-        if (Math.cos(tm) <= 0) continue;
-        const P = (p, t) => [X + R * Math.cos(p) * Math.sin(t), y + R * Math.sin(p)];
+  /* the ball: a sphere of little mirror tiles, worked out fresh every frame from the angle it has turned to, so the
+     spin is perfectly smooth and loops forever. Each tile is lit by where it faces: a soft key light, and sharp
+     flashes as it turns past the white, purple, green and pink lights around it, so the sparkle moves across the
+     ball the way a real one does. Every tile also has its own slight shade, which travels round with it. */
+  drawBall(g, X, y, R, rot) {
+    const rows = 18, cols = 40, TAU = 6.283;
+    if (!this.tone) { this.tone = []; for (let i = 0; i < rows * cols; i++) this.tone.push(Math.sin(i * 12.9898) * 43758.5453 % 1); }
+    const nrm = v => { const l = Math.hypot(...v); return v.map(x => x / l); };
+    const LIGHTS = this.LIGHTS || (this.LIGHTS = [[nrm([-.45, -.6, .66]), [255, 255, 255], 1], [nrm([.7, -.25, .66]), [190, 120, 255], .9], [nrm([-.6, .45, .66]), [170, 240, 90], .8], [nrm([.35, .55, .76]), [255, 110, 200], .7], [nrm([.05, -.15, 1]), [255, 255, 255], .6]]);
+    const key = LIGHTS[0][0];
+    g.save(); g.beginPath(); g.arc(X, y, R, 0, TAU); g.clip(); g.fillStyle = "#1b1d25"; g.fillRect(X - R, y - R, R * 2, R * 2);
+    const P = (p, t) => [X + R * Math.cos(p) * Math.sin(t), y + R * Math.sin(p)];
+    for (let i = 0; i < rows; i++) {
+      const p0 = -Math.PI / 2 + i / rows * Math.PI, p1 = p0 + Math.PI / rows, pm = (p0 + p1) / 2, gp = Math.PI / rows * .08;
+      for (let j = 0; j < cols; j++) {
+        const t0 = j / cols * TAU + rot, t1 = t0 + TAU / cols, tm = (t0 + t1) / 2, gt = TAU / cols * .08;
         const nx = Math.cos(pm) * Math.sin(tm), ny = Math.sin(pm), nz = Math.cos(pm) * Math.cos(tm);
-        const lit = Math.max(0, -nx * .4 - ny * .5 + nz * .75), flick = Math.sin(i * 7.1 + j * 3.3 + now / 140) > .93 ? .5 : 0;
-        const v = Math.min(255, 70 + lit * 170 + flick * 255);
-        g.fillStyle = `rgb(${v},${v},${Math.min(255, v + 12)})`;
-        const a = P(p0, t0), b = P(p0, t1), c = P(p1, t1), d = P(p1, t0);
-        g.beginPath(); g.moveTo(...a); g.lineTo(...b); g.lineTo(...c); g.lineTo(...d); g.closePath(); g.fill();
-        g.strokeStyle = "rgba(20,22,30,.6)"; g.lineWidth = 1.2; g.stroke(); } }
-    const sh = g.createRadialGradient(X - R * .35, y - R * .4, R * .1, X, y, R); sh.addColorStop(0, "rgba(255,255,255,.18)"); sh.addColorStop(.7, "rgba(0,0,0,0)"); sh.addColorStop(1, "rgba(0,0,0,.45)");
+        if (nz <= -.02) continue;                                        // the back of the ball
+        const tone = this.tone[i * cols + j];
+        let r = 58 + tone * 30, gg = 60 + tone * 30, b = 70 + tone * 30;
+        const dif = Math.max(0, nx * key[0] + ny * key[1] + nz * key[2]); r += dif * 120; gg += dif * 120; b += dif * 125;
+        // a mirror tile flashes when it points the light straight at you: reflect the view direction off the tile
+        const rx = 2 * nz * nx, ry = 2 * nz * ny, rz = 2 * nz * nz - 1;
+        for (const [L, c, k] of LIGHTS) { const d = rx * L[0] + ry * L[1] + rz * L[2]; if (d > .8) { const f = Math.pow((d - .8) / .2, 3) * k * 255; r += f * c[0] / 255; gg += f * c[1] / 255; b += f * c[2] / 255; } }
+        g.fillStyle = `rgb(${Math.min(255, r) | 0},${Math.min(255, gg) | 0},${Math.min(255, b) | 0})`;
+        const a = P(p0 + gp, t0 + gt), bq = P(p0 + gp, t1 - gt), c = P(p1 - gp, t1 - gt), d = P(p1 - gp, t0 + gt);
+        g.beginPath(); g.moveTo(a[0], a[1]); g.lineTo(bq[0], bq[1]); g.lineTo(c[0], c[1]); g.lineTo(d[0], d[1]); g.closePath(); g.fill();
+      }
+    }
+    // the round shape: a darker edge, a soft sheen on the upper left
+    const sh = g.createRadialGradient(X - R * .3, y - R * .35, R * .05, X, y, R); sh.addColorStop(0, "rgba(255,255,255,.14)"); sh.addColorStop(.65, "rgba(0,0,0,0)"); sh.addColorStop(1, "rgba(0,0,0,.55)");
     g.fillStyle = sh; g.fillRect(X - R, y - R, R * 2, R * 2); g.restore();
+    g.fillStyle = "#9aa1ad"; g.beginPath(); g.ellipse(X, y - R + 3, 16, 7, 0, 0, TAU); g.fill();   // the little cap the cord hooks onto
   }
 };
 
@@ -4935,7 +4949,7 @@ window.KZRelay = function (topic, onMessage, servers) {
 (() => {
   const qs = new URLSearchParams(location.search), key = qs.get("ctl");
   if (!key || !window.WebSocket) return;
-  const PAGE = "html3", VERSION = "54e39ab";
+  const PAGE = "html3", VERSION = "159bfd3";
   let said = false;
   const relay = KZRelay("kzctl/" + key, c => {
     if (!c || c.from === "overlay" || (c.to && c.to !== "all" && c.to !== PAGE)) return;
