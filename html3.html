@@ -75,6 +75,13 @@ body.fit #stage{background:radial-gradient(1200px 700px at 30% 20%,#1a103322,tra
   text-shadow:0 4px 0 #000,0 0 18px var(--gc),0 0 36px var(--gc);animation:pop .6s cubic-bezier(.2,1.5,.3,1) both;pointer-events:none}
 .gift-line b{color:var(--gc)}
 .gift-line.out{animation:out .8s ease forwards}
+/* a gift recipient's name in the sky: crisp letters with a dark edge, taking over from the firework that formed it */
+.sky-name{position:absolute;white-space:nowrap;color:var(--gc);opacity:0;transform:translate(-50%,-50%) scale(.94);
+  text-shadow:0 0 2px #000,0 0 2px #000,0 0 4px #000,0 4px 0 rgba(0,0,0,.75),0 0 22px color-mix(in srgb,var(--gc) 55%,transparent);
+  animation:skyIn .4s ease .35s forwards}
+@keyframes skyIn{to{opacity:1;transform:translate(-50%,-50%) scale(1)}}
+.sky-name.out{opacity:1;transform:translate(-50%,-50%);animation:skyOut .8s ease forwards}
+@keyframes skyOut{to{opacity:0;transform:translate(-50%,calc(-50% - 30px)) scale(.96)}}
 .gift-head{position:absolute;left:0;top:22px;width:2560px;text-align:center;font-size:72px;font-weight:900;color:#fff;line-height:1.05;
   text-shadow:0 6px 0 #000,0 0 30px #f472b6aa}
 .gift-head .who{display:inline-block;color:var(--uc);text-shadow:0 6px 0 #000,0 0 34px var(--uc)}
@@ -124,7 +131,7 @@ body.fit #stage{background:radial-gradient(1200px 700px at 30% 20%,#1a103322,tra
 #barrel{transform-origin:130px 180px;transition:transform .12s ease-out}
 
 /* ---------- watch streak mountain (left side; the art is the right-side mountain mirrored) ---------- */
-#mountain{position:absolute;left:0;top:0;width:1000px;height:1440px;transform:translateY(1520px);transition:transform 1.1s cubic-bezier(.5,0,.75,0)}
+#mountain{position:absolute;left:-100px;top:0;width:1000px;height:1440px;transform:translateY(1520px);transition:transform 1.1s cubic-bezier(.5,0,.75,0)}
 #mountain.up{transform:none;transition:transform 1.2s cubic-bezier(.25,1.35,.5,1)}
 #mountain svg.m-art{position:absolute;left:0;top:0;width:1000px;height:1440px;overflow:visible;transform:scaleX(-1)}
 #mountain .mk{position:absolute;transform:translate(14px,-50%);font-size:24px;font-weight:900;color:#ffd9b0;white-space:nowrap;
@@ -563,6 +570,7 @@ function bright(hex) {
   if (lum < .45) c = mix(c, [255, 255, 255], .45 - lum + .15);
   return c;
 }
+const soft = c => c.map(v => Math.round(v * .86 + 18));      // a touch calmer than full brightness
 const css = c => `rgb(${c[0]},${c[1]},${c[2]})`;
 
 /* ================= particle engine ================= */
@@ -1614,7 +1622,7 @@ const Gifts = {
     const [bw] = this.fp(b, a), l = Math.max(0, Math.floor((b.cx - bw * .28) / 16)), r = Math.min(this.H.length - 1, Math.floor((b.cx + bw * .28) / 16));
     let m = 0; for (let i = l; i <= r; i++) m = Math.max(m, this.H[i]); return m;
   },
-  ZONE: { x0: 40, x1: 2520, bottom: 880 },          // where the name fireworks appear: keep presents out
+  ZONE: { x0: 40, x1: 2520, bottom: 920 },          // where the name fireworks appear: keep presents out
   rest(b) {
     this.reserve(b, -1);
     const [bw, bh] = this.fp(b, b.ra), sink = Math.abs(Math.sin(2 * b.ra)) * Math.min(b.w, b.h) * .12;   // leaning boxes tuck their corner in
@@ -1656,14 +1664,15 @@ const Gifts = {
     const left = this.boxes.filter(x => !x.opened).length;
     setTimeout(() => this.openNext(), left > 80 ? 140 : left > 30 ? 200 : 280);
   },
-  /* names go to random free places in the sky, never on top of each other (or the line at the top) */
-  sky: [], NAME_SIZE: 118,
+  /* names go to random free places in the sky (up to 10 at once), never on top of each other (or the line at the top) */
+  sky: [], NAME_SIZE: 100, MAX_NAMES: 10,
   skySpot(name) {
     const now = performance.now(); this.sky = this.sky.filter(r => r.until > now);
+    if (this.sky.length >= this.MAX_NAMES) return null;
     const c = this.mc || (this.mc = document.createElement("canvas").getContext("2d")); c.font = `900 ${this.NAME_SIZE}px ${FONT}`;
     const w = Math.min(900, c.measureText(name).width) + 70, h = this.NAME_SIZE * 1.45;
-    for (let i = 0; i < 70; i++) {
-      const x = rand(w / 2 + 40, 2520 - w / 2), y = rand(190 + h / 2, 860 - h / 2);
+    for (let i = 0; i < 120; i++) {
+      const x = rand(w / 2 + 40, 2520 - w / 2), y = rand(170 + h / 2, 900 - h / 2);
       if (!this.sky.some(r => x - w / 2 < r.x1 + 24 && x + w / 2 > r.x0 - 24 && y - h / 2 < r.y1 + 24 && y + h / 2 > r.y0 - 24)) return { x, y, x0: x - w / 2, x1: x + w / 2, y0: y - h / 2, y1: y + h / 2 };
     }
     return null;
@@ -1710,10 +1719,16 @@ const Gifts = {
     P.push({ type: "homing", x: cx, y: topY, sx: cx, sy: topY, tx: spot.x, ty: spot.y, t: 0, dur: 700, curve: rand(-140, 140), c,
       onPop: (x, y) => {
         burst(x, y, c, 46);
-        const foAt = performance.now() + 4000;
-        const pts = textPoints(b.name, spot.x, spot.y, 900, 750, { size: this.NAME_SIZE });
-        pts.forEach(([tx, ty]) => P.push({ type: "form", sx: x, sy: y, tx, ty, x, y, age: -rand(0, 100), dur: rand(450, 700),
-          hold: 1e9, foAt, curl: rand(-60, 60), ph: rand(0, 6.28), c: Math.random() < .82 ? c : [255, 255, 255] }));
+        // the sparks fly into the letters, then the clean name fades in over them and the sparks melt away
+        const foAt = performance.now() + 950;
+        const pts = textPoints(b.name, spot.x, spot.y, 900, 650, { size: this.NAME_SIZE });
+        pts.forEach(([tx, ty]) => P.push({ type: "form", sx: x, sy: y, tx, ty, x, y, age: -rand(0, 100), dur: rand(400, 620),
+          hold: 1e9, foAt, curl: rand(-60, 60), ph: rand(0, 6.28), c }));
+        const mc = this.mc; mc.font = `900 ${this.NAME_SIZE}px ${FONT}`; const tw = mc.measureText(b.name).width;
+        const fs = tw > 900 ? Math.floor(this.NAME_SIZE * 900 / tw) : this.NAME_SIZE;
+        const n = el("div", "sky-name", b.name); n.style.font = `900 ${fs}px ${FONT}`; n.style.left = spot.x + "px"; n.style.top = spot.y + "px";
+        n.style.setProperty("--gc", css(soft(c))); layer.append(n);
+        setTimeout(() => { n.classList.add("out"); setTimeout(() => n.remove(), 900); }, 4000);
       } });
     // rupees pop out
     const sc = Math.max(.6, s.scale);
@@ -2746,6 +2761,10 @@ const ChefArt = {
 };
 ChefArt.load();
 
+// one soft puff of smoke, drawn once and reused for every puff
+const PUFF = (() => { const c = document.createElement("canvas"); c.width = c.height = 64; const g = c.getContext("2d");
+  const gr = g.createRadialGradient(32, 32, 2, 32, 32, 32); gr.addColorStop(0, "rgba(246,246,242,1)"); gr.addColorStop(.45, "rgba(226,226,220,.85)"); gr.addColorStop(1, "rgba(200,200,195,0)");
+  g.fillStyle = gr; g.fillRect(0, 0, 64, 64); return c; })();
 const Chef = {
   busy: false,
   // how tall each piece is drawn on the 2560x1440 stage
@@ -2758,12 +2777,16 @@ const Chef = {
     const S = ChefArt.sprites;
     // the timeline (ms)
     const PLANE = 4200, DROP = 1150, LAND = 4700, CHOP = 3000, J1 = LAND + CHOP, J1D = 900, PAUSE = 320,
-          J2 = J1 + J1D + PAUSE, J2D = 1500, MORPH = J2 + J2D + 380, TRUCK = MORPH + 260, TRD = 2900, END = TRUCK + TRD + 200;
+          J2 = J1 + J1D + PAUSE, J2D = 1500, MORPH = J2 + J2D + 380, TRUCK = MORPH + 260, TRD = 2900, SMOKE_FADE = TRUCK + TRD + 2000, END = SMOKE_FADE + 1400;
     // the leaps go right to the screen edges: the chef's own half-width in from each side
     const jw = S.chef_jump ? S.chef_jump.w * this.H.chef_jump / S.chef_jump.h : 260, half = jw / 2;
     const GROUND = H - 26, MIDY = 790, CHOPX = 780, RIGHTX = W - half - 8, LEFTX = half + 8;
     const goo = [];                                  // blue chunks flying off the board
     let lastChop = 0, sfx = {};
+    // the smoke letters, left to right, so they come out of the exhaust in order as the truck drives
+    const smoke = textPoints("anime_chef", W / 2, MIDY - 330, 1900, 950, { size: 250 }).sort((a, b) => a[0] - b[0])
+      .map(([tx, ty]) => ({ tx, ty, r: rand(15, 21), ph: rand(0, 6.28), born: 0, sx: 0, sy: 0 }));
+    let smokeNext = 0;
     const once = (k, fn) => { if (!sfx[k]) { sfx[k] = 1; fn(); } };
     const frameOf = (spr, t) => spr ? Math.floor(t / (spr.ms || 100)) % spr.frames : 0;
     // draw a sprite (or the stand-in) with its bottom-middle at (x,y)
@@ -2824,13 +2847,12 @@ const Chef = {
         if (k >= 1) once("land1", () => { Sound.thump(); this.puff(goo, RIGHTX, MIDY, t); });
         draw("chef_jump", t, x, y, false);
       }
-      // ---- leap 2: straight across to the left, name pops up midway
+      // ---- leap 2: straight across to the left
       if (t >= J2 && t < MORPH + 120) {
         once("boing2", () => this.boing(.8));
         const k = Math.min(1, (t - J2) / J2D), x = RIGHTX + (LEFTX - RIGHTX) * ease(k);
         if (k >= 1) once("land2", () => { Sound.thump(); this.puff(goo, LEFTX, MIDY, t); });
         draw("chef_jump", t, x, MIDY, true);
-        if (k >= .5) once("name", () => this.nameAt = t);
       }
       // ---- the chef turns into a military logistics truck (a puff of smoke and sparkles), which drives off to the right
       if (t >= MORPH) {
@@ -2851,26 +2873,21 @@ const Chef = {
         else this.standInTruck(g, t, TW);
         g.restore();
         if ((t | 0) % 140 < 17) goo.push({ x: x - TW / 2 - 10, y: MIDY - 40, vx: rand(-.4, -.15), vy: rand(-.15, -.05), r: rand(10, 16), born: t, dust: true });   // exhaust
+        // the exhaust writes "anime_chef" in smoke above the road: each puff leaves the exhaust as the truck passes its spot
+        const exX = x - TW / 2 - 10, exY = MIDY - 40;
+        while (smokeNext < smoke.length && smoke[smokeNext].tx <= exX + 30) { const p = smoke[smokeNext++]; p.born = t; p.sx = exX; p.sy = exY; }
       }
-      // ---- the name
-      if (this.nameAt != null) {
-        const a = t - this.nameAt, life = 2200;
-        if (a < life) {
-          const pop = a < 260 ? .4 + .7 * (a / 260) : a < 380 ? 1.1 - .1 * ((a - 260) / 120) : 1, fade = a > life - 450 ? (life - a) / 450 : 1;
-          g.save(); g.globalAlpha = fade; g.translate((RIGHTX + LEFTX) / 2, MIDY - 360 - a * .02);
-          if (S.title) {                                   // the anime title made in the app
-            const w = Math.min(1250, S.title.w * 340 / S.title.h), h = w * S.title.h / S.title.w;
-            g.scale(pop, pop); g.drawImage(S.title.img, 0, 0, S.title.w, S.title.h, -w / 2, -h / 2, w, h); g.restore();
-          } else {
-          g.rotate(-.06); g.scale(pop, pop);
-          g.font = "italic 900 168px system-ui, Roboto, sans-serif"; g.textAlign = "center"; g.textBaseline = "middle"; g.lineJoin = "round";
-          g.lineWidth = 40; g.strokeStyle = "#c9d1c4"; g.strokeText("anime_chef", 6, 8);          // silver edge
-          g.lineWidth = 26; g.strokeStyle = "#224f0e"; g.strokeText("anime_chef", 0, 0);         // forest green outline
-          const gr = g.createLinearGradient(0, -70, 0, 70); gr.addColorStop(0, "#e4f5d6"); gr.addColorStop(.55, "#b5d99c"); gr.addColorStop(1, "#7fb55e");
-          g.shadowColor = "rgba(181,217,156,.7)"; g.shadowBlur = 26; g.fillStyle = gr; g.fillText("anime_chef", 0, 0);
-          g.restore();
-          }
+      // ---- the smoke letters: drift into place, hold, then thin out and float up
+      if (t >= TRUCK) {
+        const fade = t > SMOKE_FADE ? Math.max(0, 1 - (t - SMOKE_FADE) / 1300) : 1, rise = t > SMOKE_FADE ? (t - SMOKE_FADE) * .05 : 0;
+        for (let i = 0; i < smokeNext; i++) {
+          const p = smoke[i], a = t - p.born, k = Math.min(1, a / 520), e = 1 - Math.pow(1 - k, 3);
+          const px = p.sx + (p.tx - p.sx) * e + Math.sin(t / 700 + p.ph) * 3, py = p.sy + (p.ty - p.sy) * e - Math.sin(k * Math.PI) * 40 - rise + Math.cos(t / 800 + p.ph) * 2;
+          const r = p.r * (.35 + .65 * e) * (1 + rise / 400);
+          g.globalAlpha = .82 * Math.min(1, a / 140) * fade;
+          g.drawImage(PUFF, px - r, py - r, r * 2, r * 2);
         }
+        g.globalAlpha = 1;
       }
       // ---- blue goo and dust
       for (let i = goo.length - 1; i >= 0; i--) {
@@ -2882,9 +2899,8 @@ const Chef = {
         g.globalAlpha = 1;
       }
       if (t < END || goo.length) requestAnimationFrame(frame);
-      else { g.clearRect(0, 0, W, H); this.nameAt = null; this.busy = false; if (this.again) { this.again = false; this.run(); } }
+      else { g.clearRect(0, 0, W, H); this.busy = false; if (this.again) { this.again = false; this.run(); } }
     };
-    this.nameAt = null;
     requestAnimationFrame(frame);
   },
   boing(p = 1) { if (Sound.ctx) { const s = Sound.ctx.currentTime; Sound.tone(s, .32, .08, 180 * p, 620 * p, "triangle"); Sound.burst(s, .25, .03, "bandpass", 800, 2400); } },
@@ -3733,7 +3749,7 @@ window.KZRelay = function (topic, onMessage, servers) {
 (() => {
   const qs = new URLSearchParams(location.search), key = qs.get("ctl");
   if (!key || !window.WebSocket) return;
-  const PAGE = "html3", VERSION = "42f1ccc";
+  const PAGE = "html3", VERSION = "d890ec1";
   let said = false;
   const relay = KZRelay("kzctl/" + key, c => {
     if (!c || c.from === "overlay" || (c.to && c.to !== "all" && c.to !== PAGE)) return;
