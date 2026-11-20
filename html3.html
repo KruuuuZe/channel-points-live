@@ -345,23 +345,30 @@ body.fit #stage{background:radial-gradient(1200px 700px at 30% 20%,#1a103322,tra
 .eagle .eagleArt{position:absolute;left:0;top:-163px;width:560px;height:700px;filter:drop-shadow(0 16px 14px #0005)}
 .eagle svg{width:100%;height:100%;overflow:visible;filter:drop-shadow(0 16px 14px #0005)}
 
-/* ---------- lurk tower (bottom-left) ---------- */
-#tower{position:absolute;left:30px;bottom:0;width:560px;height:820px;transform:translateY(880px);
+/* ---------- lurk tower (bottom-left): an observation tower; lurkers walk in the door, climb the ladder inside and sit
+   in the thin window ring near the top, where it glows ---------- */
+#tower{position:absolute;left:40px;bottom:0;width:470px;height:980px;transform:translateY(1040px);
   transition:transform 1.1s cubic-bezier(.5,0,.75,0)}
 #tower.up{transform:none;transition:transform 1.2s cubic-bezier(.25,1.35,.5,1)}
-#tower .t-int{position:absolute;left:60px;top:140px;width:440px;height:300px;background:linear-gradient(#171230,#0b0916);transition:background .5s}
-#tower .t-int.lit{background:linear-gradient(#fff1c4,#f0b24f)}
-#tower .t-glow{position:absolute;left:60px;top:140px;width:440px;height:300px;opacity:0;transition:opacity .8s;
-  background:radial-gradient(120% 70% at 50% 92%,#5ee7ffaa,#3b82f655 45%,transparent 75%)}
-#tower .t-glow.on{opacity:1;animation:tv 2.2s infinite}
-#tower .beacon{animation:beacon 1.6s steps(2) infinite}
-@keyframes beacon{50%{opacity:.25}}
+#tower > *{position:absolute}
+#tower .t-back{opacity:0;transition:opacity .6s}               /* the inside: dark shaft and ladder (only while the front is see-through) */
+#tower.xray .t-back{opacity:1}
+#tower .t-art{transition:opacity .6s}
+#tower.xray .t-art{opacity:.38}
+#tower .t-dark{background:#0a0806;opacity:0;transition:opacity .25s}  /* the open doorway */
+#tower .t-dark.open{opacity:1}
+#tower .t-slab{background:linear-gradient(90deg,#4a4844,#2e2c29);border:3px solid #1a1916;border-radius:3px;transform-origin:0 50%;transform:scaleX(0);transition:transform .5s}
+#tower .t-slab.open{transform:scaleX(.18)}
+#tower .t-win{overflow:hidden;border-radius:12px;opacity:0;transition:opacity .8s;
+  background:radial-gradient(100% 140% at 50% 100%,#ffd27acc,#f0a03a88 45%,#5ee7ff33 80%,transparent)}
+#tower .t-win.on{opacity:1;animation:tv 2.4s infinite}
+#tower .t-win .head{position:absolute;bottom:-12%;border-radius:50%;background:#0b0916;border:4px solid var(--fc);transform:translateX(-50%);transition:left 1.1s ease-in-out,opacity .5s}
+#tower .t-lbl,#tower .t-mid,#tower .t-out{left:0;top:0;width:100%;height:100%;pointer-events:none}
+#tower .t-lbl .lbl{position:absolute;transform:translate(-50%,-100%);white-space:nowrap;font-size:26px;font-weight:900;color:var(--fc);
+  text-shadow:0 2px 0 #000,0 0 8px #000,0 0 3px #000;transition:left 1.1s ease-in-out,top .5s,opacity .5s}
+#tower .t-sign{left:0;width:100%;text-align:center;font:900 26px/1 "Segoe UI",system-ui,Roboto,sans-serif;letter-spacing:3px;color:#e9ffd0;
+  text-shadow:0 2px 0 #000,0 0 8px #000}
 @keyframes tv{0%,100%{opacity:.85}18%{opacity:.6}22%{opacity:.95}50%{opacity:.7}63%{opacity:1}80%{opacity:.75}}
-#tower .t-in{position:absolute;left:60px;top:140px;width:440px;height:300px;overflow:hidden}
-#tower .t-out{position:absolute;inset:0}
-#tower .t-lbl{position:absolute;left:60px;top:140px;width:440px;height:300px}
-#tower .t-lbl .lbl{position:absolute;transform:translate(-50%,-100%);white-space:nowrap;font-size:26px;font-weight:900;color:var(--fc);text-shadow:0 2px 0 #000,0 0 8px #000,0 0 3px #000}
-#tower svg.t-frame{position:absolute;left:0;top:0;width:560px;height:820px;overflow:visible}
 .fig{position:absolute;width:60px;height:120px;--fc:#fff}
 .fig svg{position:absolute;left:0;top:0;width:60px;height:120px;overflow:visible;transition:transform .5s}
 .fig svg *{transform-box:view-box}
@@ -472,42 +479,14 @@ body.fit #stage{background:radial-gradient(1200px 700px at 30% 20%,#1a103322,tra
     <div class="m-figs"></div>
   </div>
   <div id="tower">
-    <div class="t-int"></div>
-    <div class="t-glow"></div>
-    <div class="t-in"></div>
-    <svg class="t-frame" viewBox="0 0 560 820">
-      <defs><linearGradient id="roofG" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#8b4cf0"/><stop offset="1" stop-color="#4c1d95"/></linearGradient>
-        <linearGradient id="wallG" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2d2350"/><stop offset="1" stop-color="#1b1533"/></linearGradient></defs>
-      <!-- legs and braces -->
-      <g stroke="#4b3d7a" stroke-width="16" stroke-linecap="round">
-        <line x1="112" y1="456" x2="62" y2="812"/><line x1="448" y1="456" x2="498" y2="812"/>
-      </g>
-      <g stroke="#3a2f63" stroke-width="8" stroke-linecap="round">
-        <line x1="104" y1="512" x2="472" y2="640"/><line x1="456" y1="512" x2="88" y2="640"/>
-        <line x1="86" y1="660" x2="484" y2="790"/><line x1="474" y1="660" x2="76" y2="790"/>
-      </g>
-      <!-- ladder -->
-      <g stroke="#cfc3f5" stroke-width="6" stroke-linecap="round">
-        <line x1="262" y1="458" x2="262" y2="815"/><line x1="298" y1="458" x2="298" y2="815"/>
-        <line x1="262" y1="486" x2="298" y2="486"/><line x1="262" y1="514" x2="298" y2="514"/><line x1="262" y1="542" x2="298" y2="542"/>
-        <line x1="262" y1="570" x2="298" y2="570"/><line x1="262" y1="598" x2="298" y2="598"/><line x1="262" y1="626" x2="298" y2="626"/>
-        <line x1="262" y1="654" x2="298" y2="654"/><line x1="262" y1="682" x2="298" y2="682"/><line x1="262" y1="710" x2="298" y2="710"/>
-        <line x1="262" y1="738" x2="298" y2="738"/><line x1="262" y1="766" x2="298" y2="766"/><line x1="262" y1="794" x2="298" y2="794"/>
-      </g>
-      <rect x="10" y="806" width="540" height="18" rx="6" fill="#241c40"/>
-      <!-- cabin front wall with a big window -->
-      <path d="M60 140 H500 V440 H60 Z M85 168 V396 H475 V168 Z" fill="url(#wallG)" fill-rule="evenodd" stroke="#a855f7" stroke-width="3"/>
-      <rect x="85" y="168" width="390" height="228" fill="none" stroke="#a3e635" stroke-width="5" rx="4"/>
-      <line x1="85" y1="380" x2="475" y2="380" stroke="#3a2f63" stroke-width="10"/>
-      <rect x="44" y="438" width="472" height="22" rx="4" fill="#3a2d63" stroke="#a855f7" stroke-width="2"/>
-      <!-- roof, antenna, sign -->
-      <polygon points="24,144 280,56 536,144" fill="url(#roofG)" stroke="#a3e635" stroke-width="4" stroke-linejoin="round"/>
-      <line x1="280" y1="58" x2="280" y2="14" stroke="#cfc3f5" stroke-width="5"/>
-      <circle class="beacon" cx="280" cy="12" r="8" fill="#ff4d6d"/>
-      <text id="towerSign" x="280" y="124" text-anchor="middle" font-size="30" font-weight="900" fill="#e9ffd0" letter-spacing="3"
-        style="font-family:'Segoe UI',system-ui,Roboto,sans-serif;paint-order:stroke;stroke:#1b1533;stroke-width:5px">LURKERS</text>
-    </svg>
+    <canvas class="t-back"></canvas>
+    <div class="t-mid"></div>
+    <canvas class="t-art"></canvas>
+    <div class="t-dark"></div>
+    <div class="t-slab"></div>
+    <div class="t-win"></div>
     <div class="t-lbl"></div>
+    <div class="t-sign" id="towerSign">LURKERS</div>
     <div class="t-out"></div>
   </div>
   <div id="toast"></div>
@@ -2800,10 +2779,10 @@ const ChefArt = {
   sprites: {}, parts: {},
   db: null,
   open() { return this.db || (this.db = new Promise((ok, no) => { const r = indexedDB.open("kzArt", 1); r.onupgradeneeded = () => r.result.createObjectStore("a"); r.onsuccess = () => ok(r.result); r.onerror = () => no(r.error); })); },
-  use(name, a) { const img = new Image(); img.onload = () => { this.sprites[name] = Object.assign({ img }, a); }; img.src = a.url; },
+  use(name, a) { const img = new Image(); img.onload = () => { this.sprites[name] = Object.assign({ img }, a); if (name === "tower" && Lurk.up) Lurk.paint(); }; img.src = a.url; },
   async load() {
     try { const db = await this.open();
-      ["tank_drive", "soldier_run", "soldier_throw", "grenade", "explosion", "eagle_glide", "eagle_flap", "plane", "title", "chef_parachute", "chef_chop", "chef_jump", "chef_fly", "chef_truck"].forEach(n => { const r = db.transaction("a").objectStore("a").get(n); r.onsuccess = () => { if (r.result) this.use(n, r.result); }; });
+      ["tower", "tank_drive", "soldier_run", "soldier_throw", "grenade", "explosion", "eagle_glide", "eagle_flap", "plane", "title", "chef_parachute", "chef_chop", "chef_jump", "chef_fly", "chef_truck"].forEach(n => { const r = db.transaction("a").objectStore("a").get(n); r.onsuccess = () => { if (r.result) this.use(n, r.result); }; });
     } catch (e) {}
   },
   // a piece of art arriving from the app (sent in parts)
@@ -3570,12 +3549,16 @@ const Chat = {
 
 
 /* ================= lurk tower =================
-   !lurk in chat: the tower rises (bottom-left), a stick figure climbs the ladder, the light goes on,
-   they walk to a seat and sit, the light goes off and a screen glow stays. 10s later the tower sinks.
+   !lurk in chat: the observation tower rises (bottom-left). A stick figure walks up to the door, the door opens and
+   the front of the tower turns see-through: they walk in, climb the ladder inside to the top and take a seat in the
+   room behind the thin window ring, which glows. Then the tower turns solid again, so you only see the tower, the
+   glow in the window, and each lurker's head in it with their name above. 10 s later the tower sinks.
+   The tower art comes from the app's Art screen (with the door and window marked); until then a drawn tower is used.
    Lurkers stay inside (saved) until they type something else in chat. */
 const Lurk = {
   KEY: "cpo3_lurkers",
-  list: [], figs: {}, q: [], busy: false, up: false, lowerT: null, arriving: new Set(),
+  list: [], heads: {}, q: [], busy: false, up: false, lowerT: null, arriving: new Set(),
+  BOX: [470, 980],
   init() {
     try { this.list = JSON.parse(localStorage.getItem(this.KEY)) || []; } catch (e) { this.list = []; }
     const day = Date.now() - 12 * 3600 * 1000;           // forget lurkers from an old stream
@@ -3600,65 +3583,72 @@ const Lurk = {
     MySounds.play("chat");
     this.list.splice(i, 1); this.save();
     this.q = this.q.filter(x => x !== k); this.arriving.delete(k);
-    const f = this.figs[k];
-    if (f) { delete this.figs[k]; f.animate([{ opacity: 1 }, { opacity: 0, transform: "translateY(30px)" }], { duration: 600, fill: "forwards" });
-      setTimeout(() => { f.remove(); if (f._lbl) f._lbl.remove(); }, 650); }
+    const h = this.heads[k];
+    if (h) { delete this.heads[k]; h.head.style.opacity = 0; h.lbl.style.opacity = 0; setTimeout(() => { h.head.remove(); h.lbl.remove(); }, 600); }
     this.layout();
   },
+  /* ---- the picture: the art from the app, or the drawn stand-in. Everything else is placed from its door and window ---- */
+  pic() {
+    const a = ChefArt.sprites.tower;
+    if (a && a.img && a.img.naturalWidth) return { img: a.img, w: a.w, h: a.h, door: a.door || [.38, .82, .62, .985], win: a.win || [.2, .27, .8, .32] };
+    return this.standIn || (this.standIn = this.drawStandIn());
+  },
+  geo() {      // where things are, in the tower box's pixels
+    const P = this.pic(), [BW, BH] = this.BOX, sc = Math.min(BW / P.w, (BH - 40) / P.h), w = P.w * sc, h = P.h * sc, x = (BW - w) / 2, y = BH - h;
+    const R = r => ({ x0: x + r[0] * w, y0: y + r[1] * h, x1: x + r[2] * w, y1: y + r[3] * h });
+    const door = R(P.door), win = R(P.win);
+    return { P, x, y, w, h, door, win, ground: door.y1, fig: Math.max(.5, (door.y1 - door.y0) * .82 / 120) };
+  },
+  paint() {
+    const G = this.geo(), [BW, BH] = this.BOX, t = $("#tower");
+    const art = t.querySelector(".t-art"); art.width = BW; art.height = BH; Object.assign(art.style, { left: 0, top: 0, width: BW + "px", height: BH + "px" });
+    const ag = art.getContext("2d"); ag.clearRect(0, 0, BW, BH); ag.imageSmoothingQuality = "high"; ag.drawImage(G.P.img, 0, 0, G.P.w, G.P.h, G.x, G.y, G.w, G.h);
+    // the inside: a dark shaft from the door up to the window room, with a ladder up the middle
+    const back = t.querySelector(".t-back"); back.width = BW; back.height = BH; Object.assign(back.style, { left: 0, top: 0, width: BW + "px", height: BH + "px" });
+    const bg = back.getContext("2d"); bg.clearRect(0, 0, BW, BH);
+    const sx0 = Math.min(G.door.x0, G.win.x0) - 6, sx1 = Math.max(G.door.x1, G.win.x1) + 6, sy0 = G.win.y0 - 10;
+    const gr = bg.createLinearGradient(sx0, 0, sx1, 0); gr.addColorStop(0, "#0b0907"); gr.addColorStop(.5, "#2a241d"); gr.addColorStop(1, "#0b0907");
+    bg.fillStyle = gr; bg.fillRect(sx0, sy0, sx1 - sx0, G.ground - sy0);
+    const lx = (G.win.x0 + G.win.x1) / 2 + 30, rw = 34; G.ladder = lx;
+    bg.strokeStyle = "#b9b1a3"; bg.lineWidth = 5; bg.lineCap = "round";
+    bg.beginPath(); bg.moveTo(lx - rw / 2, G.ground); bg.lineTo(lx - rw / 2, G.win.y1 - 4); bg.moveTo(lx + rw / 2, G.ground); bg.lineTo(lx + rw / 2, G.win.y1 - 4); bg.stroke();
+    bg.lineWidth = 4; for (let y = G.ground - 22; y > G.win.y1; y -= 28) { bg.beginPath(); bg.moveTo(lx - rw / 2, y); bg.lineTo(lx + rw / 2, y); bg.stroke(); }
+    bg.fillStyle = "#3a332a"; bg.fillRect(sx0, G.win.y1 + 2, sx1 - sx0, 8);          // the floor of the top room
+    // door, window and sign positions
+    const place = (sel, r) => Object.assign(t.querySelector(sel).style, { left: r.x0 + "px", top: r.y0 + "px", width: (r.x1 - r.x0) + "px", height: (r.y1 - r.y0) + "px" });
+    place(".t-dark", G.door); place(".t-slab", G.door); place(".t-win", G.win);
+    t.querySelector(".t-sign").style.top = Math.max(0, G.y - 34) + "px";
+    this.G = G;
+  },
   seatX(k) {   // seats spread across the window, in the order people arrived
-    const seated = this.list.filter(x => !this.arriving.has(x.k) || this.figs[x.k]);
-    const i = seated.findIndex(x => x.k === k), n = seated.length;
-    if (n <= 1) return 190;
-    return 34 + i * (300 / (n - 1));
+    const seated = this.list.filter(x => !this.arriving.has(x.k) || this.heads[x.k]);
+    const i = seated.findIndex(x => x.k === k), n = seated.length, W = this.G.win.x1 - this.G.win.x0;
+    return n <= 1 ? W / 2 : W * .12 + i * (W * .76 / (n - 1));
   },
   layout() {
+    if (!this.G) return;
     this.list.forEach((x, idx) => {
-      const f = this.figs[x.k];
-      if (!f || !f.classList.contains("seat")) return;
-      f.style.left = this.seatX(x.k) + "px";
-      f.classList.toggle("hi", idx % 2 === 1);
+      const h = this.heads[x.k]; if (!h) return;
+      const sx = this.seatX(x.k);
+      h.head.style.left = sx + "px";
+      h.lbl.style.left = (this.G.win.x0 + sx) + "px"; h.lbl.style.top = (this.G.win.y0 - 6 - (idx % 2 ? 30 : 0)) + "px";
     });
   },
-  makeFig(entry, cls) {
-    const f = el("div", "fig " + cls);
-    f.style.setProperty("--fc", css(bright(entry.color)));
-    f.innerHTML = `<svg viewBox="0 0 60 120"><g class="chair"><line x1="10" y1="74" x2="44" y2="74"/><line x1="14" y1="74" x2="14" y2="96"/><line x1="40" y1="74" x2="40" y2="96"/><line x1="10" y1="74" x2="10" y2="44"/></g><line class="aL" x1="30" y1="36" x2="30" y2="64"/><line class="aR" x1="30" y1="36" x2="30" y2="64"/>
-      <g class="tL"><line x1="30" y1="70" x2="30" y2="95"/><g class="sh"><line x1="30" y1="95" x2="30" y2="118"/></g></g>
-      <g class="tR"><line x1="30" y1="70" x2="30" y2="95"/><g class="sh"><line x1="30" y1="95" x2="30" y2="118"/></g></g>
-      <line x1="30" y1="26" x2="30" y2="70"/><circle cx="30" cy="14" r="11"/></svg>`;
-    const l = el("div", "lbl", entry.name);
-    if (cls.includes("climb")) f.append(l);
-    else { l.style.setProperty("--fc", css(bright(entry.color))); $("#tower .t-lbl").append(l); f._lbl = l; this.sync(); }
-    return f;
-  },
-  sync() {         // keep each name floating above its stick figure
-    if (this._raf) return;
-    const step = () => {
-      let any = false;
-      document.querySelectorAll("#tower .t-in .fig").forEach(f => {
-        if (!f._lbl) return; any = true;
-        const sit = f.classList.contains("sit") ? 24 : 0, hi = f.classList.contains("hi") ? 34 : 0;
-        f._lbl.style.left = (f.offsetLeft + 30) + "px";
-        f._lbl.style.top = (f.offsetTop + sit - 8 - hi) + "px";
-        f._lbl.style.opacity = getComputedStyle(f).opacity;
-      });
-      this._raf = any || this.up ? requestAnimationFrame(step) : 0;
-    };
-    this._raf = requestAnimationFrame(step);
+  seat(entry) {     // their head in the window and their name above it
+    const G = this.G, d = (G.win.y1 - G.win.y0) * .9;
+    const head = el("div", "head"); head.style.width = head.style.height = d + "px"; head.style.setProperty("--fc", css(bright(entry.color)));
+    const lbl = el("div", "lbl", entry.name); lbl.style.setProperty("--fc", css(bright(entry.color)));
+    $("#tower .t-win").append(head); $("#tower .t-lbl").append(lbl);
+    this.heads[entry.k] = { head, lbl };
   },
   raise() {
     if (this.up) return Promise.resolve();
-    // everyone already lurking is inside, seated, with the screen glow on
-    $("#tower .t-in").innerHTML = ""; $("#tower .t-lbl").innerHTML = ""; this.figs = {};
-    this.list.forEach((x, idx) => {
-      if (this.arriving.has(x.k)) return;
-      const f = this.makeFig(x, "seat sit" + (idx % 2 ? " hi" : ""));
-      f.style.left = this.seatX(x.k) + "px"; f.style.top = "115px";
-      $("#tower .t-in").append(f); this.figs[x.k] = f;
-    });
-    $("#tower .t-int").classList.remove("lit");
-    $("#tower .t-glow").classList.toggle("on", Object.keys(this.figs).length > 0);
-    this.up = true; $("#tower").classList.add("up"); this.sync();
+    this.paint();
+    $("#tower .t-win").innerHTML = ""; $("#tower .t-lbl").innerHTML = ""; this.heads = {};
+    this.list.forEach(x => { if (!this.arriving.has(x.k)) this.seat(x); });
+    this.layout();
+    $("#tower .t-win").classList.toggle("on", Object.keys(this.heads).length > 0);
+    this.up = true; $("#tower").classList.add("up");
     return new Promise(r => setTimeout(r, 1200));
   },
   lowerLater() { clearTimeout(this.lowerT); this.lowerT = setTimeout(() => { if (!this.busy) { this.up = false; $("#tower").classList.remove("up"); } }, 10000); },
@@ -3672,46 +3662,77 @@ const Lurk = {
     this.next();
   },
   wait(ms) { return new Promise(r => setTimeout(r, ms)); },
+  creak() { if (!Sound.ctx) return; const t = Sound.ctx.currentTime; Sound.tone(t, .4, .03, 180, 120, "sawtooth"); Sound.burst(t, .3, .02, "bandpass", 400, 700); },
   async arrive(entry) {
     await this.raise();
-    // 1) climb the ladder (outside, in front of the tower)
-    const c = this.makeFig(entry, "climb");
-    c.style.left = "250px"; c.style.top = "700px";
-    $("#tower .t-out").append(c);
-    await c.animate([{ top: "700px" }, { top: "440px" }], { duration: 3200, easing: "linear", fill: "forwards" }).finished;
-    // 2) through the hatch: the light comes on
-    await c.animate([{ opacity: 1 }, { opacity: 0, transform: "translateY(-24px)" }], { duration: 350, fill: "forwards" }).finished;
-    c.remove();
-    if (!this.list.find(x => x.k === entry.k)) return;          // typed in chat while climbing
-    $("#tower .t-glow").classList.remove("on");
-    $("#tower .t-int").classList.add("lit");
-    const f = this.makeFig(entry, "walk");
-    f.style.left = "190px"; f.style.top = "250px";
-    $("#tower .t-in").append(f); this.figs[entry.k] = f;
+    const G = this.G, t = $("#tower"), sc = G.fig, dc = (G.door.x0 + G.door.x1) / 2;
+    // a stick figure, scaled to the door, with its feet at (x, y)
+    const f = this.makeFig(entry, "walk"), put = (x, y) => { f.style.left = (x - 30) + "px"; f.style.top = (y - 120) + "px"; };
+    f.style.transform = `scale(${sc})`; f.style.transformOrigin = "50% 100%";
+    t.querySelector(".t-out").append(f);
+    const go = async (x0, y0, x1, y1, ms) => { await f.animate([{ left: (x0 - 30) + "px", top: (y0 - 120) + "px" }, { left: (x1 - 30) + "px", top: (y1 - 120) + "px" }], { duration: ms, easing: "linear", fill: "forwards" }).finished; put(x1, y1); };
+    // 1) walk up to the door
+    await go(-80, G.ground, dc - 50 * sc, G.ground, 2400);
+    f.getAnimations().forEach(a => a.cancel()); put(dc - 50 * sc, G.ground);
+    // 2) the door swings open and the front turns see-through
+    this.creak(); t.querySelector(".t-dark").classList.add("open"); t.querySelector(".t-slab").classList.add("open");
+    await this.wait(450);
+    t.classList.add("xray"); t.querySelector(".t-mid").append(f);          // now they're inside the tower
+    // 3) in through the door, over to the ladder, and up
+    await go(dc - 50 * sc, G.ground, G.ladder, G.ground, 900);
+    t.querySelector(".t-dark").classList.remove("open"); t.querySelector(".t-slab").classList.remove("open");   // the door shuts behind them
+    f.getAnimations().forEach(a => a.cancel()); put(G.ladder, G.ground);
+    f.classList.remove("walk"); f.classList.add("climb");
+    const top = G.win.y1 + 4, climbMs = Math.max(1800, (G.ground - top) * 6);
+    await go(G.ladder, G.ground, G.ladder, top, climbMs);
+    // 4) up into the room: they take their seat in the window and it glows
+    await f.animate([{ opacity: 1 }, { opacity: 0, transform: `scale(${sc}) translateY(-30px)` }], { duration: 350, fill: "forwards" }).finished;
+    f.remove();
+    if (!this.list.find(x => x.k === entry.k)) { t.classList.remove("xray"); return; }   // typed in chat while climbing
     this.arriving.delete(entry.k);
-    await f.animate([{ top: "250px" }, { top: "115px" }], { duration: 650, easing: "ease-out", fill: "forwards" }).finished;
-    f.style.top = "115px";
-    this.layout();                                              // others shuffle over to make room
-    // 3) walk around a bit, then to the seat
-    const seat = this.seatX(entry.k);
-    const wander = Math.max(34, Math.min(334, seat + (seat > 190 ? -120 : 120)));
-    for (const x of [wander, seat]) {
-      const from = parseFloat(f.style.left);
-      f.classList.toggle("left", x < from);
-      const dur = Math.max(300, Math.abs(x - from) * 9);
-      await f.animate([{ left: from + "px" }, { left: x + "px" }], { duration: dur, easing: "linear", fill: "forwards" }).finished;
-      f.style.left = x + "px";
-      await this.wait(250);
-    }
-    f.getAnimations().forEach(a => a.cancel());
-    f.style.left = seat + "px";
-    f.classList.remove("walk", "left"); f.classList.add("seat", "sit");
-    this.layout();
+    this.seat(entry); this.layout();
+    $("#tower .t-win").classList.add("on");
     await this.wait(900);
-    // 4) lights off, screen glow on
-    $("#tower .t-int").classList.remove("lit");
-    $("#tower .t-glow").classList.add("on");
-    await this.wait(400);
+    // 5) the tower turns solid again: just the tower, the glowing window ring and the heads in it
+    t.classList.remove("xray");
+    await this.wait(600);
+  },
+  makeFig(entry, cls) {
+    const f = el("div", "fig " + cls);
+    f.style.setProperty("--fc", css(bright(entry.color)));
+    f.innerHTML = `<svg viewBox="0 0 60 120"><line class="aL" x1="30" y1="36" x2="30" y2="64"/><line class="aR" x1="30" y1="36" x2="30" y2="64"/>
+      <g class="tL"><line x1="30" y1="70" x2="30" y2="95"/><g class="sh"><line x1="30" y1="95" x2="30" y2="118"/></g></g>
+      <g class="tR"><line x1="30" y1="70" x2="30" y2="95"/><g class="sh"><line x1="30" y1="95" x2="30" y2="118"/></g></g>
+      <line x1="30" y1="26" x2="30" y2="70"/><circle cx="30" cy="14" r="11"/></svg>`;
+    return f;
+  },
+  /* ---- the drawn stand-in tower (a concrete observation tower like the reference), with its door and window known ---- */
+  drawStandIn() {
+    const W = 360, H = 900, c = document.createElement("canvas"); c.width = W; c.height = H; const g = c.getContext("2d");
+    const L = 50, R = 310, cyl = (x0, x1, y0, y1, c0, c1) => { const gr = g.createLinearGradient(x0, 0, x1, 0); gr.addColorStop(0, c1); gr.addColorStop(.35, c0); gr.addColorStop(.7, c1); gr.addColorStop(1, "#2b2a28"); g.fillStyle = gr; g.fillRect(x0, y0, x1 - x0, y1 - y0); };
+    // body
+    cyl(L, R, 300, 890, "#8d8a83", "#5f5c56");
+    g.strokeStyle = "rgba(0,0,0,.25)"; g.lineWidth = 2; for (let y = 360; y < 880; y += 70) { g.beginPath(); g.moveTo(L, y); g.lineTo(R, y); g.stroke(); }
+    [120, 200, 260].forEach(x => { g.beginPath(); g.moveTo(x, 300); g.lineTo(x, 890); g.stroke(); });
+    g.fillStyle = "rgba(110,60,30,.25)"; [[90, 420, 6, 160], [240, 520, 5, 200], [170, 640, 4, 120]].forEach(([x, y, w, h]) => g.fillRect(x, y, w, h));
+    // upper ring, steel window band, top ring
+    cyl(L - 14, R + 14, 140, 320, "#9a968e", "#66635d");
+    cyl(L - 16, R + 16, 200, 262, "#3e3d3a", "#262523");
+    g.fillStyle = "#0d0c0b"; g.beginPath(); g.roundRect(L + 10, 218, R - L - 20, 26, 12); g.fill();          // the slit window
+    g.fillStyle = "#8a8780"; for (let x = L - 8; x < R + 14; x += 26) { g.beginPath(); g.arc(x, 208, 2.5, 0, 6.283); g.arc(x, 254, 2.5, 0, 6.283); g.fill(); }
+    cyl(L - 18, R + 18, 120, 146, "#a7a39b", "#6c6963");
+    // railing, masts, flag
+    g.strokeStyle = "#3b3a37"; g.lineWidth = 4; g.beginPath(); g.moveTo(L - 14, 92); g.lineTo(R + 14, 92); g.moveTo(L - 14, 110); g.lineTo(R + 14, 110); g.stroke();
+    g.lineWidth = 3; for (let x = L - 14; x <= R + 14; x += 22) { g.beginPath(); g.moveTo(x, 92); g.lineTo(x, 122); g.stroke(); }
+    g.fillStyle = "#4b4740"; g.fillRect(140, 70, 60, 40); g.fillRect(150, 20, 18, 60); g.fillRect(180, 10, 22, 70);
+    g.strokeStyle = "#5a5853"; g.lineWidth = 2; g.beginPath(); g.moveTo(159, 20); g.lineTo(159, -10); g.moveTo(191, 10); g.lineTo(191, -20); g.stroke();
+    g.lineWidth = 4; g.beginPath(); g.moveTo(270, 120); g.lineTo(270, 0); g.stroke();
+    g.fillStyle = "#3d3a38"; g.beginPath(); g.moveTo(272, 4); g.quadraticCurveTo(300, 14, 330, 6); g.lineTo(330, 44); g.quadraticCurveTo(300, 52, 272, 42); g.fill();
+    // door and sandbags
+    g.fillStyle = "#3d3b37"; g.strokeStyle = "#1c1b19"; g.lineWidth = 4; g.beginPath(); g.roundRect(136, 760, 88, 128, 3); g.fill(); g.stroke();
+    g.strokeStyle = "#57544e"; g.lineWidth = 2; g.strokeRect(144, 770, 72, 108); g.beginPath(); g.arc(180, 828, 12, 0, 6.283); g.stroke();
+    g.fillStyle = "#a08868"; [[30, 868, 60, 26], [262, 866, 64, 28], [100, 876, 40, 18], [232, 878, 36, 16]].forEach(([x, y, w, h]) => { g.beginPath(); g.ellipse(x + w / 2, y + h / 2, w / 2, h / 2, 0, 0, 6.283); g.fill(); });
+    return { img: c, w: W, h: H, door: [136 / W, 760 / H, 224 / W, 888 / H], win: [(L + 10) / W, 218 / H, (R - 10) / W, 244 / H] };
   }
 };
 Lurk.init();
@@ -3806,7 +3827,7 @@ window.KZRelay = function (topic, onMessage, servers) {
 (() => {
   const qs = new URLSearchParams(location.search), key = qs.get("ctl");
   if (!key || !window.WebSocket) return;
-  const PAGE = "html3", VERSION = "7d82d01";
+  const PAGE = "html3", VERSION = "c13d582";
   let said = false;
   const relay = KZRelay("kzctl/" + key, c => {
     if (!c || c.from === "overlay" || (c.to && c.to !== "all" && c.to !== PAGE)) return;
