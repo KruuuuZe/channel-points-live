@@ -293,7 +293,7 @@ function rowFor(list, e) {
     li.style.setProperty("--c", bitColor(e.amount));
     li.append(icon("i-gem"), el("span", "nm", e.name), el("span", "vl", fmt(e.amount)), el("span", "tm", clock(e.t)));
   } else if (list === "raids") {
-    li.append(icon("i-rocket"), el("span", "nm", e.name), el("span", "vl", fmt(e.viewers)), el("span", "nt", "raiders"), el("span", "tm", clock(e.t)));
+    li.append(icon("i-rocket"), el("span", "nm", e.name), el("span", "tm", clock(e.t)));     // just who raided (no raid size)
   } else if (list === "streaks") {
     li.append(icon("i-flame"), el("span", "nm", e.name), el("span", "vl", fmt(e.value)), el("span", "nt", "streams"), el("span", "tm", clock(e.t)));
   }
@@ -433,7 +433,7 @@ const Alerts = {
     const [kind, e] = item, a = $("#alert");
     const C = { follow: ["var(--lime)", "NEW FOLLOWER"], sub: ["var(--purple)", "NEW SUBSCRIBER"],
       resub: ["var(--purple)", `RESUB · ${e.months} MONTHS`], gift: ["var(--pink)", `GIFTED ${fmt(e.count)} SUB${e.count === 1 ? "" : "S"}`],
-      bits: [bitColor(e.amount), `${fmt(e.amount)} BITS`], raid: ["var(--lime)", `RAID · ${fmt(e.viewers)} RAIDERS`],
+      bits: [bitColor(e.amount), `${fmt(e.amount)} BITS`], raid: ["var(--lime)", "RAID"],
       streak: ["var(--flame)", `WATCH STREAK · ${fmt(e.value)}`] }[kind];
     a.style.setProperty("--a", C[0]);
     a.querySelector(".ak").textContent = C[1];
@@ -759,7 +759,7 @@ window.KZRelay = function (topic, onMessage, servers) {
 (() => {
   const qs = new URLSearchParams(location.search), key = qs.get("ctl");
   if (!key || !window.WebSocket) return;
-  const PAGE = "html2", VERSION = "8baafff";
+  const PAGE = "html2", VERSION = "5ca5119";
   let said = false;
   const relay = KZRelay("kzctl/" + key, c => {
     if (!c || c.from === "overlay" || (c.to && c.to !== "all" && c.to !== PAGE)) return;
