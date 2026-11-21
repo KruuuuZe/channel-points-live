@@ -3932,10 +3932,10 @@ const Face = {
       // the shape's picture shows once it has formed and is facing left or right; it fades back to puffs while it turns
       // around, or does an action that moves its parts (so the 3D turn and the moving parts still show)
       const shapeArt = ChefArt.sprites["cs_" + this.kind], facing = Math.abs(Math.cos(this.ang + (A.ang || 0)));
-      const artWant = shapeArt && this.tank && this.kind === this.kindWant && this.tankM > .9 && facing > .97 && !A.hide && !A.snap && !A.trunkUp ? 1 : 0;
-      this.artK = (this.artK || 0) + (artWant - (this.artK || 0)) * (artWant ? .05 : .14);
+      const artWant = shapeArt && this.tank && this.kind === this.kindWant && this.tankM > .85 && facing > .5 ? 1 : 0;
+      this.artK = (this.artK || 0) + (artWant - (this.artK || 0)) * (artWant ? .035 : .06);
       if (artCloud) this.drawArtCloud(lg, AS, t);
-      else RealCloud.draw(lg, t, this.tankM, shade, this.ang + (A.ang || 0), this.kind, { walk: this.speed > .8 ? this.walk : 0, jerk: A.jerk, snap: A.snap, hide: A.hide, trunkUp: A.trunkUp, bark: Math.max(0, 1 - (performance.now() - this.barkAt) / 380) * (performance.now() - this.barkAt < 380 ? 1 : 0) }, shapeArt, this.artK * Math.min(1, this.tankM));
+      else RealCloud.draw(lg, t, this.tankM, shade, this.ang + (A.ang || 0), this.kind, { walk: this.speed > .8 ? this.walk : 0, jerk: A.jerk, snap: A.snap, hide: A.hide, trunkUp: A.trunkUp, bark: Math.max(0, 1 - (performance.now() - this.barkAt) / 380) * (performance.now() - this.barkAt < 380 ? 1 : 0) }, shapeArt, this.artK * Math.min(1, this.tankM) * Math.min(1, Math.max(0, (facing - .45) / .25)));
       lg.globalCompositeOperation = "source-atop";
       if (faceMode) { lg.globalAlpha = .2 + .08 * Math.sin(t / 1300); lg.drawImage(Smoke.lime, -260 + Math.sin(t / 2100) * 60, -40, 240, 180);
         lg.globalAlpha = .22 + .08 * Math.sin(t / 1700 + 2); lg.drawImage(Smoke.purple, 30 + Math.sin(t / 1900) * 60, -60, 260, 190); }
@@ -4393,6 +4393,51 @@ const RealCloud = {
     this.P.forEach(p => { p.kids = p.edge && p.hy < 20 ? Array.from({ length: 1 }, () => { const a = rr(-Math.PI * .85, -Math.PI * .15); return [Math.cos(a) * p.hr * rr(.4, .6), Math.sin(a) * p.hr * rr(.4, .6), p.hr * rr(.55, .75)]; }) : []; });
     this.tex = {};
   },
+  /* drawing a shape's picture so it moves like the shape: the picture is cut into a grid of small triangles; each grid
+     point follows the 3 nearest puff spots of the shape (so if a wing's spots move, that part of the picture moves
+     with them), then everything is turned around the up axis like the puffs. It's built in a layer of its own, then
+     shown through soft puff-shaped holes that grow as it appears, so the puffs seem to turn into the picture. */
+  drawArt(lg, art, kind, SP, ca, sa, artA, pos, t, s, an) {
+    const LWc = lg.canvas.width, LHc = lg.canvas.height, G = 16, GH = 12;
+    const bb = this.box(kind), bw = bb[1] - bb[0], bh = bb[3] - bb[2], asp = art.w / art.h;
+    let w = bw * 1.12, h = w / asp; if (h > bh * 1.3) { h = bh * 1.3; w = h * asp; }
+    const cx0 = (bb[0] + bb[1]) / 2, cy0 = (bb[2] + bb[3]) / 2, key = kind + "|" + asp.toFixed(3);
+    this.WG = this.WG || {};
+    if (!this.WG[key]) { const V = [];
+      for (let j = 0; j <= GH; j++) for (let i = 0; i <= G; i++) { const X = cx0 + (i / G - .5) * w, Y = cy0 + (j / GH - .5) * h;
+        const near = SP.map(([rx, ry], k) => [Math.hypot(rx - X, ry - Y), k]).sort((a, b) => a[0] - b[0]).slice(0, 3);
+        const ws = near.map(([d]) => 1 / Math.pow(d + 24, 2)), tw = ws.reduce((a, b) => a + b, 0); V.push({ X, Y, n: near.map(([, k], q) => [k, ws[q] / tw]) }); }
+      this.WG[key] = V; }
+    const br = 1 + .012 * Math.sin(t / 900), bob = an.walk ? Math.abs(Math.sin(an.walk)) * 5 : 0;
+    const P = this.WG[key].map(v => { let dx = 0, dy = 0, z = 0; v.n.forEach(([k, wt]) => { const q = SP[k]; dx += (q[2] - q[0]) * wt; dy += (q[3] - q[1]) * wt; z += q[4] * wt; });
+      const X = (v.X + dx - cx0) * br + cx0, Y = (v.Y + dy - cy0) * br + cy0 - bob; return [X * ca + z * sa, Y]; });
+    const cv = this.artCv || (this.artCv = document.createElement("canvas")); if (cv.width !== LWc || cv.height !== LHc) { cv.width = LWc; cv.height = LHc; }
+    const c = cv.getContext("2d"); c.setTransform(1, 0, 0, 1, 0, 0); c.clearRect(0, 0, LWc, LHc); c.globalCompositeOperation = "source-over";
+    c.setTransform(1, 0, 0, 1, LWc / 2, LHc / 2 + 30); c.filter = s > .02 ? `brightness(${1 - .55 * s}) saturate(${1 - .4 * s})` : "none";
+    const sw = art.w / G, sh2 = art.h / GH;
+    for (let j = 0; j < GH; j++) for (let i = 0; i < G; i++) { const a = j * (G + 1) + i, b = a + 1, d = a + G + 1, e = d + 1;
+      const sa0 = [i * sw, j * sh2], sb0 = [(i + 1) * sw, j * sh2], sd0 = [i * sw, (j + 1) * sh2], se0 = [(i + 1) * sw, (j + 1) * sh2];
+      this.tri(c, art.img, sa0, sb0, sd0, P[a], P[b], P[d]); this.tri(c, art.img, sb0, se0, sd0, P[b], P[e], P[d]); }
+    c.filter = "none";
+    // appearing / disappearing: show it through soft puff-shaped holes that grow from the puffs' places
+    if (artA < .97) { const mk = this.maskCv || (this.maskCv = document.createElement("canvas")); if (mk.width !== LWc || mk.height !== LHc) { mk.width = LWc; mk.height = LHc; }
+      const m2 = mk.getContext("2d"), wp = this.puff([255, 255, 255]); m2.setTransform(1, 0, 0, 1, 0, 0); m2.clearRect(0, 0, LWc, LHc); m2.setTransform(1, 0, 0, 1, LWc / 2, LHc / 2 + 30);
+      const grow = .5 + 2.2 * artA; m2.globalAlpha = Math.min(1, artA * 1.8);
+      pos.forEach(([x, y, r]) => { const R = r * grow; m2.drawImage(wp, x - R, y - R, R * 2, R * 2); });
+      c.setTransform(1, 0, 0, 1, 0, 0); c.globalCompositeOperation = "destination-in"; c.globalAlpha = 1; c.drawImage(mk, 0, 0); c.globalCompositeOperation = "source-over"; }
+    lg.save(); lg.setTransform(1, 0, 0, 1, 0, 0); lg.globalAlpha = Math.min(1, artA * 1.25); lg.drawImage(cv, 0, 0); lg.restore();
+  },
+  // one triangle of a picture, stretched from its place in the picture (s0,s1,s2) to where it goes (d0,d1,d2)
+  tri(c, img, s0, s1, s2, d0, d1, d2) {
+    const [x0, y0] = s0, [x1, y1] = s1, [x2, y2] = s2; let [u0, v0] = d0, [u1, v1] = d1, [u2, v2] = d2;
+    const den = x0 * (y1 - y2) + x1 * (y2 - y0) + x2 * (y0 - y1); if (!den) return;
+    const mx = (u0 + u1 + u2) / 3, my = (v0 + v1 + v2) / 3, grow = (u, v) => { const l = Math.hypot(u - mx, v - my) || 1; return [u + (u - mx) / l * .9, v + (v - my) / l * .9]; };
+    c.save(); c.beginPath(); c.moveTo(...grow(u0, v0)); c.lineTo(...grow(u1, v1)); c.lineTo(...grow(u2, v2)); c.closePath(); c.clip();
+    c.transform((u0 * (y1 - y2) + u1 * (y2 - y0) + u2 * (y0 - y1)) / den, (v0 * (y1 - y2) + v1 * (y2 - y0) + v2 * (y0 - y1)) / den,
+      (u0 * (x2 - x1) + u1 * (x0 - x2) + u2 * (x1 - x0)) / den, (v0 * (x2 - x1) + v1 * (x0 - x2) + v2 * (x1 - x0)) / den,
+      (u0 * (x1 * y2 - x2 * y1) + u1 * (x2 * y0 - x0 * y2) + u2 * (x0 * y1 - x1 * y0)) / den, (v0 * (x1 * y2 - x2 * y1) + v1 * (x2 * y0 - x0 * y2) + v2 * (x0 * y1 - x1 * y0)) / den);
+    c.drawImage(img, 0, 0); c.restore();
+  },
   // the space a shape takes up (from its puff spots), for fitting its picture
   box(kind) { this.BB = this.BB || {}; if (this.BB[kind]) return this.BB[kind]; let a = 1e9, b = -1e9, c = 1e9, d = -1e9;
     this.P.forEach(p => { const T = p.S[kind]; if (!T) return; a = Math.min(a, T[0] - T[2] * .7); b = Math.max(b, T[0] + T[2] * .7); c = Math.min(c, T[1] - T[2] * .7); d = Math.max(d, T[1] + T[2] * .7); });
@@ -4410,7 +4455,8 @@ const RealCloud = {
      an: { walk (step phase, 0 when standing), bark (0..1 while barking) } */
   side: 1,
   draw(lg, t, m, s, ang, kind, an, art, artA) {
-    this.init(); artA = art ? artA || 0 : 0; const pa = 1 - artA * .96;            // puffs fade away as the picture fades in
+    this.init(); artA = art ? artA || 0 : 0; const pa = 1 - Math.pow(artA, .7) * .97;  // puffs fade away as the picture dissolves in
+    const SP = [];                                                                   // each shape spot: rest x, y, moved x, y, depth
     const ca = Math.cos(ang), sa = Math.sin(ang);
     if (m > .02) this.side = ca < 0 ? -1 : 1;                                         // the cloud faces the way the shape last faced
     const lit = this.puff(this.mix([255, 255, 255], [128, 134, 150], s)), mid = this.puff(this.mix([206, 213, 228], [84, 89, 104], s)), sh = this.puff(this.mix([128, 138, 160], [42, 45, 58], s));
@@ -4437,6 +4483,7 @@ const RealCloud = {
       if (an.snap && (part === "clawL" || part === "clawR")) { const b = Math.sin(an.snap * Math.PI * 4); sy -= Math.abs(b) * 22; }
       if (an.hide && (part === "head" || part.startsWith("leg") || part === "tail" || part === "eye")) { const h = an.hide; sx += (0 - sx) * h * .8; sy += (15 - sy) * h * .8; sr *= 1 - .5 * h; }
       if (part === "body" && an.walk) sy += Math.sin(an.walk * 2) * 2;
+      SP.push([T[0], T[1], sx, sy, sz]);
       // turning: rotate the spot around the up axis, so halfway through a turn you see it from the front
       const tx = sx * ca + sz * sa, depth = -sx * sa + sz * ca;
       const hxs = hx * this.side;                                                    // the cloud faces the same way the shape did
@@ -4452,13 +4499,9 @@ const RealCloud = {
       lg.drawImage(lit, x - r * (1 - .1 * m), y - r * (1.12 - .2 * m), r * (1.75 + .2 * m), r * (1.75 + .2 * m));
       if (kk > .05) kids.forEach(([ox, oy, kr]) => { lg.globalAlpha = kk * .45 * pa; lg.drawImage(mid, x + ox - kr * .95, y + oy - kr * .85, kr * 1.9, kr * 1.9); lg.globalAlpha = kk * .7 * pa; lg.drawImage(lit, x + ox - kr * 1.0, y + oy - kr * 1.1, kr * 1.7, kr * 1.7); }); });
     lg.globalAlpha = 1;
-    // the shape's picture from the Art screen, fitted to the shape's size, facing the way the shape faces, darkened
-    // with the storm/darkness slider, breathing very slightly
-    if (artA > .01) { const bb = this.box(kind), bw = bb[1] - bb[0], bh = bb[3] - bb[2], asp = art.w / art.h;
-      let w = bw * 1.12, h = w / asp; if (h > bh * 1.3) { h = bh * 1.3; w = h * asp; }
-      const br = 1 + .015 * Math.sin(t / 900), cx = (bb[0] + bb[1]) / 2 * (ca < 0 ? -1 : 1), cy = (bb[2] + bb[3]) / 2 - (an.walk ? Math.abs(Math.sin(an.walk)) * 6 : 0);
-      lg.save(); lg.globalAlpha = artA; lg.filter = s > .02 ? `brightness(${1 - .55 * s}) saturate(${1 - .4 * s})` : "none";
-      lg.translate(cx, cy); lg.scale((ca < 0 ? -1 : 1) * br, br); lg.drawImage(art.img, 0, 0, art.w, art.h, -w / 2, -h / 2, w, h); lg.restore(); }
+    // the shape's picture from the Art screen, bent along with the shape's moving parts (wings flap, tails wag, legs
+    // walk, heads jerk, it turns in 3D), and dissolving in and out through the puffs
+    if (artA > .01) this.drawArt(lg, art, kind, SP, ca, sa, artA, pos, t, s, an);
     // a real cumulus has a fairly flat, slightly darker underside
     if (m < .99) { lg.save(); lg.globalCompositeOperation = "destination-out"; const gr = lg.createLinearGradient(0, 74, 0, 120);
       gr.addColorStop(0, "rgba(0,0,0,0)"); gr.addColorStop(1, `rgba(0,0,0,${1 - m})`); lg.fillStyle = gr; lg.fillRect(-380, 74, 760, 80); lg.restore(); }
@@ -5586,7 +5629,7 @@ window.KZRelay = function (topic, onMessage, servers) {
 (() => {
   const qs = new URLSearchParams(location.search), key = qs.get("ctl");
   if (!key || !window.WebSocket) return;
-  const PAGE = "html3", VERSION = "3e794f7";
+  const PAGE = "html3", VERSION = "7f312c0";
   let said = false;
   const relay = KZRelay("kzctl/" + key, c => {
     if (!c || c.from === "overlay" || (c.to && c.to !== "all" && c.to !== PAGE)) return;
