@@ -5290,7 +5290,7 @@ const Bolt = {
 
 /* ================= Jawa929's scrap haul (his "Play my Effect" redeem) =================
    A loaded scrap truck backs in from the right (beep, beep), tips its load out in a heap and drives off. The heap
-   rumbles, and a scrappy little junkyard gremlin (an original character) bursts out of it holding gold loot, shouts
+   rumbles, and a small hooded desert scavenger (an original character) bursts out of it holding gold loot, shouts
    "JACKPOT!" with it held high, and runs off to the left. Then a scrap harvester rolls in from the right with its
    toothed rollers spinning, chews up the whole heap (bits flying) and trundles off the left side.
    Art: the app's 🎨 Art screen, SCRAP HAUL ART; drawn stand-ins until it's sent. */
@@ -5348,7 +5348,7 @@ const ScrapHaul = {
         if (S.scrap_pile) put(S.scrap_pile, 0, px + shake, GY, { w: PW, sx: .6 + .4 * grow, sy: grow });
         else this.drawPile(g, px + shake, GY, PW, PH * grow);
         g.restore(); };
-      // ---------- the gremlin
+      // ---------- the hooded scavenger
       const guyTop = GY - PH * .6;
       let guy = null, gf = 0, gx = px, gy = guyTop, flip = false, show = false;
       if (t >= T.pop && !ranOff) { show = true;
@@ -5369,7 +5369,7 @@ const ScrapHaul = {
       const drawGuy = () => { if (!show) return; if (guy) put(guy, gf, gx, gy, { h: GUYH, flip }); else this.drawGuy(g, gx, gy, GUYH, t, t >= T.run); };
       // while he's still coming up out of the heap he's behind it; after that he's on top
       if (t < T.pop + (T.popEnd - T.pop) * .45 && !S.scrap_guy_pop) { drawGuy(); drawPile(); } else { drawPile(); drawGuy(); }
-      if (show && t > T.popEnd - 200 && t < T.run + 400) Pirate.bubble(g, gx + 20, gy - GUYH - 30, this.SHOUT, Math.min(1, (t - T.popEnd + 200) / 250), 1);
+      if (show && t > T.popEnd - 200 && t < T.run + 400) Pirate.bubble(g, gx + 20, gy - GUYH - 75, this.SHOUT, Math.min(1, (t - T.popEnd + 200) / 250), 1);
       // sparkles off the gold
       if (show && t > T.pop + 300 && Math.random() < .5) dust.push({ spark: 1, x: gx + rand(-60, 60), y: gy - GUYH * rand(.75, 1.05), vx: 0, vy: rand(-.6, -.1), r: rand(3, 6), life: 1 });
       // ---------- the harvester
@@ -5423,11 +5423,14 @@ const ScrapHaul = {
     g.fillStyle = "#8a4b2a"; [[-.3, .2, .4], [.1, .45, -.3], [.3, .15, .2]].forEach(([u, v, r]) => { g.save(); g.translate(u * w, -v * h); g.rotate(r); g.fillRect(-50, -6, 100, 12); g.restore(); });
     g.restore(); },
   drawGuy(g, x, y, h, t, running) { g.save(); g.translate(x, y); if (running) g.scale(-1, 1); const k = h / 230, step = running ? Math.sin(t / 60) * 14 : 0;
-    g.scale(k, k); g.fillStyle = "#4a3a2a"; g.fillRect(-28 + step, -40, 24, 40); g.fillRect(4 - step, -40, 24, 40);
-    g.fillStyle = "#d4a52a"; g.fillRect(-34, -130, 68, 92); g.fillStyle = "#7a5a3a"; g.fillRect(-34, -70, 68, 10);
-    g.fillStyle = "#8fa07a"; g.beginPath(); g.arc(0, -160, 34, 0, 6.283); g.fill(); g.beginPath(); g.moveTo(-30, -165); g.lineTo(-70, -185); g.lineTo(-28, -150); g.fill(); g.beginPath(); g.moveTo(30, -165); g.lineTo(70, -185); g.lineTo(28, -150); g.fill();
-    g.fillStyle = "#b8862e"; g.fillRect(-26, -190, 52, 14); g.fillStyle = "#222"; g.beginPath(); g.arc(-10, -160, 4, 0, 6.283); g.arc(10, -160, 4, 0, 6.283); g.fill();
-    g.fillStyle = "#ffd34a"; g.shadowColor = "#ffd34a"; g.shadowBlur = 16; g.beginPath(); g.arc(0, running ? -100 : -232, 26, 0, 6.283); g.fill(); g.restore(); },
+    g.scale(k, k); g.fillStyle = "#4a3a2a"; g.fillRect(-24 + step, -30, 20, 30); g.fillRect(4 - step, -30, 20, 30);
+    g.fillStyle = "#5f7488"; g.beginPath(); g.moveTo(-46, -24); g.lineTo(46, -24); g.lineTo(30, -150); g.lineTo(-30, -150); g.closePath(); g.fill();   // cloak
+    g.fillStyle = "#b5683a"; g.fillRect(-40, -80, 80, 14); g.fillRect(-20, -130, 16, 60);                                                        // patches
+    g.fillStyle = "#5f7488"; g.beginPath(); g.arc(0, -165, 40, Math.PI * .95, Math.PI * .05); g.lineTo(30, -140); g.lineTo(-30, -140); g.closePath(); g.fill();   // hood
+    g.fillStyle = "#e0b48c"; g.beginPath(); g.arc(0, -160, 24, 0, 6.283); g.fill();                                                               // face
+    g.fillStyle = "#b8862e"; g.fillRect(-22, -172, 44, 14); g.fillStyle = "#9fd3e6"; g.fillRect(-18, -170, 14, 10); g.fillRect(4, -170, 14, 10);   // goggles
+    g.strokeStyle = "#5a3a2a"; g.lineWidth = 3; g.beginPath(); g.arc(0, -152, 9, .2, 2.9); g.stroke();
+    g.fillStyle = "#ffd34a"; g.shadowColor = "#ffd34a"; g.shadowBlur = 16; g.beginPath(); g.arc(0, running ? -95 : -232, 26, 0, 6.283); g.fill(); g.restore(); },
   drawHarvester(g, cx, gy, w, t) { const h = w * .5; g.save(); g.translate(cx, gy); g.scale(-1, 1);   // faces left
     g.fillStyle = "#2b2b2b"; g.beginPath(); g.roundRect(-w * .45, -h * .3, w * .75, h * .3, 40); g.fill();      // tracks
     g.fillStyle = "#c06a2a"; g.fillRect(-w * .42, -h * .62, w * .32, h * .3); g.fillRect(-w * .1, -h * .95, w * .3, h * .65);   // hopper, cab
@@ -6173,7 +6176,7 @@ window.KZRelay = function (topic, onMessage, servers) {
 (() => {
   const qs = new URLSearchParams(location.search), key = qs.get("ctl");
   if (!key || !window.WebSocket) return;
-  const PAGE = "html3", VERSION = "e1520e9";
+  const PAGE = "html3", VERSION = "b52b0fe";
   let said = false;
   const relay = KZRelay("kzctl/" + key, c => {
     if (!c || c.from === "overlay" || (c.to && c.to !== "all" && c.to !== PAGE)) return;
