@@ -4153,23 +4153,25 @@ const Face = {
         return true;
       });
       // ---- rain, while it's switched on (Rain on/off button)
-      // rain in the logo's colours (lime green and purple, a few white): bold, glowing streaks that are easy to see on stream,
-      // falling from under the cloud with a slight slant; they burst into tiny droplets and ripples at the bottom of the screen
-      const RAINC = ["163,230,53", "168,85,247", "163,230,53", "168,85,247", "236,255,210"];
-      if (this.on && (this.rain || performance.now() < this.rainTill)) for (let i = 0; i < 7; i++) { const v = rand(20, 28);
-        this.drops.push({ x: x + rand(-250, 250) * SC * (1 + .3 * this.tankM), y: y + rand(30, 70) * SC, v, len: v * rand(2, 2.8), a: rand(.8, 1), w: rand(4, 5.5), c: RAINC[Math.floor(Math.random() * RAINC.length)] }); }
+      // real-looking rain, tinted the logo's colours (lime green and purple, a few pale ones): thin streaks with a slight
+      // slant, some nearer (a bit thicker, faster, brighter) and most further away (finer, slower, fainter), so it has depth;
+      // they burst into tiny droplets and ripples at the bottom of the screen
+      const RAINC = ["163,230,53", "178,110,250", "163,230,53", "178,110,250", "225,240,215"];
+      if (this.on && (this.rain || performance.now() < this.rainTill)) for (let i = 0; i < 5; i++) { const near = Math.random() < .3, v = near ? rand(21, 26) : rand(15, 20);
+        this.drops.push({ x: x + rand(-230, 230) * SC * (1 + .3 * this.tankM), y: y + rand(30, 70) * SC, v, len: v * rand(1.1, 1.5), a: near ? rand(.7, .9) : rand(.4, .6), w: near ? rand(2, 2.6) : rand(1.2, 1.7), glow: near, c: RAINC[Math.floor(Math.random() * RAINC.length)] }); }
       const wind = .1, sp = this.splash || (this.splash = []);
       g.lineCap = "round";
       this.drops = this.drops.filter(d => { const s = dt / 16; d.y += d.v * s; d.x += d.v * wind * s;
         const c = d.c || "210,225,245";
         if (d.y > H - 4) { if (sp.length < 400) { sp.push({ x: d.x, y: H - 4, r: 1, a: d.a * .6, ring: true, c }); for (let k = 0; k < 2; k++) sp.push({ x: d.x, y: H - 6, vx: rand(-2.2, 2.2), vy: rand(-4.5, -2), a: d.a, life: 1, c }); } return false; }
         const ex = d.x - d.len * wind, ey = d.y - d.len;
-        let gr = g.createLinearGradient(d.x, d.y, ex, ey); gr.addColorStop(0, `rgba(${c},${d.a * .28})`); gr.addColorStop(1, `rgba(${c},0)`);   // soft glow around it
-        g.strokeStyle = gr; g.lineWidth = d.w * 3.2; g.beginPath(); g.moveTo(d.x, d.y); g.lineTo(ex, ey); g.stroke();
+        let gr;
+        if (d.glow) { gr = g.createLinearGradient(d.x, d.y, ex, ey); gr.addColorStop(0, `rgba(${c},${d.a * .15})`); gr.addColorStop(1, `rgba(${c},0)`);   // a faint sheen on the near drops
+          g.strokeStyle = gr; g.lineWidth = d.w * 2.6; g.beginPath(); g.moveTo(d.x, d.y); g.lineTo(ex, ey); g.stroke(); }
         gr = g.createLinearGradient(d.x, d.y, ex, ey); gr.addColorStop(0, `rgba(${c},${d.a})`); gr.addColorStop(1, `rgba(${c},0)`);
         g.strokeStyle = gr; g.lineWidth = d.w; g.beginPath(); g.moveTo(d.x, d.y); g.lineTo(ex, ey); g.stroke(); return true; });
-      this.splash = sp.filter(q => { if (q.ring) { q.r += .9 * dt / 16; q.a *= .9; if (q.a < .02) return false; g.strokeStyle = `rgba(${q.c || "210,225,245"},${q.a})`; g.lineWidth = 2; g.beginPath(); g.ellipse(q.x, q.y, q.r * 2.2, q.r * .5, 0, 0, 6.283); g.stroke(); return true; }
-        q.x += q.vx; q.y += q.vy; q.vy += .35; q.life -= .06; if (q.life <= 0 || q.y > H) return false; g.fillStyle = `rgba(${q.c || "215,228,248"},${q.a * q.life})`; g.beginPath(); g.arc(q.x, q.y, 2.2, 0, 6.283); g.fill(); return true; });
+      this.splash = sp.filter(q => { if (q.ring) { q.r += .9 * dt / 16; q.a *= .9; if (q.a < .02) return false; g.strokeStyle = `rgba(${q.c || "210,225,245"},${q.a})`; g.lineWidth = 1.3; g.beginPath(); g.ellipse(q.x, q.y, q.r * 2.2, q.r * .5, 0, 0, 6.283); g.stroke(); return true; }
+        q.x += q.vx; q.y += q.vy; q.vy += .35; q.life -= .06; if (q.life <= 0 || q.y > H) return false; g.fillStyle = `rgba(${q.c || "215,228,248"},${q.a * q.life})`; g.beginPath(); g.arc(q.x, q.y, 1.5, 0, 6.283); g.fill(); return true; });
       // ---- and once in a while it shoots a bolt of lightning out of the cloud
       if (this.on && faceMode && this.stormK < .3 && t > nextBolt) {
         nextBolt = t + rand(8000, 20000);
@@ -6011,7 +6013,7 @@ window.KZRelay = function (topic, onMessage, servers) {
 (() => {
   const qs = new URLSearchParams(location.search), key = qs.get("ctl");
   if (!key || !window.WebSocket) return;
-  const PAGE = "html3", VERSION = "bd7db24";
+  const PAGE = "html3", VERSION = "f9bba45";
   let said = false;
   const relay = KZRelay("kzctl/" + key, c => {
     if (!c || c.from === "overlay" || (c.to && c.to !== "all" && c.to !== PAGE)) return;
