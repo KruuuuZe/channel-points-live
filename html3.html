@@ -3471,6 +3471,9 @@ const Smoke = {
    puffs of smoke pop out all over the cloud. The voice comes from the microphone: either OBS itself (if it allows
    the browser source to use the mic) or the Voice page from the app's Control screen, open in a browser on the PC. */
 const Voice = {
+  /* switched off for now: the cloud doesn't listen to the mic (no OBS WebSocket or mic connection, no talking mouth).
+     Set OFF to false to bring it back. */
+  OFF: true,
   level: 0, shape: .5, last: 0, an: null, buf: null, fbuf: null, tried: false, obsOk: false,
   /* 1st choice: OBS itself. OBS has a built-in WebSocket server (Tools > WebSocket Server Settings); through it the
      overlay gets the live volume of your mic straight from OBS, with no mic permission needed. */
@@ -3532,6 +3535,7 @@ const Voice = {
     this.last = performance.now();
   },
   async startMic() {
+    if (this.OFF) return;
     if (this.tried) return; this.tried = true;
     if (await this.obs()) { toast("😶 The face is listening to your mic through OBS", false, 4000); return; }
     try {
@@ -3546,8 +3550,9 @@ const Voice = {
     }
   },
   // from the Voice page (over the relay): already-measured level and shape
-  remote(l, sh) { this.level = Math.max(0, Math.min(1, l)); this.shape = Math.max(0, Math.min(1, sh)); this.last = performance.now(); this.syl(l > .001 ? 20 * Math.log10(l * .06) : -100); },
+  remote(l, sh) { if (this.OFF) return; this.level = Math.max(0, Math.min(1, l)); this.shape = Math.max(0, Math.min(1, sh)); this.last = performance.now(); this.syl(l > .001 ? 20 * Math.log10(l * .06) : -100); },
   sample() {
+    if (this.OFF) { this.level = 0; return 0; }
     if (this.an) {
       this.an.getFloatTimeDomainData(this.buf); let sum = 0; for (const v of this.buf) sum += v * v;
       const rms = Math.sqrt(sum / this.buf.length), lv = Math.max(0, Math.min(1, (rms - .012) * 9));
@@ -6006,7 +6011,7 @@ window.KZRelay = function (topic, onMessage, servers) {
 (() => {
   const qs = new URLSearchParams(location.search), key = qs.get("ctl");
   if (!key || !window.WebSocket) return;
-  const PAGE = "html3", VERSION = "667ddaa";
+  const PAGE = "html3", VERSION = "bd7db24";
   let said = false;
   const relay = KZRelay("kzctl/" + key, c => {
     if (!c || c.from === "overlay" || (c.to && c.to !== "all" && c.to !== PAGE)) return;
