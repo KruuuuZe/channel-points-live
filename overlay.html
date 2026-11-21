@@ -736,7 +736,35 @@ const LiveSetup = {
 };
 
 /* ================= live Twitch connection ================= */
+/* ================= one Twitch connection shared by all the overlays =================
+   Twitch allows only 3 live event connections per channel, and every overlay (prediction overlay, event wall, alerts)
+   used to open its own, so one extra copy anywhere (a duplicate source, a browser tab) made Twitch refuse.
+   Now the overlays open in OBS take turns: one of them (the "leader") holds the only connection to Twitch, and
+   every overlay adds the events it needs to that same connection with its own token. The leader passes every
+   event on to the others. If the leader is closed, another overlay takes over by itself within a few seconds. */
+const TwShare = {
+  bc: null, live: null, leader: false, seen: [], sid: null, mySid: null,
+  start(live, types) {
+    this.live = live; live.wants = new Set(types);
+    if (!window.BroadcastChannel || !navigator.locks) { live.connect("wss://eventsub.wss.twitch.tv/ws", false); return; }   // old browser: its own connection, as before
+    const bc = this.bc = new BroadcastChannel("kz-eventsub-" + live.uid);
+    bc.onmessage = e => { const m = e.data || {};
+      if (m.k === "hello" && this.leader && this.sid) bc.postMessage({ k: "sid", sid: this.sid });
+      else if (m.k === "sid" && !this.leader && m.sid && m.sid !== this.mySid) { this.mySid = m.sid; live.subscribe(m.sid); }         // add my events to the leader's connection
+      else if (m.k === "ev" && !this.leader) this.got(m.t, m.e, m.id); };
+    navigator.locks.request("kz-eventsub-" + live.cid + "-" + live.uid, () => new Promise(() => {   // held until this overlay closes
+      this.leader = true; live.connect("wss://eventsub.wss.twitch.tv/ws", false); }));
+    setTimeout(() => { if (!this.leader) bc.postMessage({ k: "hello" }); }, 300);
+  },
+  // called by the leader's connection
+  welcome(sid) { this.sid = sid; if (this.bc) this.bc.postMessage({ k: "sid", sid }); },
+  note(t, e, id) { if (this.bc) this.bc.postMessage({ k: "ev", t, e, id }); this.got(t, e, id); },
+  got(t, e, id) { if (id) { if (this.seen.includes(id)) return; this.seen.push(id); if (this.seen.length > 300) this.seen.shift(); }
+    if (this.live.wants.has(t)) this.live.handle(t, e); }
+};
+
 const Live = {
+  TYPES: ["channel.prediction.begin", "channel.prediction.progress", "channel.prediction.lock", "channel.prediction.end"],
   cid: null, uid: null, ws: null, seen: [], watchdog: null, keepalive: 10, backoff: 2000, closing: new Set(),
 
   async init() {
@@ -749,7 +777,7 @@ const Live = {
       this.cid = v.client_id; this.uid = v.user_id;
       if (v.login !== EXPECTED_LOGIN) toast(`Connected as ${v.login} (not KruuuuZe).`, true, 15000);
       await this.restore();
-      this.connect("wss://eventsub.wss.twitch.tv/ws", false);
+      TwShare.start(this, this.TYPES);
       setInterval(() => this.revalidate(), 3600 * 1000);  // Twitch asks apps to re-check tokens hourly
     } catch (e) {
       toast("Can't reach Twitch. Retrying in 15s…", true, 14000);
@@ -790,12 +818,12 @@ const Live = {
         const old = this.ws; this.ws = ws; this.backoff = 2000;
         this.keepalive = m.payload.session.keepalive_timeout_seconds || 10;
         this.kick();
-        if (isReconnect && old && old !== ws) { this.closing.add(old); old.close(); }
-        else this.subscribe(m.payload.session.id);
+        if (isReconnect && old && old !== ws) { this.closing.add(old); old.close(); TwShare.sid = m.payload.session.id; }
+        else { this.subscribe(m.payload.session.id); TwShare.welcome(m.payload.session.id); }
       } else if (type === "session_reconnect") {
         this.connect(m.payload.session.reconnect_url, true);
       } else if (type === "notification") {
-        this.handle(m.metadata.subscription_type, m.payload.event);
+        TwShare.note(m.metadata.subscription_type, m.payload.event, id);
       } else if (type === "revocation") {
         toast("Twitch stopped sending prediction events (" + (m.payload?.subscription?.status || "revoked") + "). Redo step B.", true, 600000);
       }
@@ -951,7 +979,7 @@ window.KZRelay = function (topic, onMessage, servers) {
 (() => {
   const qs = new URLSearchParams(location.search), key = qs.get("ctl");
   if (!key || !window.WebSocket) return;
-  const PAGE = "overlay", VERSION = "d4bee9a";
+  const PAGE = "overlay", VERSION = "e586b44";
   let said = false;
   const relay = KZRelay("kzctl/" + key, c => {
     if (!c || c.from === "overlay" || (c.to && c.to !== "all" && c.to !== PAGE)) return;
