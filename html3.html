@@ -2867,7 +2867,7 @@ const ChefArt = {
   use(name, a) { const img = new Image(); img.onload = () => { this.sprites[name] = Object.assign({ img }, a); if (name === "tower" && Lurk.up) Lurk.paint(); }; img.src = a.url; },
   async load() {
     try { const db = await this.open();
-      ["cs_tank", "cs_dog", "cs_cat", "cs_fish", "cs_whale", "cs_bunny", "cs_turtle", "cs_duck", "cs_elephant", "cs_dino", "cs_dragon", "cs_butterfly", "cs_bird", "cs_snail", "cs_octopus", "cs_crab", "cs_plane", "cs_rocket", "cs_car", "cs_train", "cs_boat", "cs_heli", "cs_ufo", "cs_heart", "cs_star", "cs_moon", "cs_mushroom", "cs_tree", "cs_castle", "cs_ghost", "cs_pig", "cs_sheep", "cs_lion", "cs_giraffe", "cs_horse", "cs_cow", "cs_penguin", "cs_owl", "cs_frog", "cs_snake", "cs_shark", "cs_dolphin", "cs_bee", "cs_spider", "cs_mouse", "cs_fox", "cs_bear", "cs_kangaroo", "cs_flamingo", "cs_seahorse", "cs_jellyfish", "cs_unicorn", "cs_guitar", "cs_umbrella", "cs_balloon", "cs_lighthouse", "cs_house", "cs_robot", "cs_skull", "cs_crown", "cs_anchor", "cs_sword", "cs_trophy", "cs_cupcake", "cs_icecream", "cs_pizza", "cs_apple", "cs_bell", "cs_kite", "cs_submarine", "cs_bicycle", "cs_gamepad", "cf_e_none", "disco_glint", "cf_x_talk_me", "sm_hat", "sm_face", "sm_nose", "sm_arm", "sm_ball", "sm_ball_melt", "sm_puddle", "cf_ref", "cf_x_talk", "cf_x_wide", "cf_x_look_l", "cf_x_look_r", "cf_x_smile", "cf_x_grin", "cf_x_oo", "cf_x_blink", "cf_v_smile_talk", "cf_v_smile_l", "cf_v_smile_r", "cf_v_grin_talk", "cf_v_grin_l", "cf_v_grin_r", "cf_v_oo_talk", "cf_v_oo_l", "cf_v_oo_r", "cf_v_closed_talk", "cf_e_smirk", "cf_v_smirk_talk", "cf_v_smirk_l", "cf_v_smirk_r", "cf_e_wink", "cf_v_wink_talk", "cf_e_laugh", "cf_v_laugh_talk", "cf_e_shocked", "cf_v_shocked_talk", "cf_v_shocked_l", "cf_v_shocked_r", "cf_e_sleepy", "cf_v_sleepy_talk", "cf_v_sleepy_l", "cf_v_sleepy_r", "cf_e_sideeye", "cf_v_sideeye_talk", "cf_v_sideeye_l", "cf_v_sideeye_r", "cf_e_sad", "cf_v_sad_talk", "cf_v_sad_l", "cf_v_sad_r", "cf_e_tongue", "cf_v_tongue_talk", "cf_v_tongue_l", "cf_v_tongue_r", "cf_e_puffed", "cf_v_puffed_talk", "cf_v_puffed_l", "cf_v_puffed_r", "cf_e_determined", "cf_v_determined_talk", "cf_v_determined_l", "cf_v_determined_r", "cf_e_evil", "cf_v_evil_talk", "cf_v_evil_l", "cf_v_evil_r", "cf_e_smug", "cf_v_smug_talk", "cf_v_smug_l", "cf_v_smug_r", "cf_e_confused", "cf_v_confused_talk", "cf_v_confused_l", "cf_v_confused_r", "cf_e_disgusted", "cf_v_disgusted_talk", "cf_v_disgusted_l", "cf_v_disgusted_r", "cf_e_nervous", "cf_v_nervous_talk", "cf_v_nervous_l", "cf_v_nervous_r", "cf_e_kissy", "cf_v_kissy_talk", "cf_v_kissy_l", "cf_v_kissy_r", "cf_e_bored", "cf_v_bored_talk", "cf_v_bored_l", "cf_v_bored_r", "cf_e_excited", "cf_v_excited_talk", "cf_v_excited_l", "cf_v_excited_r", "cf_e_thinking", "cf_v_thinking_talk", "cf_v_thinking_l", "cf_v_thinking_r", "cf_e_scared", "cf_v_scared_talk", "cf_v_scared_l", "cf_v_scared_r", "jinx_flip", "jinx_spin", "jinx_fire", "jinx_launch", "artillery", "golden_banana", "golden_mango", "tower", "eagle_roll", "tank_drive", "soldier_run", "soldier_throw", "grenade", "explosion", "eagle_glide", "eagle_flap", "plane", "title", "chef_parachute", "chef_chop", "chef_jump", "chef_fly", "chef_truck", "cf_x_look_d", "cf_v_smile_d", "cf_v_grin_d", "cf_v_oo_d", "cf_v_smirk_d", "cf_v_shocked_d", "cf_v_sleepy_d", "cf_v_sideeye_d", "cf_v_sad_d", "cf_v_tongue_d", "cf_v_puffed_d", "cf_v_determined_d", "cf_v_evil_d", "cf_v_smug_d", "cf_v_confused_d", "cf_v_disgusted_d", "cf_v_nervous_d", "cf_v_kissy_d", "cf_v_bored_d", "cf_v_excited_d", "cf_v_thinking_d", "cf_v_scared_d"].forEach(n => { const r = db.transaction("a").objectStore("a").get(n); r.onsuccess = () => { if (r.result) this.use(n, r.result); }; });
+      ["cs__base", "cs_tank", "cs_tank_form", "cs_tank_idle", "cs_tank_act", "cs_tank_turn", "cs_dog", "cs_dog_form", "cs_dog_idle", "cs_dog_act", "cs_dog_turn", "cs_cat", "cs_cat_form", "cs_cat_idle", "cs_cat_act", "cs_cat_turn", "cs_fish", "cs_fish_form", "cs_fish_idle", "cs_fish_act", "cs_fish_turn", "cs_whale", "cs_whale_form", "cs_whale_idle", "cs_whale_act", "cs_whale_turn", "cs_bunny", "cs_bunny_form", "cs_bunny_idle", "cs_bunny_act", "cs_bunny_turn", "cs_turtle", "cs_turtle_form", "cs_turtle_idle", "cs_turtle_act", "cs_turtle_turn", "cs_duck", "cs_duck_form", "cs_duck_idle", "cs_duck_act", "cs_duck_turn", "cs_elephant", "cs_elephant_form", "cs_elephant_idle", "cs_elephant_act", "cs_elephant_turn", "cs_dino", "cs_dino_form", "cs_dino_idle", "cs_dino_act", "cs_dino_turn", "cs_dragon", "cs_dragon_form", "cs_dragon_idle", "cs_dragon_act", "cs_dragon_turn", "cs_butterfly", "cs_butterfly_form", "cs_butterfly_idle", "cs_butterfly_act", "cs_bird", "cs_bird_form", "cs_bird_idle", "cs_bird_act", "cs_bird_turn", "cs_snail", "cs_snail_form", "cs_snail_idle", "cs_snail_turn", "cs_octopus", "cs_octopus_form", "cs_octopus_idle", "cs_octopus_act", "cs_crab", "cs_crab_form", "cs_crab_idle", "cs_crab_act", "cs_plane", "cs_plane_form", "cs_plane_idle", "cs_plane_act", "cs_plane_turn", "cs_rocket", "cs_rocket_form", "cs_rocket_idle", "cs_rocket_act", "cs_car", "cs_car_form", "cs_car_idle", "cs_car_act", "cs_car_turn", "cs_train", "cs_train_form", "cs_train_idle", "cs_train_act", "cs_train_turn", "cs_boat", "cs_boat_form", "cs_boat_idle", "cs_heli", "cs_heli_form", "cs_heli_idle", "cs_heli_turn", "cs_ufo", "cs_ufo_form", "cs_ufo_idle", "cs_ufo_act", "cs_ufo_turn", "cs_heart", "cs_heart_form", "cs_heart_idle", "cs_heart_act", "cs_star", "cs_star_form", "cs_star_idle", "cs_star_act", "cs_moon", "cs_moon_form", "cs_moon_idle", "cs_mushroom", "cs_mushroom_form", "cs_mushroom_idle", "cs_tree", "cs_tree_form", "cs_tree_idle", "cs_castle", "cs_castle_form", "cs_castle_idle", "cs_ghost", "cs_ghost_form", "cs_ghost_idle", "cs_ghost_act", "cs_pig", "cs_pig_form", "cs_pig_idle", "cs_pig_act", "cs_pig_turn", "cs_sheep", "cs_sheep_form", "cs_sheep_idle", "cs_sheep_act", "cs_sheep_turn", "cs_lion", "cs_lion_form", "cs_lion_idle", "cs_lion_act", "cs_lion_turn", "cs_giraffe", "cs_giraffe_form", "cs_giraffe_idle", "cs_giraffe_turn", "cs_horse", "cs_horse_form", "cs_horse_idle", "cs_horse_act", "cs_horse_turn", "cs_cow", "cs_cow_form", "cs_cow_idle", "cs_cow_act", "cs_cow_turn", "cs_penguin", "cs_penguin_form", "cs_penguin_idle", "cs_penguin_act", "cs_owl", "cs_owl_form", "cs_owl_idle", "cs_owl_act", "cs_frog", "cs_frog_form", "cs_frog_idle", "cs_frog_act", "cs_frog_turn", "cs_snake", "cs_snake_form", "cs_snake_idle", "cs_snake_act", "cs_snake_turn", "cs_shark", "cs_shark_form", "cs_shark_idle", "cs_shark_act", "cs_shark_turn", "cs_dolphin", "cs_dolphin_form", "cs_dolphin_idle", "cs_dolphin_act", "cs_dolphin_turn", "cs_bee", "cs_bee_form", "cs_bee_idle", "cs_bee_act", "cs_bee_turn", "cs_spider", "cs_spider_form", "cs_spider_idle", "cs_mouse", "cs_mouse_form", "cs_mouse_idle", "cs_mouse_act", "cs_mouse_turn", "cs_fox", "cs_fox_form", "cs_fox_idle", "cs_fox_act", "cs_fox_turn", "cs_bear", "cs_bear_form", "cs_bear_idle", "cs_bear_act", "cs_bear_turn", "cs_kangaroo", "cs_kangaroo_form", "cs_kangaroo_idle", "cs_kangaroo_act", "cs_kangaroo_turn", "cs_flamingo", "cs_flamingo_form", "cs_flamingo_idle", "cs_flamingo_turn", "cs_seahorse", "cs_seahorse_form", "cs_seahorse_idle", "cs_seahorse_turn", "cs_jellyfish", "cs_jellyfish_form", "cs_jellyfish_idle", "cs_jellyfish_act", "cs_unicorn", "cs_unicorn_form", "cs_unicorn_idle", "cs_unicorn_act", "cs_unicorn_turn", "cs_guitar", "cs_guitar_form", "cs_guitar_idle", "cs_guitar_act", "cs_umbrella", "cs_umbrella_form", "cs_umbrella_idle", "cs_umbrella_act", "cs_balloon", "cs_balloon_form", "cs_balloon_idle", "cs_balloon_act", "cs_lighthouse", "cs_lighthouse_form", "cs_lighthouse_idle", "cs_lighthouse_act", "cs_house", "cs_house_form", "cs_house_idle", "cs_house_act", "cs_robot", "cs_robot_form", "cs_robot_idle", "cs_robot_act", "cs_skull", "cs_skull_form", "cs_skull_idle", "cs_skull_act", "cs_crown", "cs_crown_form", "cs_crown_idle", "cs_crown_act", "cs_anchor", "cs_anchor_form", "cs_anchor_idle", "cs_sword", "cs_sword_form", "cs_sword_idle", "cs_sword_act", "cs_trophy", "cs_trophy_form", "cs_trophy_idle", "cs_trophy_act", "cs_cupcake", "cs_cupcake_form", "cs_cupcake_idle", "cs_icecream", "cs_icecream_form", "cs_icecream_idle", "cs_pizza", "cs_pizza_form", "cs_pizza_idle", "cs_pizza_turn", "cs_apple", "cs_apple_form", "cs_apple_idle", "cs_bell", "cs_bell_form", "cs_bell_idle", "cs_bell_act", "cs_kite", "cs_kite_form", "cs_kite_idle", "cs_submarine", "cs_submarine_form", "cs_submarine_idle", "cs_submarine_act", "cs_submarine_turn", "cs_bicycle", "cs_bicycle_form", "cs_bicycle_idle", "cs_bicycle_act", "cs_bicycle_turn", "cs_gamepad", "cs_gamepad_form", "cs_gamepad_idle", "cs_gamepad_act", "cf_e_none", "disco_glint", "cf_x_talk_me", "sm_hat", "sm_face", "sm_nose", "sm_arm", "sm_ball", "sm_ball_melt", "sm_puddle", "cf_ref", "cf_x_talk", "cf_x_wide", "cf_x_look_l", "cf_x_look_r", "cf_x_smile", "cf_x_grin", "cf_x_oo", "cf_x_blink", "cf_v_smile_talk", "cf_v_smile_l", "cf_v_smile_r", "cf_v_grin_talk", "cf_v_grin_l", "cf_v_grin_r", "cf_v_oo_talk", "cf_v_oo_l", "cf_v_oo_r", "cf_v_closed_talk", "cf_e_smirk", "cf_v_smirk_talk", "cf_v_smirk_l", "cf_v_smirk_r", "cf_e_wink", "cf_v_wink_talk", "cf_e_laugh", "cf_v_laugh_talk", "cf_e_shocked", "cf_v_shocked_talk", "cf_v_shocked_l", "cf_v_shocked_r", "cf_e_sleepy", "cf_v_sleepy_talk", "cf_v_sleepy_l", "cf_v_sleepy_r", "cf_e_sideeye", "cf_v_sideeye_talk", "cf_v_sideeye_l", "cf_v_sideeye_r", "cf_e_sad", "cf_v_sad_talk", "cf_v_sad_l", "cf_v_sad_r", "cf_e_tongue", "cf_v_tongue_talk", "cf_v_tongue_l", "cf_v_tongue_r", "cf_e_puffed", "cf_v_puffed_talk", "cf_v_puffed_l", "cf_v_puffed_r", "cf_e_determined", "cf_v_determined_talk", "cf_v_determined_l", "cf_v_determined_r", "cf_e_evil", "cf_v_evil_talk", "cf_v_evil_l", "cf_v_evil_r", "cf_e_smug", "cf_v_smug_talk", "cf_v_smug_l", "cf_v_smug_r", "cf_e_confused", "cf_v_confused_talk", "cf_v_confused_l", "cf_v_confused_r", "cf_e_disgusted", "cf_v_disgusted_talk", "cf_v_disgusted_l", "cf_v_disgusted_r", "cf_e_nervous", "cf_v_nervous_talk", "cf_v_nervous_l", "cf_v_nervous_r", "cf_e_kissy", "cf_v_kissy_talk", "cf_v_kissy_l", "cf_v_kissy_r", "cf_e_bored", "cf_v_bored_talk", "cf_v_bored_l", "cf_v_bored_r", "cf_e_excited", "cf_v_excited_talk", "cf_v_excited_l", "cf_v_excited_r", "cf_e_thinking", "cf_v_thinking_talk", "cf_v_thinking_l", "cf_v_thinking_r", "cf_e_scared", "cf_v_scared_talk", "cf_v_scared_l", "cf_v_scared_r", "jinx_flip", "jinx_spin", "jinx_fire", "jinx_launch", "artillery", "golden_banana", "golden_mango", "tower", "eagle_roll", "tank_drive", "soldier_run", "soldier_throw", "grenade", "explosion", "eagle_glide", "eagle_flap", "plane", "title", "chef_parachute", "chef_chop", "chef_jump", "chef_fly", "chef_truck", "cf_x_look_d", "cf_v_smile_d", "cf_v_grin_d", "cf_v_oo_d", "cf_v_smirk_d", "cf_v_shocked_d", "cf_v_sleepy_d", "cf_v_sideeye_d", "cf_v_sad_d", "cf_v_tongue_d", "cf_v_puffed_d", "cf_v_determined_d", "cf_v_evil_d", "cf_v_smug_d", "cf_v_confused_d", "cf_v_disgusted_d", "cf_v_nervous_d", "cf_v_kissy_d", "cf_v_bored_d", "cf_v_excited_d", "cf_v_thinking_d", "cf_v_scared_d"].forEach(n => { const r = db.transaction("a").objectStore("a").get(n); r.onsuccess = () => { if (r.result) this.use(n, r.result); }; });
     } catch (e) {}
   },
   // a piece of art arriving from the app (sent in parts)
@@ -3649,10 +3649,59 @@ const Face = {
   actDef: null, actAt: 0, glow2: [], sparks: [],
   doAction() { const a = SHAPES[this.kind] && SHAPES[this.kind].act, now = performance.now();
     if (!a || this.kind !== this.kindWant || this.tankM < .7 || (this.actDef && now - this.actAt < (this.actDef.dur || 900))) return;
-    this.actDef = a; this.actAt = now; this.actFresh = true; },
+    this.actDef = a; this.actAt = now; this.actFresh = true; this.playAct(); },
+  playAct() { const sa = this.sa, sp = ChefArt.sprites["cs_" + this.kind + "_act"]; if (sa && sa.phase === "idle" && sp) { sa.phase = "act"; sa.at = performance.now(); } },
+  // works out which shape animation is playing and how far through it is
+  shapeAnim(now, faceMode) {
+    const S = ChefArt.sprites, sa = this.sa || (this.sa = { phase: "none", at: 0, facing: 1 });
+    const has = k => S.cs__base && S["cs_" + k] && S["cs_" + k + "_form"], len = sp => sp ? sp.frames * (sp.ms || 120) : 0, X = 450;
+    const want = !faceMode && this.on && this.tank && has(this.kindWant);
+    const goingAway = () => !this.tank || this.kindWant !== sa.kind || !this.on;
+    const go = (ph) => { sa.phase = ph; sa.at = now; }, e = () => now - sa.at;
+    for (let guard = 0; guard < 4; guard++) {
+      const ph = sa.phase;
+      if (ph === "none") { if (want) { sa.kind = this.kindWant; sa.facing = Math.cos(this.ang) < 0 ? -1 : 1; go("toBase"); } break; }
+      if (ph === "toBase") { if (goingAway()) { go("fromBase"); sa.at = now - (X - Math.min(X, e())); break; } if (e() >= X) { go("form"); continue; } break; }
+      if (ph === "form") { if (goingAway()) { const done = Math.min(1, e() / len(S["cs_" + sa.kind + "_form"])); go("unform"); sa.at = now - (1 - done) * len(S["cs_" + sa.kind + "_form"]); break; }
+        if (e() >= len(S["cs_" + sa.kind + "_form"])) { go("idle"); continue; } break; }
+      if (ph === "idle" || ph === "act" || ph === "turn" || ph === "flip") {
+        if (goingAway()) { go("unform"); break; }
+        if (ph === "act" && e() >= len(S["cs_" + sa.kind + "_act"])) { go("idle"); continue; }
+        if (ph === "turn" && e() >= len(S["cs_" + sa.kind + "_turn"])) { sa.facing = sa.turnTo; go("idle"); continue; }
+        if (ph === "flip" && e() >= 320) { sa.facing = sa.turnTo; go("idle"); continue; }
+        if (ph === "idle") { const to = this.angTo > 1.5 ? -1 : 1; if (to !== sa.facing) { sa.turnTo = to; go(S["cs_" + sa.kind + "_turn"] ? "turn" : "flip"); } }
+        break; }
+      if (ph === "unform") { if (e() >= len(S["cs_" + sa.kind + "_form"])) { go("fromBase"); continue; } break; }
+      if (ph === "fromBase") { if (e() >= X) { go("none"); continue; } break; }
+      break;
+    }
+    const on = sa.phase !== "none", k = Math.min(1, e() / X);
+    return { on, puffA: sa.phase === "toBase" ? 1 - k : sa.phase === "fromBase" ? k : on ? 0 : 1, phase: sa.phase, e: e(), k };
+  },
+  // draws the current frame of the shape animation into the cloud's layer
+  drawShapeAnim(lg, SA, now, shade) {
+    const S = ChefArt.sprites, sa = this.sa, kd = sa.kind, ph = SA.phase, e = SA.e;
+    const frameOf = (sp, el, mode) => { const n = sp.frames, ms = sp.ms || 120; let f = Math.floor(el / ms);
+      if (mode === "pingpong") { const per = Math.max(1, 2 * (n - 1)); f %= per; return f < n ? f : per - f; }
+      if (mode === "back") return Math.max(0, n - 1 - Math.min(n - 1, f)); return Math.min(n - 1, f); };
+    const draw = (sp, f, alpha, mirror, squash = 1) => { if (!sp || alpha <= .01) return; const asp = sp.w / sp.h; let w = 640, h = w / asp; if (h > 440) { h = 440; w = h * asp; }
+      lg.save(); lg.globalAlpha = alpha; lg.filter = shade > .02 ? `brightness(${1 - .55 * shade}) saturate(${1 - .4 * shade})` : "none";
+      lg.translate(0, -28 - (this.speed > .8 ? Math.abs(Math.sin(this.walk || 0)) * 5 : 0)); lg.scale((mirror ? -1 : 1) * squash, 1);
+      lg.drawImage(sp.img, f * sp.w, 0, sp.w, sp.h, -w / 2, -h / 2, w, h); lg.restore(); };
+    const mir = sa.facing < 0, base = S.cs__base, still = S["cs_" + kd], form = S["cs_" + kd + "_form"], idle = S["cs_" + kd + "_idle"] || still, act = S["cs_" + kd + "_act"], turn = S["cs_" + kd + "_turn"];
+    const fade = 160;                                                                // short crossfades where one animation hands over to the next
+    if (ph === "toBase") draw(base, 0, SA.k, mir);
+    else if (ph === "fromBase") draw(base, 0, 1 - SA.k, mir);
+    else if (ph === "form") { const f = frameOf(form, e, "fwd"); draw(form, f, 1, mir); if (e < fade) draw(base, 0, 1 - e / fade, mir); }
+    else if (ph === "unform") { const f = frameOf(form, e, "back"), left = form.frames * (form.ms || 120) - e; draw(form, f, 1, mir); if (left < fade) draw(base, 0, 1 - left / fade, mir); if (e < fade) draw(idle, 0, 1 - e / fade, mir); }
+    else if (ph === "idle") { draw(idle, idle.frames ? frameOf(idle, e, "pingpong") : 0, 1, mir); }
+    else if (ph === "act") { draw(act, frameOf(act, e, "fwd"), 1, mir); if (e < fade) draw(idle, 0, 1 - e / fade, mir); const left = act.frames * (act.ms || 110) - e; if (left < fade) draw(idle, 0, 1 - left / fade, mir); }
+    else if (ph === "turn") { const back = sa.turnTo > 0; draw(turn, frameOf(turn, e, back ? "back" : "fwd"), 1, false); }
+    else if (ph === "flip") { const k = Math.min(1, e / 320), sq = Math.abs(Math.cos(k * Math.PI)); draw(idle, 0, 1, k < .5 ? mir : sa.turnTo < 0, Math.max(.05, sq)); }
+  },
   toggleDog() { this.shapeToggle("dog"); },
   barkAt: -1e9,
-  bark() { if (this.tank && this.kind === "dog" && this.tankM > .7 && performance.now() - this.barkAt > 450) { this.barkAt = performance.now(); this.wantBark = true; } },
+  bark() { if (this.tank && this.kind === "dog" && this.tankM > .7 && performance.now() - this.barkAt > 450) { this.barkAt = performance.now(); this.wantBark = true; this.playAct(); } },
   shots: [], fireAt: 0, woofs: [],
   // a little synthesized bark (used unless a bark sound was added with the 🔊+ button)
   barkSound() { const c = Sound.ctx; if (!c) return; const t0 = c.currentTime;
@@ -3661,7 +3710,7 @@ const Face = {
       g.gain.setValueAtTime(.0001, t0 + d); g.gain.exponentialRampToValueAtTime(.35, t0 + d + .012); g.gain.exponentialRampToValueAtTime(.0001, t0 + d + .13);
       o.connect(f); f.connect(g); g.connect(c.destination); o.start(t0 + d); o.stop(t0 + d + .15); });
     Sound.burst(t0, .1, .06, "bandpass", 1200); },
-  fire() { if (this.tank && this.kind === "tank" && this.tankM > .7 && performance.now() - this.fireAt > 450) { this.fireAt = performance.now(); this.wantFire = true; } },
+  fire() { if (this.tank && this.kind === "tank" && this.tankM > .7 && performance.now() - this.fireAt > 450) { this.fireAt = performance.now(); this.wantFire = true; this.playAct(); } },
   goTo(nx, ny) { const p = [Math.max(0, Math.min(1, nx)) * 2560, Math.max(0, Math.min(1, ny)) * 1440];
     if (this.tank) this.tankTo = p; else { this.steerTo = p; this.steerAt = performance.now(); } },
   rain: false,
@@ -3838,10 +3887,10 @@ const Face = {
       // the cloud first.
       const shapeOn = this.tank && this.kind === this.kindWant;
       this.tankM += ((shapeOn ? 1 : 0) - this.tankM) * (shapeOn ? .018 : .009);
-      if (this.tankM < .03) this.kind = this.kindWant;
+      if (this.tankM < .03 && (!this.sa || this.sa.phase === "none")) this.kind = this.kindWant;
       if (!this.tank || !shapeOn) this.speed = 0;
-      if (!this.tank && this.tankWas) { this.tankWas = false;                         // a soft poof as it puffs back up into a cloud
-        for (let i = 0; i < 40; i++) { const a = rand(0, 6.283), sp = rand(1, 4); this.puffs.push({ x: px + rand(-160, 160), y: py + rand(-30, 50), vx: Math.cos(a) * sp, vy: Math.sin(a) * sp * .6 - 1, r: rand(22, 40), born: t, life: rand(1600, 2800) }); } }
+      if (!this.tank && this.tankWas) { this.tankWas = false;                         // a soft poof as it puffs back up into a cloud (not when its animations do it)
+        if (!this.sa || this.sa.phase === "none") for (let i = 0; i < 40; i++) { const a = rand(0, 6.283), sp = rand(1, 4); this.puffs.push({ x: px + rand(-160, 160), y: py + rand(-30, 50), vx: Math.cos(a) * sp, vy: Math.sin(a) * sp * .6 - 1, r: rand(22, 40), born: t, life: rand(1600, 2800) }); } }
       if (this.tank) this.tankWas = true; this.stormK += ((this.storm ? 1 : 0) - this.stormK) * .012;
       this.darkM += (this.darkTo - this.darkM) * .04; const shade = Math.max(this.stormK, this.darkM);
       this.ang += (this.angTo - this.ang) * .03;                                     // turning around takes about a second
@@ -3929,13 +3978,20 @@ const Face = {
       // real, slowly rolling cloud
       const AS = ChefArt.sprites, faceMode = this.faceOn && this.tankM < .03, noFace = !faceMode || this.mood === "none";
       const artCloud = faceMode && !!AS.cf_ref && !(this.mood === "none" && !AS.cf_e_none);
-      // the shape's picture shows once it has formed and is facing left or right; it fades back to puffs while it turns
+      // ---- shape animations from the Art screen (CLOUD SHAPES ART): the cloud crossfades into the plain-cloud picture,
+      // the forming animation plays (it reshapes into the shape), then the idle animation loops (played forwards then
+      // backwards, so it always loops smoothly). Actions and turning around play their own animations. Going back to a
+      // cloud plays the forming animation backwards, then crossfades to the real cloud. Used when the plain cloud, the
+      // shape's picture and its forming animation are all in OBS; otherwise the puffs do it all.
+      const SA = this.shapeAnim(performance.now(), faceMode);
+      // (without those: the shape's still picture shows once formed and is facing sideways; it fades back to puffs while it turns
       // around, or does an action that moves its parts (so the 3D turn and the moving parts still show)
       const shapeArt = ChefArt.sprites["cs_" + this.kind], facing = Math.abs(Math.cos(this.ang + (A.ang || 0)));
       const artWant = shapeArt && this.tank && this.kind === this.kindWant && this.tankM > .85 && facing > .5 ? 1 : 0;
       this.artK = (this.artK || 0) + (artWant - (this.artK || 0)) * (artWant ? .035 : .06);
       if (artCloud) this.drawArtCloud(lg, AS, t);
-      else RealCloud.draw(lg, t, this.tankM, shade, this.ang + (A.ang || 0), this.kind, { walk: this.speed > .8 ? this.walk : 0, jerk: A.jerk, snap: A.snap, hide: A.hide, trunkUp: A.trunkUp, bark: Math.max(0, 1 - (performance.now() - this.barkAt) / 380) * (performance.now() - this.barkAt < 380 ? 1 : 0) }, shapeArt, this.artK * Math.min(1, this.tankM) * Math.min(1, Math.max(0, (facing - .45) / .25)));
+      else RealCloud.draw(lg, t, SA.on ? 0 : this.tankM, shade, this.ang + (A.ang || 0), this.kind, { walk: this.speed > .8 ? this.walk : 0, jerk: A.jerk, snap: A.snap, hide: A.hide, trunkUp: A.trunkUp, bark: Math.max(0, 1 - (performance.now() - this.barkAt) / 380) * (performance.now() - this.barkAt < 380 ? 1 : 0) }, SA.on ? null : shapeArt, this.artK * Math.min(1, this.tankM) * Math.min(1, Math.max(0, (facing - .45) / .25)), SA.on ? SA.puffA : 1);
+      if (SA.on && !artCloud) this.drawShapeAnim(lg, SA, performance.now(), shade);
       lg.globalCompositeOperation = "source-atop";
       if (faceMode) { lg.globalAlpha = .2 + .08 * Math.sin(t / 1300); lg.drawImage(Smoke.lime, -260 + Math.sin(t / 2100) * 60, -40, 240, 180);
         lg.globalAlpha = .22 + .08 * Math.sin(t / 1700 + 2); lg.drawImage(Smoke.purple, 30 + Math.sin(t / 1900) * 60, -60, 260, 190); }
@@ -4454,8 +4510,8 @@ const RealCloud = {
      ang: which way the shape faces (0 = right, π = left; in between it's turning). kind: "tank" or "dog".
      an: { walk (step phase, 0 when standing), bark (0..1 while barking) } */
   side: 1,
-  draw(lg, t, m, s, ang, kind, an, art, artA) {
-    this.init(); artA = art ? artA || 0 : 0; const pa = 1 - Math.pow(artA, .7) * .97;  // puffs fade away as the picture dissolves in
+  draw(lg, t, m, s, ang, kind, an, art, artA, puffA = 1) {
+    this.init(); artA = art ? artA || 0 : 0; const pa = (1 - Math.pow(artA, .7) * .97) * puffA;  // puffs fade away as the picture dissolves in
     const SP = [];                                                                   // each shape spot: rest x, y, moved x, y, depth
     const ca = Math.cos(ang), sa = Math.sin(ang);
     if (m > .02) this.side = ca < 0 ? -1 : 1;                                         // the cloud faces the way the shape last faced
@@ -5629,7 +5685,7 @@ window.KZRelay = function (topic, onMessage, servers) {
 (() => {
   const qs = new URLSearchParams(location.search), key = qs.get("ctl");
   if (!key || !window.WebSocket) return;
-  const PAGE = "html3", VERSION = "7f312c0";
+  const PAGE = "html3", VERSION = "e89385d";
   let said = false;
   const relay = KZRelay("kzctl/" + key, c => {
     if (!c || c.from === "overlay" || (c.to && c.to !== "all" && c.to !== PAGE)) return;
