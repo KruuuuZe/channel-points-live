@@ -3610,10 +3610,25 @@ const Face = {
   faceOn: (() => { try { return localStorage.getItem("kz_face_on") === "1"; } catch { return false; } })(),
   toggleFace() { this.faceOn = !this.faceOn; try { localStorage.setItem("kz_face_on", this.faceOn ? "1" : "0"); } catch {} },
   storm: false, stormK: 0, tank: false, tankM: 0, tankTo: null, flip: 1,
+  // the darkness slider in the app: 0 = bright white .. 1 = dark storm grey (lightning strikes still only with Storm on)
+  darkTo: 0, darkM: 0,
+  setDark(v) { this.darkTo = Math.max(0, Math.min(1, +v || 0)); },
   toggleStorm() { this.storm = !this.storm; },
   kind: "tank", kindWant: "tank", ang: 0, angTo: 0,
   shapeToggle(k) { if (this.tank && this.kindWant === k) this.tank = false; else { this.tank = true; this.kindWant = k; } this.tankTo = null; if (this.tank && !this.on) this.toggle(); },
   toggleTank() { this.shapeToggle("tank"); },
+  /* the shape buttons: the first tap turns the cloud into that shape; tapping it again while it's that shape does
+     its special action (or, if it hasn't got one, turns it back into a cloud). "cloud" turns it back into a cloud. */
+  setShape(k) {
+    if (k === "cloud") { this.tank = false; return; }
+    if (!SHAPES[k] && k !== "tank" && k !== "dog") return;
+    if (this.tank && this.kindWant === k) { if (k === "tank") return this.fire(); if (k === "dog") return this.bark(); if (SHAPES[k].act) this.doAction(); else this.tank = false; return; }
+    this.tank = true; this.kindWant = k; this.tankTo = null; this.actDef = null; if (!this.on) this.toggle();
+  },
+  actDef: null, actAt: 0, glow2: [], sparks: [],
+  doAction() { const a = SHAPES[this.kind] && SHAPES[this.kind].act, now = performance.now();
+    if (!a || this.kind !== this.kindWant || this.tankM < .7 || (this.actDef && now - this.actAt < (this.actDef.dur || 900))) return;
+    this.actDef = a; this.actAt = now; this.actFresh = true; },
   toggleDog() { this.shapeToggle("dog"); },
   barkAt: -1e9,
   bark() { if (this.tank && this.kind === "dog" && this.tankM > .7 && performance.now() - this.barkAt > 450) { this.barkAt = performance.now(); this.wantBark = true; } },
@@ -3802,18 +3817,60 @@ const Face = {
       if (!this.tank && this.tankWas) { this.tankWas = false;                         // a soft poof as it puffs back up into a cloud
         for (let i = 0; i < 40; i++) { const a = rand(0, 6.283), sp = rand(1, 4); this.puffs.push({ x: px + rand(-160, 160), y: py + rand(-30, 50), vx: Math.cos(a) * sp, vy: Math.sin(a) * sp * .6 - 1, r: rand(22, 40), born: t, life: rand(1600, 2800) }); } }
       if (this.tank) this.tankWas = true; this.stormK += ((this.storm ? 1 : 0) - this.stormK) * .012;
+      this.darkM += (this.darkTo - this.darkM) * .04; const shade = Math.max(this.stormK, this.darkM);
       this.ang += (this.angTo - this.ang) * .03;                                     // turning around takes about a second
       this.pos = [px, py];
       // the eyes look straight ahead (at the top and at the bottom)
       this.lookTo = [0, 0];
       this.recoil = (this.recoil || 0) * .86;
-      const bob = 1 - this.tankM * .75, sq = 1, x = px + Math.sin(t / 2300) * 18 * bob - this.recoil * Math.cos(this.ang), y = py + (Math.sin(t / 900) * 12 + Math.sin(t / 2700) * 9) * bob;
+      // ---- a shape's special action (the second tap on its button), worked out as how far through it we are
+      const A = {}, act = this.actDef, ak = act ? (performance.now() - this.actAt) / (act.dur || 900) : 2;
+      if (act && ak < 1) { const env = Math.sin(ak * Math.PI);
+        if (act.hop) A.y = -Math.sin(ak * Math.PI) * act.hop;
+        if (act.shake) A.x = (Math.random() - .5) * 2 * act.shake * (1 - ak);
+        if (act.pulse) A.s = 1 + .14 * Math.abs(Math.sin(ak * Math.PI * 3));
+        if (act.spin) A.ang = ak * ak * (3 - 2 * ak) * Math.PI * 2;
+        if (act.jerk) A.jerk = Math.min(1, ak * 2.5);
+        if (act.snap) A.snap = ak;
+        if (act.trunkUp) A.trunkUp = ak;
+        if (act.hide) A.hide = ak < .2 ? ak / .2 : ak > .8 ? (1 - ak) / .2 : 1;
+        if (act.wobble) A.x = Math.sin(ak * 30) * 6;
+        if (act.blast) A.y = ak < .45 ? -Math.pow(ak / .45, 2) * (py + 400) : ak < .55 ? -(py + 400) : -(1 - (1 - Math.pow(1 - (ak - .55) / .45, 3))) * (py + 400);
+      } else if (act) this.actDef = null;
+      const bob = 1 - this.tankM * .75, sq = 1, x = px + Math.sin(t / 2300) * 18 * bob - this.recoil * Math.cos(this.ang) + (A.x || 0), y = py + (Math.sin(t / 900) * 12 + Math.sin(t / 2700) * 9) * bob + (A.y || 0);
       // ---- FIRE: a plume of cloud bursts out of the end of the gun, the tank kicks back, and a cloud cannonball flies
       // straight ahead the way the gun points until it leaves the screen
       if (this.wantFire) { this.wantFire = false; const ts0 = SC * (1 + .3 * this.tankM), d = Math.cos(this.ang) < 0 ? -1 : 1, mx = x + 350 * Math.cos(this.ang) * ts0, my = y - 30 * ts0;
         for (let i = 0; i < 34; i++) { const a = (d > 0 ? 0 : Math.PI) + rand(-.55, .55), sp = rand(3, 13); this.puffs.push({ x: mx, y: my + rand(-6, 6), vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - .6, r: rand(14, 30), born: t, life: rand(900, 2000) }); }
         for (let i = 0; i < 10; i++) this.puffs.push({ x: mx - d * rand(0, 40), y: my + rand(-10, 10), vx: rand(-1, 1), vy: rand(-2.5, -.5), r: rand(20, 34), born: t, life: rand(1400, 2400) });
         this.shots.push({ x: mx + d * 20, y: my, vx: d * 30, born: t, spin: rand(0, 6.28) }); this.recoil = 16;
+      }
+      // ---- a shape's special action: the one-off bits when it starts (words, puffs, glow, sparkles), and the bits that
+      // keep going while it runs (steam, skywriting trail, rocket exhaust, the UFO's beam)
+      { const ts0 = SC * (1 + .3 * this.tankM) * (A.s || 1), c = Math.cos(this.ang), dirc = c < 0 ? -1 : 1, lp = (lx, ly) => [x + lx * c * ts0, y + ly * ts0];
+        const spray = (P, n) => { const [sx, sy] = lp(P.x, P.y); for (let i = 0; i < (n || P.n); i++) { const a = (P.a + rand(-P.spread, P.spread)) * Math.PI / 180, sp = rand(...P.sp);
+          this.puffs.push({ x: sx, y: sy, vx: Math.cos(a) * sp * dirc, vy: Math.sin(a) * sp - (P.rise ? 1 : 0), r: rand(...P.r), born: t, life: rand(900, 1900), dark: P.dark }); } };
+        if (this.actFresh && act) { this.actFresh = false;
+          if (act.text) { const [tx2, ty2] = lp(act.textAt ? act.textAt[0] : 120, act.textAt ? act.textAt[1] : -150); this.woofs.push({ x: tx2 + 30 * dirc, y: Math.max(60, ty2), born: t, text: act.text }); }
+          if (act.puffs) spray(act.puffs);
+          if (act.glow) { const [gx, gy] = lp(act.puffs ? act.puffs.x + 60 : 0, act.puffs ? act.puffs.y : 0); this.glow2.push({ x: gx, y: gy, born: t, dur: act.dur || 900, c: act.glow, dx: 9 * dirc }); }
+          if (act.sparkle) for (let i = 0; i < act.sparkle; i++) { const [sx, sy] = lp(rand(-230, 230), rand(-170, 90)); this.sparks.push({ x: sx, y: sy, born: t + rand(0, 500), s: rand(.5, 1.2) }); }
+        }
+        if (act && ak < 1) {
+          if (act.steam && ak < .75 && Math.random() < .6) { const [sx, sy] = lp(act.steam.x, act.steam.y); this.puffs.push({ x: sx + rand(-8, 8), y: sy, vx: rand(-.8, .8) - dirc * 1.5, vy: rand(-5, -3), r: rand(14, 26), born: t, life: rand(1400, 2400) }); }
+          if (act.trail && this.puffs.length < 900) { const [sx, sy] = lp(-255, 0); for (let i = 0; i < 2; i++) this.puffs.push({ x: sx + rand(-6, 6), y: sy + rand(-6, 6), vx: -dirc * rand(.2, .8), vy: rand(-.2, .2), r: rand(14, 22), born: t, life: rand(2600, 4000), keep: true }); }
+          if (act.blast && (ak < .45 || ak > .55) && this.puffs.length < 900) { const [sx, sy] = lp(0, 125); for (let i = 0; i < 3; i++) this.puffs.push({ x: sx + rand(-14, 14), y: sy, vx: rand(-1.5, 1.5), vy: rand(4, 9), r: rand(14, 26), born: t, life: rand(700, 1400) }); }
+          if (act.beam) { const [bx, by] = lp(0, 55), k = Math.min(1, ak * 5, (1 - ak) * 5), wTop = 70 * ts0 * 2, wBot = 260;
+            g.save(); g.globalCompositeOperation = "lighter"; const gr = g.createLinearGradient(0, by, 0, H); gr.addColorStop(0, `rgba(200,255,210,${.42 * k})`); gr.addColorStop(1, `rgba(200,255,210,${.08 * k})`);
+            g.fillStyle = gr; g.beginPath(); g.moveTo(bx - wTop / 2, by); g.lineTo(bx + wTop / 2, by); g.lineTo(bx + wBot, H); g.lineTo(bx - wBot, H); g.closePath(); g.fill();
+            for (let i = 0; i < 3; i++) { const yy = by + ((t / 6 + i * 200) % (H - by)); g.fillStyle = `rgba(230,255,235,${.3 * k})`; g.fillRect(bx - 30 - (yy - by) * .25, yy, 60 + (yy - by) * .5, 3); }
+            g.restore(); }
+        }
+        this.glow2 = this.glow2.filter(q => { const k = (t - q.born) / q.dur; if (k >= 1) return false; const env = Math.sin(k * Math.PI), R = 180; g.save(); g.globalCompositeOperation = "lighter";
+          const gx = q.x + q.dx * k * 30, gr = g.createRadialGradient(gx, q.y, 0, gx, q.y, R); gr.addColorStop(0, `rgba(${q.c},${.5 * env})`); gr.addColorStop(1, `rgba(${q.c},0)`); g.fillStyle = gr; g.fillRect(gx - R, q.y - R, R * 2, R * 2); g.restore(); return true; });
+        this.sparks = this.sparks.filter(q => { const k = (t - q.born) / 700; if (k >= 1) return false; if (k < 0) return true; const env = Math.sin(k * Math.PI), z = 30 * q.s * env;
+          g.save(); g.globalCompositeOperation = "lighter"; g.globalAlpha = env; g.fillStyle = "#fff"; g.beginPath(); g.moveTo(q.x, q.y - z); g.lineTo(q.x + z * .15, q.y - z * .15); g.lineTo(q.x + z, q.y); g.lineTo(q.x + z * .15, q.y + z * .15);
+          g.lineTo(q.x, q.y + z); g.lineTo(q.x - z * .15, q.y + z * .15); g.lineTo(q.x - z, q.y); g.lineTo(q.x - z * .15, q.y - z * .15); g.closePath(); g.fill(); g.restore(); return true; });
       }
       // ---- BARK: the dog's head jerks up with its mouth open, a little puff of cloud pops out, and "WOOF!" floats up
       if (this.wantBark) { this.wantBark = false; const ts0 = SC * (1 + .3 * this.tankM), c = Math.cos(this.ang), mx = x + 255 * c * ts0, my = y - 40 * ts0;
@@ -3842,23 +3899,24 @@ const Face = {
       const AS = ChefArt.sprites, faceMode = this.faceOn && this.tankM < .03, noFace = !faceMode || this.mood === "none";
       const artCloud = faceMode && !!AS.cf_ref && !(this.mood === "none" && !AS.cf_e_none);
       if (artCloud) this.drawArtCloud(lg, AS, t);
-      else RealCloud.draw(lg, t, this.tankM, this.stormK, this.ang, this.kind, { walk: this.speed > .8 ? this.walk : 0, bark: Math.max(0, 1 - (performance.now() - this.barkAt) / 380) * (performance.now() - this.barkAt < 380 ? 1 : 0) });
+      else RealCloud.draw(lg, t, this.tankM, shade, this.ang + (A.ang || 0), this.kind, { walk: this.speed > .8 ? this.walk : 0, jerk: A.jerk, snap: A.snap, hide: A.hide, trunkUp: A.trunkUp, bark: Math.max(0, 1 - (performance.now() - this.barkAt) / 380) * (performance.now() - this.barkAt < 380 ? 1 : 0) });
       lg.globalCompositeOperation = "source-atop";
       if (faceMode) { lg.globalAlpha = .2 + .08 * Math.sin(t / 1300); lg.drawImage(Smoke.lime, -260 + Math.sin(t / 2100) * 60, -40, 240, 180);
         lg.globalAlpha = .22 + .08 * Math.sin(t / 1700 + 2); lg.drawImage(Smoke.purple, 30 + Math.sin(t / 1900) * 60, -60, 260, 190); }
       // storm: lightning lighting up the inside of the cloud in soft flickers
-      if (this.on && this.stormK > .4 && t > nextFlash) { nextFlash = t + rand(1200, 4200); flashes.push({ x: rand(-200, 200), y: rand(-150, 40), at: t, pat: Math.random() < .5 ? [0, 90, 160, 300] : [0, 140] }); }
+      // soft lightning glowing inside the cloud: more often (and brighter) the darker the cloud is
+      if (this.on && shade > .35 && t > nextFlash) { nextFlash = t + rand(1200, 4200) / Math.max(.5, shade); flashes.push({ x: rand(-200, 200), y: rand(-150, 40), at: t, pat: Math.random() < .5 ? [0, 90, 160, 300] : [0, 140], str: Math.min(1, (shade - .3) * 1.6) }); }
       for (let i = flashes.length - 1; i >= 0; i--) { const f = flashes[i], a = t - f.at; if (a > 700) { flashes.splice(i, 1); continue; }
         let k = 0; f.pat.forEach((st, j) => { if (j % 2 === 0) { const e = a - st; if (e >= 0 && e < 260) k = Math.max(k, Math.exp(-e / 90)); } });
         if (k > .01) { const gr = lg.createRadialGradient(f.x, f.y, 0, f.x, f.y, 240); gr.addColorStop(0, `rgba(235,240,255,${.85 * k})`); gr.addColorStop(.5, `rgba(190,205,255,${.4 * k})`); gr.addColorStop(1, "rgba(190,205,255,0)");
-          lg.globalAlpha = 1; lg.fillStyle = gr; lg.fillRect(f.x - 240, f.y - 240, 480, 480); f.k = k; } else f.k = 0; }
+          lg.globalAlpha = f.str == null ? 1 : f.str; lg.fillStyle = gr; lg.fillRect(f.x - 240, f.y - 240, 480, 480); f.k = k * (f.str == null ? 1 : f.str); } else f.k = 0; }
       if (faceMode && t > nextGlow) { nextGlow = t + rand(1500, 4000); this.glows.push({ x: rand(-180, 180), y: rand(-60, 60), born: t, dur: rand(500, 900), c: Math.random() < .5 ? [190, 140, 255] : [190, 245, 140] }); }
       this.glows = this.glows.filter(f => { const k = (t - f.born) / f.dur; if (k >= 1) return false; const env = Math.sin(k * Math.PI) * (.8 + .2 * Math.sin(k * 50)), [r, gg, b] = f.c;
         const gr = lg.createRadialGradient(f.x, f.y, 0, f.x, f.y, 170); gr.addColorStop(0, `rgba(${r},${gg},${b},${.55 * env})`); gr.addColorStop(1, `rgba(${r},${gg},${b},0)`);
         lg.globalAlpha = 1; lg.fillStyle = gr; lg.fillRect(f.x - 170, f.y - 170, 340, 340); return true; });
       lg.globalCompositeOperation = "source-over"; lg.globalAlpha = 1;
       // storm: realistic lightning bolts out of the bottom of the cloud (drawn behind it), with a faint flash of the screen
-      if (this.on && this.stormK > .6 && t > nextStormBolt) {
+      if (this.on && this.storm && this.stormK > .6 && t > nextStormBolt) {
         nextStormBolt = t + rand(3500, 9000); const sx = x + rand(-120, 120) * SC, sy = y + 40 * SC, ex = sx + rand(-500, 500), ey = Math.random() < .6 ? H + 10 : rand(H * .45, H * .85);
         storms.push({ segs: RealCloud.bolt(sx, sy, ex, ey), at: t, pat: [0, 70, 130, 230] });
         flashes.push({ x: (sx - x) / SC, y: 40, at: t, pat: [0, 70, 130, 230] });
@@ -3870,7 +3928,7 @@ const Face = {
         b.segs.forEach(sg => { [[sg.w * 5, `rgba(150,170,255,${.18 * k})`, 30], [sg.w * 2, `rgba(200,215,255,${.55 * k})`, 12], [sg.w, `rgba(255,255,255,${k})`, 0]].forEach(([lw, col, bl]) => {
           g.lineWidth = lw; g.strokeStyle = col; g.shadowColor = "rgba(170,190,255,.9)"; g.shadowBlur = bl; g.beginPath(); sg.pts.forEach(([u, v], j) => j ? g.lineTo(u, v) : g.moveTo(u, v)); g.stroke(); }); });
         g.restore(); }
-      g.globalAlpha = this.a; g.save(); g.filter = artCloud ? "blur(.4px)" : "blur(1.6px)"; const ts = SC * (1 + .3 * this.tankM);
+      g.globalAlpha = this.a; g.save(); g.filter = artCloud ? "blur(.4px)" : "blur(1.6px)"; const ts = SC * (1 + .3 * this.tankM) * (A.s || 1);
       g.drawImage(layer, x - LW / 2 * es * ts, y - (LH / 2 + 30) * es * ts, LW * es * ts, LH * es * ts); g.restore();
       // storm: a soft glow around the cloud when the lightning inside it flashes
       flashes.forEach(f => { if (!f.k) return; const fx = x + f.x * SC, fy = y + f.y * SC, R = 300; g.save(); g.globalCompositeOperation = "lighter"; const gr = g.createRadialGradient(fx, fy, 0, fx, fy, R);
@@ -3974,8 +4032,8 @@ const Face = {
         g.restore(); return true; });
       // ---- "WOOF!" in soft cloud-white letters, floating up and fading
       this.woofs = this.woofs.filter(w => { const k = (t - w.born) / 1100; if (k >= 1) return false; g.save(); g.globalAlpha = Math.min(1, (1 - k) * 2) * Math.min(1, k * 8);
-        g.font = `900 ${Math.round(44 + 10 * Math.sin(Math.min(1, k * 4) * Math.PI))}px ${FONT}`; g.textAlign = "center"; g.lineWidth = 8; g.strokeStyle = "rgba(120,135,160,.6)"; g.strokeText("WOOF!", w.x, w.y - k * 60);
-        g.fillStyle = "#fff"; g.shadowColor = "rgba(255,255,255,.8)"; g.shadowBlur = 12; g.fillText("WOOF!", w.x, w.y - k * 60); g.restore(); return true; });
+        g.font = `900 ${Math.round(44 + 10 * Math.sin(Math.min(1, k * 4) * Math.PI))}px ${FONT}`; g.textAlign = "center"; g.lineWidth = 8; g.strokeStyle = "rgba(120,135,160,.6)"; g.strokeText(w.text || "WOOF!", w.x, w.y - k * 60);
+        g.fillStyle = "#fff"; g.shadowColor = "rgba(255,255,255,.8)"; g.shadowBlur = 12; g.fillText(w.text || "WOOF!", w.x, w.y - k * 60); g.restore(); return true; });
       // ---- cloud cannonballs in flight: a tight spinning ball of cloud leaving a puffy trail
       this.shots = this.shots.filter(b => { const s = dt / 16; b.x += b.vx * s; b.spin += .2 * s; if (b.x < -150 || b.x > W + 150) return false;
         if (this.puffs.length < 900) this.puffs.push({ x: b.x - Math.sign(b.vx) * 18, y: b.y + rand(-5, 5), vx: -b.vx * .05, vy: rand(-.4, .2), r: rand(14, 24), born: t, life: rand(800, 1500) });
@@ -3985,13 +4043,86 @@ const Face = {
       for (let i = this.puffs.length - 1; i >= 0; i--) {
         const q = this.puffs[i], k = (t - q.born) / q.life; if (k >= 1) { this.puffs.splice(i, 1); continue; }
         q.x += q.vx * dt / 16; q.y += q.vy * dt / 16; q.vx *= .955; q.vy = q.vy * .955 - .05;
-        const r = q.r * (1 + k * 2.2); g.globalAlpha = .65 * (1 - k) * Math.min(1, k * 10); g.drawImage(i % 3 ? Smoke.light : Smoke.hi, q.x - r, q.y - r, r * 2, r * 2);
+        const r = q.r * (1 + k * (q.keep ? .8 : 2.2)); g.globalAlpha = (q.dark ? .85 : .65) * (1 - k) * Math.min(1, k * 10); g.drawImage(q.dark ? Smoke.base : i % 3 ? Smoke.light : Smoke.hi, q.x - r, q.y - r, r * 2, r * 2);
       }
       g.globalAlpha = 1;
-      if (this.a > .01 || this.puffs.length || this.drops.length || this.on || this.snowmen.length || this.flakes.length || storms.length || this.shots.length || this.woofs.length) requestAnimationFrame(frame); else { g.clearRect(0, 0, W, H); this.run = false; }
+      if (this.a > .01 || this.puffs.length || this.drops.length || this.on || this.snowmen.length || this.flakes.length || storms.length || this.shots.length || this.woofs.length || this.sparks.length) requestAnimationFrame(frame); else { g.clearRect(0, 0, W, H); this.run = false; }
     };
     requestAnimationFrame(frame);
   }
+};
+
+/* ================= cloud shapes =================
+   Every shape is drawn from simple parts, all facing right, about 500 wide, standing on y ≈ 110:
+   E = a filled oval, L = a thick line, T = a filled triangle, R = a filled box, D = a disc with a bite out of it.
+   part names drive the animations (legs walk, tails wag, wings flap, rotors spin, tentacles wave, heads jerk
+   when it makes a noise). `z` is depth (+ toward you), so shapes turn around in 3D. `act` is its special action. */
+const E = (cx, cy, rx, ry, part = "body", dark = 0, z) => ({ t: "e", cx, cy, rx, ry, part, dark, z });
+const L = (x0, y0, x1, y1, w, part = "body", dark = 0, z = 0) => ({ t: "l", x0, y0, x1, y1, w, part, dark, z });
+const T3 = (x0, y0, x1, y1, x2, y2, part = "body", dark = 0, z) => ({ t: "t", x0, y0, x1, y1, x2, y2, part, dark, z });
+const R = (x0, y0, x1, y1, part = "body", dark = 0, z) => ({ t: "r", x0, y0, x1, y1, part, dark, z });
+const D = (cx, cy, r, bx, by, br, part = "body", dark = 0) => ({ t: "d", cx, cy, r, bx, by, br, part, dark });
+const legs4 = (xb, xf, top, bot, w, dark = .08) => [L(xb, top, xb, bot, w, "legBL", dark, 26), L(xb + 6, top, xb + 6, bot, w, "legBR", dark, -26), L(xf, top, xf, bot, w, "legFL", dark, 26), L(xf + 6, top, xf + 6, bot, w, "legFR", dark, -26)];
+const SHAPES = {
+  cat: { e: "🐱", n: "Cat", tail: -125, prims: [E(-10, 35, 120, 48), E(130, -38, 52, 46, "head"), L(108, -72, 98, -118, 14, "ear"), L(152, -74, 162, -120, 14, "ear"), ...legs4(-85, 70, 70, 112, 15),
+      L(-122, 20, -170, -40, 12, "tail"), L(-170, -40, -158, -92, 10, "tail"), E(146, -46, 6, 7, "eye", .95, 30), E(118, -46, 6, 7, "eye", .95, 34), E(178, -30, 7, 5, "nose", .8, 20)],
+    act: { text: "MEOW!", jerk: 1, hop: 50 } },
+  fish: { e: "🐟", n: "Fish", tail: -140, prims: [E(0, 0, 150, 72), L(-140, 0, -215, -58, 22, "tail"), L(-140, 0, -215, 58, 22, "tail"), L(-10, -66, -65, -108, 14, "fin"), L(5, 66, -35, 100, 12, "fin"), E(96, -14, 9, 9, "eye", .95, 34)],
+    act: { puffs: { x: 160, y: 5, a: -80, spread: 25, n: 14, sp: [2, 5], r: [6, 14], rise: true }, text: "blub" } },
+  whale: { e: "🐳", n: "Whale", tail: -190, prims: [E(0, 10, 200, 82), L(-185, 0, -250, -55, 22, "tail"), L(-250, -55, -295, -80, 22, "tail"), L(-250, -55, -235, -110, 22, "tail"), L(30, 60, -25, 102, 16, "fin"), E(140, 12, 8, 8, "eye", .95, 40)],
+    act: { puffs: { x: 90, y: -80, a: -90, spread: 22, n: 40, sp: [6, 15], r: [10, 22] } } },
+  bunny: { e: "🐰", n: "Bunny", tail: -110, prims: [E(-20, 40, 100, 62), E(92, -18, 50, 45, "head"), L(76, -52, 60, -152, 16, "ear"), L(102, -52, 108, -152, 16, "ear"), E(-122, 22, 26, 26, "tail"), L(-70, 90, -20, 110, 18, "legBL", .05, 25), L(55, 70, 66, 112, 13, "legFL", .05, 20), E(112, -26, 6, 7, "eye", .95, 34), E(140, -8, 6, 5, "nose", .7, 20)],
+    act: { hop: 160, dur: 900 } },
+  turtle: { e: "🐢", n: "Turtle", tail: -150, prims: [E(0, 10, 145, 72, "body", .05), L(130, 30, 165, 22, 18, "head"), E(185, 18, 36, 28, "head"), ...legs4(-85, 70, 60, 105, 20, .12), L(-140, 40, -170, 50, 10, "tail"), E(198, 10, 5, 6, "eye", .95, 22)],
+    act: { hide: 1, dur: 2600 } },
+  duck: { e: "🦆", n: "Duck", tail: -120, prims: [E(-10, 32, 120, 58), E(112, -48, 45, 42, "head"), L(150, -42, 200, -36, 13, "jaw", .25), L(-118, 12, -160, -20, 18, "tail"), E(-20, 16, 70, 30, "wingStill", .12, 50), E(124, -58, 6, 7, "eye", .95, 32), L(-10, 88, -14, 112, 6, "legBL", .3, 0), L(25, 88, 22, 112, 6, "legFL", .3, 0)],
+    act: { text: "QUACK!", jerk: 1 } },
+  elephant: { e: "🐘", n: "Elephant", tail: -165, prims: [E(-20, 0, 145, 85), E(132, -30, 70, 64, "head"), E(96, -28, 44, 60, "ear", .12, 48), L(185, -5, 205, 58, 18, "trunk"), L(205, 58, 195, 108, 14, "trunk"), ...legs4(-95, 70, 60, 115, 24), L(-160, -10, -175, 40, 7, "tail"), E(160, -50, 6, 7, "eye", .95, 40)],
+    act: { puffs: { x: 205, y: -30, a: -60, spread: 25, n: 30, sp: [5, 12], r: [8, 18] }, trunkUp: 1, dur: 1200 } },
+  dino: { e: "🦖", n: "Dinosaur", tail: -125, prims: [E(-20, 10, 120, 60), L(-120, 10, -200, 0, 26, "tail"), L(-200, 0, -272, -22, 15, "tail"), L(70, -10, 118, -70, 30, "head"), E(152, -88, 56, 32, "head"), L(142, -64, 198, -64, 12, "jaw"),
+      L(-40, 50, -40, 115, 28, "legBL", .08, 25), L(-30, 50, -30, 115, 28, "legBR", .08, -25), L(40, 50, 48, 115, 26, "legFL", .08, 25), L(50, 50, 58, 115, 26, "legFR", .08, -25), L(110, -20, 132, 10, 8, "arm"), E(165, -98, 6, 6, "eye", .95, 30)],
+    act: { text: "ROAR!", jerk: 1, shake: 9, dur: 1000 } },
+  dragon: { e: "🐉", n: "Dragon", tail: -140, prims: [E(-20, 5, 130, 55), L(90, -20, 140, -80, 24, "head"), E(176, -96, 46, 30, "head"), L(170, -76, 222, -80, 10, "jaw"), T3(-60, -25, -150, -165, 60, -125, "wing", .05, -20), T3(-60, -25, 60, -125, 30, -30, "wing", .05, -20),
+      L(-140, 0, -255, -28, 18, "tail"), L(-255, -28, -292, -62, 12, "tail"), ...legs4(-80, 60, 45, 110, 17), E(186, -104, 5, 6, "eye", .95, 26)],
+    act: { puffs: { x: 225, y: -80, a: 5, spread: 18, n: 36, sp: [8, 18], r: [10, 22] }, glow: [255, 150, 60], jerk: 1, dur: 1100 } },
+  butterfly: { e: "🦋", n: "Butterfly", tail: 0, prims: [L(0, -60, 0, 70, 13, "body", .3), E(-92, -42, 86, 70, "wingL"), E(92, -42, 86, 70, "wingR"), E(-70, 55, 56, 44, "wingL"), E(70, 55, 56, 44, "wingR"), L(0, -60, -26, -112, 5, "ant", .3), L(0, -60, 26, -112, 5, "ant", .3)],
+    act: { sparkle: 14, hop: 70 } },
+  bird: { e: "🐦", n: "Bird", tail: -100, prims: [E(0, 20, 110, 52), E(106, -20, 45, 40, "head"), L(146, -14, 188, -8, 10, "jaw", .25), L(-100, 10, -182, -22, 20, "tail"), E(-10, -8, 88, 32, "wing", .05, 40), L(-8, 70, -14, 110, 6, "legBL", .3, 0), L(22, 70, 20, 110, 6, "legFL", .3, 0), E(122, -28, 6, 7, "eye", .95, 32)],
+    act: { text: "TWEET!", jerk: 1, hop: 40 } },
+  snail: { e: "🐌", n: "Snail", tail: -160, prims: [D(-25, -25, 95, -25, -25, 30, "shell", .08), L(-150, 92, 165, 92, 24), L(145, 92, 185, 40, 18, "head"), L(182, 40, 196, -10, 6, "ant"), L(188, 40, 214, 0, 6, "ant")] },
+  octopus: { e: "🐙", n: "Octopus", tail: 0, prims: [E(0, -55, 112, 100, "head"), E(-40, -60, 12, 14, "eye", .95, 70), E(40, -60, 12, 14, "eye", .95, 70),
+      ...[-95, -57, -19, 19, 57, 95].map(x => L(x * .8, 25, x * 1.25, 112, 15, "tent", .05, rand(-20, 20)))],
+    act: { puffs: { x: 0, y: 70, a: 90, spread: 160, n: 38, sp: [3, 9], r: [14, 28], dark: true }, text: "squirt!" } },
+  crab: { e: "🦀", n: "Crab", tail: 0, prims: [E(0, 22, 130, 58), L(-30, -25, -36, -68, 7, "eye", .2), L(30, -25, 36, -68, 7, "eye", .2), E(-36, -74, 12, 12, "eye", .9, 40), E(36, -74, 12, 12, "eye", .9, 40),
+      L(-118, 10, -185, -48, 20, "clawL"), E(-205, -70, 40, 28, "clawL"), L(118, 10, 185, -48, 20, "clawR"), E(205, -70, 40, 28, "clawR"),
+      ...[-1, 1].flatMap(d => [0, 1, 2].map(i => L(d * (90 + i * 12), 50, d * (165 + i * 15), 102, 9, "leg", .1, 0)))],
+    act: { text: "SNAP!", snap: 1, shake: 5 } },
+  plane: { e: "✈️", n: "Airplane", tail: 0, prims: [L(-220, 0, 215, 0, 34), E(232, 2, 30, 28), L(-200, -12, -238, -108, 20, "fin"), L(-200, 0, -252, 4, 15, "fin"), L(-15, 10, -80, 46, 28, "wing", .08, 60), L(-15, -10, -70, -36, 20, "wing", .05, -60),
+      ...[0, 1, 2, 3, 4].map(i => E(150 - i * 50, -10, 7, 7, "win", .55, 34))],
+    act: { trail: 1, dur: 3000 } },
+  rocket: { e: "🚀", n: "Rocket", tail: 0, prims: [L(0, -150, 0, 70, 52), E(0, -178, 40, 46), T3(-46, 30, -110, 112, -46, 95, "fin"), T3(46, 30, 110, 112, 46, 95, "fin"), E(0, -60, 22, 22, "win", .6, 50)],
+    act: { blast: 1, dur: 3800 } },
+  car: { e: "🚗", n: "Car", tail: 0, prims: [E(0, 25, 215, 44), E(-15, -32, 112, 46), ...[-130, 130].flatMap(x => [E(x, 70, 36, 36, "wheel", .5, 40), E(x, 70, 36, 36, "wheel", .5, -40)]), E(30, -30, 30, 22, "win", .35, 60), E(-60, -30, 30, 22, "win", .35, 60), E(205, 12, 10, 9, "light", 0, 30)],
+    act: { text: "BEEP BEEP!", puffs: { x: -225, y: 50, a: 180, spread: 25, n: 16, sp: [2, 6], r: [10, 18] }, hop: 18 } },
+  train: { e: "🚂", n: "Train", tail: 0, prims: [L(-50, 5, 150, 5, 55), E(-140, -20, 72, 85), L(110, -60, 110, -122, 24, "chimney", .1), E(110, -128, 32, 12, "chimney", .1), ...[-110, 0, 100].map(x => E(x, 88, 34, 34, "wheel", .5)), L(188, 60, 232, 98, 14, "front", .15), E(-140, -45, 30, 26, "win", .45, 70)],
+    act: { text: "CHOO CHOO!", steam: { x: 110, y: -135 }, dur: 1600 } },
+  boat: { e: "⛵", n: "Sailboat", tail: 0, prims: [E(0, 85, 195, 38, "hull", .15), L(0, 70, 0, -175, 8, "mast", .3), T3(14, -165, 14, 50, 160, 50, "sail"), T3(-14, -150, -14, 40, -135, 40, "sail")] },
+  heli: { e: "🚁", n: "Helicopter", tail: 0, prims: [E(0, 10, 120, 70), L(-110, -5, -262, -22, 18, "tailboom"), L(-262, -55, -262, 10, 8, "trotor"), L(-80, 98, 92, 98, 8, "skid", .3), L(-50, 76, -50, 98, 6, "skid", .3), L(50, 76, 50, 98, 6, "skid", .3), L(0, -58, 0, -82, 8, "mast", .2), L(-225, -84, 225, -84, 9, "rotor"), E(62, -5, 38, 32, "win", .35, 60)] },
+  ufo: { e: "🛸", n: "UFO", tail: 0, prims: [E(0, 22, 222, 44), E(0, -28, 92, 60, "dome", .05), ...[-150, -75, 0, 75, 150].map(x => E(x, 32, 10, 8, "light", 0, 44))],
+    act: { beam: 1, dur: 3200, wobble: 1 } },
+  heart: { e: "❤️", n: "Heart", tail: 0, prims: [E(-76, -40, 92, 86), E(76, -40, 92, 86), T3(-165, -10, 165, -10, 0, 168)], act: { pulse: 1, sparkle: 8, dur: 1300 } },
+  star: { e: "⭐", n: "Star", tail: 0, prims: [E(0, 0, 70, 70), ...[0, 1, 2, 3, 4].map(i => { const a = -Math.PI / 2 + i * 2 * Math.PI / 5, b = a + .55, c = a - .55; return T3(Math.cos(a) * 175, Math.sin(a) * 175, Math.cos(b) * 58, Math.sin(b) * 58, Math.cos(c) * 58, Math.sin(c) * 58); })],
+    act: { sparkle: 18, spin: 1, dur: 1400 } },
+  moon: { e: "🌙", n: "Moon", tail: 0, prims: [D(0, -20, 140, 70, -55, 125)] },
+  mushroom: { e: "🍄", n: "Mushroom", tail: 0, prims: [E(0, -40, 172, 82, "cap"), L(0, 30, 0, 112, 48, "stem"), ...[[-80, -60], [10, -88], [90, -55], [-20, -40]].map(([x, y]) => E(x, y, 18, 15, "spot", -.3, 60))] },
+  tree: { e: "🌲", n: "Tree", tail: 0, prims: [T3(0, -190, -150, -40, 150, -40), T3(0, -110, -175, 45, 175, 45), L(0, 40, 0, 115, 28, "trunk", .4)] },
+  castle: { e: "🏰", n: "Castle", tail: 0, prims: [R(-160, -40, 160, 112), L(-172, -125, -172, 110, 38), L(172, -125, 172, 110, 38), L(0, -170, 0, -40, 40), ...[-120, -60, 60, 120].map(x => E(x, -55, 16, 16)), E(-172, -150, 30, 18), E(172, -150, 30, 18), E(0, -192, 30, 18), E(0, 78, 32, 36, "door", .65, 60)] },
+  ghost: { e: "👻", n: "Ghost", tail: 0, prims: [E(0, -30, 112, 120), E(-72, 90, 38, 30), E(0, 96, 38, 30), E(72, 90, 38, 30), E(-36, -52, 14, 21, "eye", .95, 90), E(36, -52, 14, 21, "eye", .95, 90), E(0, 12, 20, 26, "mouth", .9, 90)],
+    act: { text: "BOO!", pulse: 1, shake: 6, dur: 1100 } },
+  pig: { e: "🐷", n: "Pig", tail: -150, prims: [E(-10, 20, 140, 74), E(132, -10, 60, 54, "head"), E(192, 0, 22, 26, "jaw", .12, 10), L(112, -54, 96, -94, 16, "ear"), ...legs4(-90, 70, 70, 114, 20), L(-150, 0, -170, -26, 9, "tail"), E(148, -26, 6, 7, "eye", .95, 40)],
+    act: { text: "OINK!", jerk: 1 } },
+  sheep: { e: "🐑", n: "Sheep", tail: -150, prims: [E(-10, 8, 140, 80), E(140, 0, 40, 48, "head", .3), L(122, -26, 96, -14, 10, "ear", .3), ...legs4(-85, 65, 70, 115, 11, .4), E(-150, 0, 22, 22, "tail"), E(152, -10, 5, 6, "eye", .95, 30)],
+    act: { text: "BAA!", jerk: 1 } },
 };
 
 /* ================= the real cloud =================
@@ -4030,11 +4161,39 @@ const RealCloud = {
     [[-95, 1, "legBL"], [-95, -1, "legBR"], [85, 1, "legFL"], [85, -1, "legFR"]].forEach(([lx, e, part]) => { for (let i = 0; i < 6; i++) dog.push([lx + rr(-6, 6), 50 + i / 5 * 66, rr(19, 23), .1, e * 30, part]); });
     for (let i = 0; i < 6; i++) { const k = i / 5; dog.push([-150 - k * 40, -10 - k * 70 - Math.sin(k * 3) * 10, 18 - k * 4, .05, 0, "tail"]); }
     [tank, dog].forEach(L => { while (L.length < this.N) L.push([rr(-120, 120), rr(0, 40), 30, .1, 0, "fill"]); L.length = this.N; });
+    // every shape in SHAPES: share the 120 puffs out between its parts (bigger parts get more), then spread each
+    // part's puffs evenly over it
+    const built = {};
+    for (const [key, def] of Object.entries(SHAPES)) {
+      const prims = def.prims, area = p => p.t === "e" ? Math.PI * p.rx * p.ry : p.t === "l" ? Math.hypot(p.x1 - p.x0, p.y1 - p.y0) * 2 * p.w + Math.PI * p.w * p.w
+        : p.t === "t" ? Math.abs((p.x1 - p.x0) * (p.y2 - p.y0) - (p.x2 - p.x0) * (p.y1 - p.y0)) / 2 : p.t === "r" ? (p.x1 - p.x0) * (p.y1 - p.y0) : Math.PI * p.r * p.r * .6;
+      const w = prims.map(p => Math.pow(area(p), .75)), tot = w.reduce((a, b) => a + b, 0);
+      // thin parts (legs, sticks) need enough puffs along their length to look solid, not dotted
+      const need = prims.map(p => p.t === "l" ? Math.min(16, Math.ceil(Math.hypot(p.x1 - p.x0, p.y1 - p.y0) / (Math.max(p.w, 8) * 1.1)) + 1) : 1);
+      const cnt = w.map((v, i) => Math.max(need[i], Math.round(v / tot * this.N)));
+      let diff = this.N - cnt.reduce((a, b) => a + b, 0); while (diff) { const i = cnt.indexOf(Math.max(...cnt)); if (diff > 0) { cnt[i]++; diff--; } else { cnt[i]--; diff++; } }
+      const out = [];
+      prims.forEach((p, pi) => { const n = cnt[pi], A = area(p), r0 = Math.max(10, Math.min(54, Math.sqrt(A / n) * 1.15)), zz = q => p.z !== undefined ? p.z : rr(-q, q);
+        for (let i = 0; i < n; i++) {
+          if (p.t === "e") { const rho = Math.sqrt((i + .5) / n), th = i * 2.39996, r = Math.min(r0, Math.min(p.rx, p.ry) * .9);
+            out.push([p.cx + Math.cos(th) * Math.max(0, p.rx - r * .55) * rho, p.cy + Math.sin(th) * Math.max(0, p.ry - r * .55) * rho, r, p.dark, zz(Math.min(p.rx, p.ry) * .5), p.part]); }
+          else if (p.t === "l") { const k = n === 1 ? .5 : i / (n - 1); out.push([p.x0 + (p.x1 - p.x0) * k, p.y0 + (p.y1 - p.y0) * k, Math.max(8, p.w * 1.15), p.dark, p.z || 0, p.part]); }
+          else if (p.t === "t") { const q = Math.ceil(Math.sqrt(2 * n)), gi = Math.floor(i * (q * (q + 1) / 2) / n), row = Math.floor((Math.sqrt(8 * gi + 1) - 1) / 2), col = gi - row * (row + 1) / 2;
+            let a = (row - col + .35 + rr(-.2, .2)) / (q + .4), b = (col + .35 + rr(-.2, .2)) / (q + .4); if (a + b > .97) { const f = .97 / (a + b); a *= f; b *= f; } const r = Math.min(r0, 44);
+            out.push([p.x0 + (p.x1 - p.x0) * a + (p.x2 - p.x0) * b, p.y0 + (p.y1 - p.y0) * a + (p.y2 - p.y0) * b, r, p.dark, zz(20), p.part]); }
+          else if (p.t === "r") { const cols = Math.max(1, Math.round(Math.sqrt(n * (p.x1 - p.x0) / (p.y1 - p.y0)))), c = i % cols, rw = Math.floor(i / cols), rows = Math.ceil(n / cols);
+            out.push([p.x0 + (c + .5) / cols * (p.x1 - p.x0), p.y0 + (rw + .5) / rows * (p.y1 - p.y0), r0, p.dark, zz(30), p.part]); }
+          else { let x, y, g = 0; do { x = p.cx + rr(-p.r, p.r); y = p.cy + rr(-p.r, p.r); g++; } while (g < 200 && (Math.hypot(x - p.cx, y - p.cy) > p.r - 10 || Math.hypot(x - p.bx, y - p.by) < p.br + 10));
+            out.push([x, y, Math.min(r0, 34), p.dark, rr(-25, 25), p.part]); }
+        } });
+      built[key] = out;
+    }
     // pair cloud puffs with shape spots by sorting both left to right, so they flow sideways without crossing much
     home.forEach((h, i) => h.push(i < 40));                                          // which puffs make the outline
     const hs = home.map((h, i) => [h, i]).sort((a, b) => a[0][0] - b[0][0]);
     const sorted = { tank: tank.slice().sort((a, b) => a[0] - b[0]), dog: dog.slice().sort((a, b) => a[0] - b[0]) };
-    this.P = hs.map(([h], k) => ({ hx: h[0], hy: h[1], hr: h[2], edge: h[3], S: { tank: sorted.tank[k], dog: sorted.dog[k] },
+    for (const k in built) sorted[k] = built[k].slice().sort((a, b) => a[0] - b[0]);
+    this.P = hs.map(([h], k) => ({ hx: h[0], hy: h[1], hr: h[2], edge: h[3], S: Object.fromEntries(Object.keys(sorted).map(n => [n, sorted[n][k]])),
       p1: rr(0, 6.28), p2: rr(0, 6.28), p3: rr(0, 6.28), w1: rr(1 / 9000, 1 / 4500), w2: rr(1 / 14000, 1 / 7000), w3: rr(1 / 10000, 1 / 5000), A: rr(7, 15) }));
     // draw order: back-to-front looks best low to high for the cloud
     this.P.sort((a, b) => b.hy - a.hy);
@@ -4067,9 +4226,19 @@ const RealCloud = {
       const hr = p.hr * (1 + .1 * Math.sin(t * p.w3 + p.p3));
       // the shape spot, moved by its part's animation (walking legs, wagging tail, barking head)
       let [sx, sy, sr, dk, sz, part] = T; sx += Math.sin(t / 1800 + p.p1) * 2; sy += Math.cos(t / 2100 + p.p2) * 2;
-      if (part.startsWith("leg") && an.walk) { const ph = an.walk + (part === "legFL" || part === "legBR" ? 0 : Math.PI), low = (sy - 50) / 66; sx += Math.sin(ph) * 16 * low; sy -= Math.max(0, Math.cos(ph)) * 10 * low; }
-      if (part === "tail") { const k2 = (-150 - T[0]) / 40; sx += Math.sin(t / 110) * 14 * k2; sy += Math.cos(t / 110) * 4 * k2; }
-      if (an.bark && (part === "head" || part === "snout" || part === "nose" || part === "eye" || part === "ear" || part === "jaw")) { const b = Math.sin(an.bark * Math.PI); sx += b * 10; sy -= b * 16; if (part === "jaw") sy += b * 22; }
+      const def = SHAPES[kind] || {}, cl = v => Math.max(0, Math.min(1, v));
+      if (part.startsWith("leg") && an.walk) { const ph = an.walk + (part === "legFL" || part === "legBR" ? 0 : Math.PI), low = kind === "dog" ? (sy - 50) / 66 : cl((sy - 40) / 75); sx += Math.sin(ph) * 16 * low; sy -= Math.max(0, Math.cos(ph)) * 10 * low; }
+      if (part === "tail") { const base = kind === "dog" ? -150 : def.tail || -150, k2 = Math.min(1.6, Math.max(0, (base - T[0]) / 45)); sx += Math.sin(t / 130) * 12 * k2; sy += Math.cos(t / 130) * 6 * k2; }
+      if (part === "wingL" || part === "wingR") { const f = .25 + .75 * Math.abs(Math.cos(t / 170)); sx *= f; }
+      if (part === "wing") sy += Math.sin(t / 120) * 34 * cl((T[0] + 120) / 160) - 6;
+      if (part === "rotor") sx *= Math.cos(t / 45);
+      if (part === "trotor") sy = -22 + (sy + 22) * Math.cos(t / 40);
+      if (part === "tent") sx += Math.sin(t / 340 + T[1] / 25 + T[0] / 40) * 14 * cl((T[1] - 25) / 80);
+      if (part === "trunk" && an.trunkUp) { const k3 = Math.sin(an.trunkUp * Math.PI); sy -= k3 * (T[1] + 10) * 1.1; sx += k3 * 20; }
+      const jerk = an.bark || an.jerk;
+      if (jerk && (part === "head" || part === "snout" || part === "nose" || part === "eye" || part === "ear" || part === "jaw")) { const b = Math.sin(jerk * Math.PI); sx += b * 10; sy -= b * 16; if (part === "jaw") sy += b * 22; }
+      if (an.snap && (part === "clawL" || part === "clawR")) { const b = Math.sin(an.snap * Math.PI * 4); sy -= Math.abs(b) * 22; }
+      if (an.hide && (part === "head" || part.startsWith("leg") || part === "tail" || part === "eye")) { const h = an.hide; sx += (0 - sx) * h * .8; sy += (15 - sy) * h * .8; sr *= 1 - .5 * h; }
       if (part === "body" && an.walk) sy += Math.sin(an.walk * 2) * 2;
       // turning: rotate the spot around the up axis, so halfway through a turn you see it from the front
       const tx = sx * ca + sz * sa, depth = -sx * sa + sz * ca;
@@ -4614,6 +4783,8 @@ window.onRemote = c => {
   else if (c.cmd === "effect" && c.name === "cloudDog") Face.toggleDog();
   else if (c.cmd === "effect" && c.name === "cloudBark") Face.bark();
   else if (c.cmd === "cloudGo") Face.goTo(+c.x, +c.y);
+  else if (c.cmd === "cloudDark") Face.setDark(+c.v);
+  else if (c.cmd === "cloudShape") Face.setShape(c.name);
   else if (c.cmd === "faceMood") Face.setMood(c.name);
   else if (c.cmd === "faceTalk") Face.setNeutralTalk(c.name);
   if (c.cmd === "faceMood") { const sel = $("#facemood"); if (sel) sel.value = Face.mood; }
@@ -5208,7 +5379,7 @@ window.KZRelay = function (topic, onMessage, servers) {
 (() => {
   const qs = new URLSearchParams(location.search), key = qs.get("ctl");
   if (!key || !window.WebSocket) return;
-  const PAGE = "html3", VERSION = "414b84c";
+  const PAGE = "html3", VERSION = "7aeef8c";
   let said = false;
   const relay = KZRelay("kzctl/" + key, c => {
     if (!c || c.from === "overlay" || (c.to && c.to !== "all" && c.to !== PAGE)) return;
