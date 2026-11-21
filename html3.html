@@ -5323,6 +5323,27 @@ window.onRemote = c => {
   }
 };
 
+/* ================= one viewer effect at a time =================
+   If an effect is playing (someone's first-chat effect, a redeem, the test buttons, the hourly lightning lap), another one
+   doesn't play on top of it: it waits in line and plays once the screen is clear, in the order they came in. */
+const FxLine = {
+  q: [], running: false, until: 0,
+  // the effects in line, and how to tell each one is still playing (a busy flag, or how long it lasts)
+  MODS: { Mango: null, Banana: null, Fishy: null, Chef: null, Tank: null, Kazul: null, Jinx: null, Pirate: null, Turkey: 7600, Penguin: 10600, Eagle: 9000, Bolt: null },
+  playing() { if (performance.now() < this.until) return true;
+    return [Mango, Banana, Fishy, Chef, Tank, Kazul, Jinx, Pirate].some(m => m.busy) || (Bolt.runs && Bolt.runs.length > 0); },
+  push(fn) { this.q.push(fn); if (this.q.length > 40) this.q.shift(); this.pump(); },
+  pump() { if (this.running) return; const fn = this.q.shift(); if (!fn) return; this.running = true;
+    const go = () => { if (this.playing()) return setTimeout(go, 300);                 // something still on screen (e.g. it started before the line existed)
+      try { fn(); } catch (e) { console.error(e); }
+      const t0 = performance.now(), wait = () => { if (this.playing() && performance.now() - t0 < 90000) return setTimeout(wait, 300);
+        setTimeout(() => { this.running = false; this.pump(); }, 700); };                // a short breather between effects
+      setTimeout(wait, 300); };
+    go(); }
+};
+for (const [name, ms] of Object.entries(FxLine.MODS)) { const m = { Mango, Banana, Fishy, Chef, Tank, Kazul, Jinx, Pirate, Turkey, Penguin, Eagle, Bolt }[name], orig = m.run.bind(m);
+  m.run = (...a) => FxLine.push(() => { if (ms) FxLine.until = performance.now() + ms; orig(...a); }); }
+
 /* one alert at a time, in order */
 const Queue = {
   q: [], busy: false,
@@ -5892,7 +5913,7 @@ window.KZRelay = function (topic, onMessage, servers) {
 (() => {
   const qs = new URLSearchParams(location.search), key = qs.get("ctl");
   if (!key || !window.WebSocket) return;
-  const PAGE = "html3", VERSION = "a518d08";
+  const PAGE = "html3", VERSION = "d4bee9a";
   let said = false;
   const relay = KZRelay("kzctl/" + key, c => {
     if (!c || c.from === "overlay" || (c.to && c.to !== "all" && c.to !== PAGE)) return;
