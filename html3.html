@@ -5164,6 +5164,7 @@ const AutoFx = {
     seen[k] = today; try { localStorage.setItem(this.KEY, JSON.stringify(seen)); } catch (e) {}
     fx();
   },
+  reset() { try { localStorage.removeItem(this.KEY); } catch (e) {} },   // everyone's next chat counts as their first of the day again
   hourly() {
     const next = () => { const n = new Date(), ms = (60 - n.getMinutes()) * 60000 - n.getSeconds() * 1000 - n.getMilliseconds(); setTimeout(() => { Bolt.run(); next(); }, ms + 50); };
     next();
@@ -5269,6 +5270,7 @@ const Bolt = {
 /* commands from the app's Control screen (see remote.js) */
 window.onRemote = c => {
   if (c.cmd === "stars") Wanted.set(+c.n || 0);
+  else if (c.cmd === "firstsReset") { AutoFx.reset(); toast("First-chat effects reset: each viewer's next chat plays theirs again", false, 5000); }
   else if (c.cmd === "effect" && c.name === "bolt") Bolt.run();
   else if (c.cmd === "effect" && c.name === "mango") Mango.run();
   else if (c.cmd === "effect" && c.name === "banana") Banana.run();
@@ -5941,7 +5943,7 @@ window.KZRelay = function (topic, onMessage, servers) {
 (() => {
   const qs = new URLSearchParams(location.search), key = qs.get("ctl");
   if (!key || !window.WebSocket) return;
-  const PAGE = "html3", VERSION = "e586b44";
+  const PAGE = "html3", VERSION = "cae8ecf";
   let said = false;
   const relay = KZRelay("kzctl/" + key, c => {
     if (!c || c.from === "overlay" || (c.to && c.to !== "all" && c.to !== PAGE)) return;
