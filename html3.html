@@ -338,6 +338,7 @@ body.fit #stage{background:radial-gradient(1200px 700px at 30% 20%,#1a103322,tra
 #smokecv{position:absolute;inset:0;width:2560px;height:1440px;pointer-events:none;z-index:8}
 #facecv{position:absolute;inset:0;width:2560px;height:1440px;pointer-events:none;z-index:8}
 #discocv{position:absolute;inset:0;width:2560px;height:1440px;pointer-events:none;z-index:7}
+#piratecv{position:absolute;inset:0;width:2560px;height:1440px;pointer-events:none;z-index:9}
 /* ---------- Kazul123: artillery from every side ---------- */
 #kazcv{position:absolute;inset:0;width:2560px;height:1440px;pointer-events:none;z-index:7}
 /* ---------- Silverhand (canvas + a red shade over the whole screen) ---------- */
@@ -426,6 +427,7 @@ body.fit #stage{background:radial-gradient(1200px 700px at 30% 20%,#1a103322,tra
   <canvas id="smokecv" width="2560" height="1440"></canvas>
   <canvas id="facecv" width="2560" height="1440"></canvas>
   <canvas id="discocv" width="2560" height="1440"></canvas>
+  <canvas id="piratecv" width="2560" height="1440"></canvas>
   <canvas id="tankcv" width="2560" height="1440"></canvas>
   <div id="pane"></div>
   <canvas id="holes" width="2560" height="1440"></canvas>
@@ -536,7 +538,7 @@ body.fit #stage{background:radial-gradient(1200px 700px at 30% 20%,#1a103322,tra
   <button class="b-scrap" data-t="scroopboard">!scroopleaderboard</button>
   <button class="b-bolt" data-t="bolt">⚡ Bolt</button><button class="snd" data-snd="bolt" title="Add a sound for this effect">🔊+</button>
   <button class="b-mango" data-t="mango">🥭 Mango</button><button class="snd" data-snd="mango" title="Add a sound for this effect">🔊+</button>
-  <button class="b-banana" data-t="banana">🍌 Banana</button><button class="snd" data-snd="banana" title="Add a sound for this effect">🔊+</button>
+  <button class="b-banana" data-t="banana">🍌 Banana</button><button class="b-banana" data-t="pirate">🏴‍☠️ Kapelan012 pirate</button><button class="snd" data-snd="pirate" title="Add a sound for the pirate">🔊+</button><button class="snd" data-snd="banana" title="Add a sound for this effect">🔊+</button>
   <button class="b-turkey" data-t="turkey">🦃 Turkey</button><button class="snd" data-snd="turkey" title="Add a sound for this effect">🔊+</button>
   <button class="b-penguin" data-t="penguin">🐧 Penguin</button><button class="snd" data-snd="penguin" title="Add a sound for this effect">🔊+</button>
   <button class="b-fish" data-t="fish">🐟 ATT3NCHUN</button><button class="snd" data-snd="fish" title="Add a sound for this effect">🔊+</button>
@@ -2867,7 +2869,7 @@ const ChefArt = {
   use(name, a) { const img = new Image(); img.onload = () => { this.sprites[name] = Object.assign({ img }, a); if (name === "tower" && Lurk.up) Lurk.paint(); }; img.src = a.url; },
   async load() {
     try { const db = await this.open();
-      ["cs__base", "cs_tank", "cs_tank_form", "cs_tank_idle", "cs_tank_act", "cs_tank_turn", "cs_dog", "cs_dog_form", "cs_dog_idle", "cs_dog_act", "cs_dog_turn", "cs_cat", "cs_cat_form", "cs_cat_idle", "cs_cat_act", "cs_cat_turn", "cs_fish", "cs_fish_form", "cs_fish_idle", "cs_fish_act", "cs_fish_turn", "cs_whale", "cs_whale_form", "cs_whale_idle", "cs_whale_act", "cs_whale_turn", "cs_bunny", "cs_bunny_form", "cs_bunny_idle", "cs_bunny_act", "cs_bunny_turn", "cs_turtle", "cs_turtle_form", "cs_turtle_idle", "cs_turtle_act", "cs_turtle_turn", "cs_duck", "cs_duck_form", "cs_duck_idle", "cs_duck_act", "cs_duck_turn", "cs_elephant", "cs_elephant_form", "cs_elephant_idle", "cs_elephant_act", "cs_elephant_turn", "cs_dino", "cs_dino_form", "cs_dino_idle", "cs_dino_act", "cs_dino_turn", "cs_dragon", "cs_dragon_form", "cs_dragon_idle", "cs_dragon_act", "cs_dragon_turn", "cs_butterfly", "cs_butterfly_form", "cs_butterfly_idle", "cs_butterfly_act", "cs_bird", "cs_bird_form", "cs_bird_idle", "cs_bird_act", "cs_bird_turn", "cs_snail", "cs_snail_form", "cs_snail_idle", "cs_snail_turn", "cs_octopus", "cs_octopus_form", "cs_octopus_idle", "cs_octopus_act", "cs_crab", "cs_crab_form", "cs_crab_idle", "cs_crab_act", "cs_plane", "cs_plane_form", "cs_plane_idle", "cs_plane_act", "cs_plane_turn", "cs_rocket", "cs_rocket_form", "cs_rocket_idle", "cs_rocket_act", "cs_car", "cs_car_form", "cs_car_idle", "cs_car_act", "cs_car_turn", "cs_train", "cs_train_form", "cs_train_idle", "cs_train_act", "cs_train_turn", "cs_boat", "cs_boat_form", "cs_boat_idle", "cs_heli", "cs_heli_form", "cs_heli_idle", "cs_heli_turn", "cs_ufo", "cs_ufo_form", "cs_ufo_idle", "cs_ufo_act", "cs_ufo_turn", "cs_heart", "cs_heart_form", "cs_heart_idle", "cs_heart_act", "cs_star", "cs_star_form", "cs_star_idle", "cs_star_act", "cs_moon", "cs_moon_form", "cs_moon_idle", "cs_mushroom", "cs_mushroom_form", "cs_mushroom_idle", "cs_tree", "cs_tree_form", "cs_tree_idle", "cs_castle", "cs_castle_form", "cs_castle_idle", "cs_ghost", "cs_ghost_form", "cs_ghost_idle", "cs_ghost_act", "cs_pig", "cs_pig_form", "cs_pig_idle", "cs_pig_act", "cs_pig_turn", "cs_sheep", "cs_sheep_form", "cs_sheep_idle", "cs_sheep_act", "cs_sheep_turn", "cs_lion", "cs_lion_form", "cs_lion_idle", "cs_lion_act", "cs_lion_turn", "cs_giraffe", "cs_giraffe_form", "cs_giraffe_idle", "cs_giraffe_turn", "cs_horse", "cs_horse_form", "cs_horse_idle", "cs_horse_act", "cs_horse_turn", "cs_cow", "cs_cow_form", "cs_cow_idle", "cs_cow_act", "cs_cow_turn", "cs_penguin", "cs_penguin_form", "cs_penguin_idle", "cs_penguin_act", "cs_owl", "cs_owl_form", "cs_owl_idle", "cs_owl_act", "cs_frog", "cs_frog_form", "cs_frog_idle", "cs_frog_act", "cs_frog_turn", "cs_snake", "cs_snake_form", "cs_snake_idle", "cs_snake_act", "cs_snake_turn", "cs_shark", "cs_shark_form", "cs_shark_idle", "cs_shark_act", "cs_shark_turn", "cs_dolphin", "cs_dolphin_form", "cs_dolphin_idle", "cs_dolphin_act", "cs_dolphin_turn", "cs_bee", "cs_bee_form", "cs_bee_idle", "cs_bee_act", "cs_bee_turn", "cs_spider", "cs_spider_form", "cs_spider_idle", "cs_mouse", "cs_mouse_form", "cs_mouse_idle", "cs_mouse_act", "cs_mouse_turn", "cs_fox", "cs_fox_form", "cs_fox_idle", "cs_fox_act", "cs_fox_turn", "cs_bear", "cs_bear_form", "cs_bear_idle", "cs_bear_act", "cs_bear_turn", "cs_kangaroo", "cs_kangaroo_form", "cs_kangaroo_idle", "cs_kangaroo_act", "cs_kangaroo_turn", "cs_flamingo", "cs_flamingo_form", "cs_flamingo_idle", "cs_flamingo_turn", "cs_seahorse", "cs_seahorse_form", "cs_seahorse_idle", "cs_seahorse_turn", "cs_jellyfish", "cs_jellyfish_form", "cs_jellyfish_idle", "cs_jellyfish_act", "cs_unicorn", "cs_unicorn_form", "cs_unicorn_idle", "cs_unicorn_act", "cs_unicorn_turn", "cs_guitar", "cs_guitar_form", "cs_guitar_idle", "cs_guitar_act", "cs_umbrella", "cs_umbrella_form", "cs_umbrella_idle", "cs_umbrella_act", "cs_balloon", "cs_balloon_form", "cs_balloon_idle", "cs_balloon_act", "cs_lighthouse", "cs_lighthouse_form", "cs_lighthouse_idle", "cs_lighthouse_act", "cs_house", "cs_house_form", "cs_house_idle", "cs_house_act", "cs_robot", "cs_robot_form", "cs_robot_idle", "cs_robot_act", "cs_skull", "cs_skull_form", "cs_skull_idle", "cs_skull_act", "cs_crown", "cs_crown_form", "cs_crown_idle", "cs_crown_act", "cs_anchor", "cs_anchor_form", "cs_anchor_idle", "cs_sword", "cs_sword_form", "cs_sword_idle", "cs_sword_act", "cs_trophy", "cs_trophy_form", "cs_trophy_idle", "cs_trophy_act", "cs_cupcake", "cs_cupcake_form", "cs_cupcake_idle", "cs_icecream", "cs_icecream_form", "cs_icecream_idle", "cs_pizza", "cs_pizza_form", "cs_pizza_idle", "cs_pizza_turn", "cs_apple", "cs_apple_form", "cs_apple_idle", "cs_bell", "cs_bell_form", "cs_bell_idle", "cs_bell_act", "cs_kite", "cs_kite_form", "cs_kite_idle", "cs_submarine", "cs_submarine_form", "cs_submarine_idle", "cs_submarine_act", "cs_submarine_turn", "cs_bicycle", "cs_bicycle_form", "cs_bicycle_idle", "cs_bicycle_act", "cs_bicycle_turn", "cs_gamepad", "cs_gamepad_form", "cs_gamepad_idle", "cs_gamepad_act", "cf_e_none", "disco_glint", "cf_x_talk_me", "sm_hat", "sm_face", "sm_nose", "sm_arm", "sm_ball", "sm_ball_melt", "sm_puddle", "cf_ref", "cf_x_talk", "cf_x_wide", "cf_x_look_l", "cf_x_look_r", "cf_x_smile", "cf_x_grin", "cf_x_oo", "cf_x_blink", "cf_v_smile_talk", "cf_v_smile_l", "cf_v_smile_r", "cf_v_grin_talk", "cf_v_grin_l", "cf_v_grin_r", "cf_v_oo_talk", "cf_v_oo_l", "cf_v_oo_r", "cf_v_closed_talk", "cf_e_smirk", "cf_v_smirk_talk", "cf_v_smirk_l", "cf_v_smirk_r", "cf_e_wink", "cf_v_wink_talk", "cf_e_laugh", "cf_v_laugh_talk", "cf_e_shocked", "cf_v_shocked_talk", "cf_v_shocked_l", "cf_v_shocked_r", "cf_e_sleepy", "cf_v_sleepy_talk", "cf_v_sleepy_l", "cf_v_sleepy_r", "cf_e_sideeye", "cf_v_sideeye_talk", "cf_v_sideeye_l", "cf_v_sideeye_r", "cf_e_sad", "cf_v_sad_talk", "cf_v_sad_l", "cf_v_sad_r", "cf_e_tongue", "cf_v_tongue_talk", "cf_v_tongue_l", "cf_v_tongue_r", "cf_e_puffed", "cf_v_puffed_talk", "cf_v_puffed_l", "cf_v_puffed_r", "cf_e_determined", "cf_v_determined_talk", "cf_v_determined_l", "cf_v_determined_r", "cf_e_evil", "cf_v_evil_talk", "cf_v_evil_l", "cf_v_evil_r", "cf_e_smug", "cf_v_smug_talk", "cf_v_smug_l", "cf_v_smug_r", "cf_e_confused", "cf_v_confused_talk", "cf_v_confused_l", "cf_v_confused_r", "cf_e_disgusted", "cf_v_disgusted_talk", "cf_v_disgusted_l", "cf_v_disgusted_r", "cf_e_nervous", "cf_v_nervous_talk", "cf_v_nervous_l", "cf_v_nervous_r", "cf_e_kissy", "cf_v_kissy_talk", "cf_v_kissy_l", "cf_v_kissy_r", "cf_e_bored", "cf_v_bored_talk", "cf_v_bored_l", "cf_v_bored_r", "cf_e_excited", "cf_v_excited_talk", "cf_v_excited_l", "cf_v_excited_r", "cf_e_thinking", "cf_v_thinking_talk", "cf_v_thinking_l", "cf_v_thinking_r", "cf_e_scared", "cf_v_scared_talk", "cf_v_scared_l", "cf_v_scared_r", "jinx_flip", "jinx_spin", "jinx_fire", "jinx_launch", "artillery", "golden_banana", "golden_mango", "tower", "eagle_roll", "tank_drive", "soldier_run", "soldier_throw", "grenade", "explosion", "eagle_glide", "eagle_flap", "plane", "title", "chef_parachute", "chef_chop", "chef_jump", "chef_fly", "chef_truck", "cf_x_look_d", "cf_v_smile_d", "cf_v_grin_d", "cf_v_oo_d", "cf_v_smirk_d", "cf_v_shocked_d", "cf_v_sleepy_d", "cf_v_sideeye_d", "cf_v_sad_d", "cf_v_tongue_d", "cf_v_puffed_d", "cf_v_determined_d", "cf_v_evil_d", "cf_v_smug_d", "cf_v_confused_d", "cf_v_disgusted_d", "cf_v_nervous_d", "cf_v_kissy_d", "cf_v_bored_d", "cf_v_excited_d", "cf_v_thinking_d", "cf_v_scared_d"].forEach(n => { const r = db.transaction("a").objectStore("a").get(n); r.onsuccess = () => { if (r.result) this.use(n, r.result); }; });
+      ["pirate_ship", "pirate_wave", "pirate_fall", "pirate_slide", "cs__base", "cs_tank", "cs_tank_form", "cs_tank_idle", "cs_tank_act", "cs_tank_turn", "cs_dog", "cs_dog_form", "cs_dog_idle", "cs_dog_act", "cs_dog_turn", "cs_cat", "cs_cat_form", "cs_cat_idle", "cs_cat_act", "cs_cat_turn", "cs_fish", "cs_fish_form", "cs_fish_idle", "cs_fish_act", "cs_fish_turn", "cs_whale", "cs_whale_form", "cs_whale_idle", "cs_whale_act", "cs_whale_turn", "cs_bunny", "cs_bunny_form", "cs_bunny_idle", "cs_bunny_act", "cs_bunny_turn", "cs_turtle", "cs_turtle_form", "cs_turtle_idle", "cs_turtle_act", "cs_turtle_turn", "cs_duck", "cs_duck_form", "cs_duck_idle", "cs_duck_act", "cs_duck_turn", "cs_elephant", "cs_elephant_form", "cs_elephant_idle", "cs_elephant_act", "cs_elephant_turn", "cs_dino", "cs_dino_form", "cs_dino_idle", "cs_dino_act", "cs_dino_turn", "cs_dragon", "cs_dragon_form", "cs_dragon_idle", "cs_dragon_act", "cs_dragon_turn", "cs_butterfly", "cs_butterfly_form", "cs_butterfly_idle", "cs_butterfly_act", "cs_bird", "cs_bird_form", "cs_bird_idle", "cs_bird_act", "cs_bird_turn", "cs_snail", "cs_snail_form", "cs_snail_idle", "cs_snail_turn", "cs_octopus", "cs_octopus_form", "cs_octopus_idle", "cs_octopus_act", "cs_crab", "cs_crab_form", "cs_crab_idle", "cs_crab_act", "cs_plane", "cs_plane_form", "cs_plane_idle", "cs_plane_act", "cs_plane_turn", "cs_rocket", "cs_rocket_form", "cs_rocket_idle", "cs_rocket_act", "cs_car", "cs_car_form", "cs_car_idle", "cs_car_act", "cs_car_turn", "cs_train", "cs_train_form", "cs_train_idle", "cs_train_act", "cs_train_turn", "cs_boat", "cs_boat_form", "cs_boat_idle", "cs_heli", "cs_heli_form", "cs_heli_idle", "cs_heli_turn", "cs_ufo", "cs_ufo_form", "cs_ufo_idle", "cs_ufo_act", "cs_ufo_turn", "cs_heart", "cs_heart_form", "cs_heart_idle", "cs_heart_act", "cs_star", "cs_star_form", "cs_star_idle", "cs_star_act", "cs_moon", "cs_moon_form", "cs_moon_idle", "cs_mushroom", "cs_mushroom_form", "cs_mushroom_idle", "cs_tree", "cs_tree_form", "cs_tree_idle", "cs_castle", "cs_castle_form", "cs_castle_idle", "cs_ghost", "cs_ghost_form", "cs_ghost_idle", "cs_ghost_act", "cs_pig", "cs_pig_form", "cs_pig_idle", "cs_pig_act", "cs_pig_turn", "cs_sheep", "cs_sheep_form", "cs_sheep_idle", "cs_sheep_act", "cs_sheep_turn", "cs_lion", "cs_lion_form", "cs_lion_idle", "cs_lion_act", "cs_lion_turn", "cs_giraffe", "cs_giraffe_form", "cs_giraffe_idle", "cs_giraffe_turn", "cs_horse", "cs_horse_form", "cs_horse_idle", "cs_horse_act", "cs_horse_turn", "cs_cow", "cs_cow_form", "cs_cow_idle", "cs_cow_act", "cs_cow_turn", "cs_penguin", "cs_penguin_form", "cs_penguin_idle", "cs_penguin_act", "cs_owl", "cs_owl_form", "cs_owl_idle", "cs_owl_act", "cs_frog", "cs_frog_form", "cs_frog_idle", "cs_frog_act", "cs_frog_turn", "cs_snake", "cs_snake_form", "cs_snake_idle", "cs_snake_act", "cs_snake_turn", "cs_shark", "cs_shark_form", "cs_shark_idle", "cs_shark_act", "cs_shark_turn", "cs_dolphin", "cs_dolphin_form", "cs_dolphin_idle", "cs_dolphin_act", "cs_dolphin_turn", "cs_bee", "cs_bee_form", "cs_bee_idle", "cs_bee_act", "cs_bee_turn", "cs_spider", "cs_spider_form", "cs_spider_idle", "cs_mouse", "cs_mouse_form", "cs_mouse_idle", "cs_mouse_act", "cs_mouse_turn", "cs_fox", "cs_fox_form", "cs_fox_idle", "cs_fox_act", "cs_fox_turn", "cs_bear", "cs_bear_form", "cs_bear_idle", "cs_bear_act", "cs_bear_turn", "cs_kangaroo", "cs_kangaroo_form", "cs_kangaroo_idle", "cs_kangaroo_act", "cs_kangaroo_turn", "cs_flamingo", "cs_flamingo_form", "cs_flamingo_idle", "cs_flamingo_turn", "cs_seahorse", "cs_seahorse_form", "cs_seahorse_idle", "cs_seahorse_turn", "cs_jellyfish", "cs_jellyfish_form", "cs_jellyfish_idle", "cs_jellyfish_act", "cs_unicorn", "cs_unicorn_form", "cs_unicorn_idle", "cs_unicorn_act", "cs_unicorn_turn", "cs_guitar", "cs_guitar_form", "cs_guitar_idle", "cs_guitar_act", "cs_umbrella", "cs_umbrella_form", "cs_umbrella_idle", "cs_umbrella_act", "cs_balloon", "cs_balloon_form", "cs_balloon_idle", "cs_balloon_act", "cs_lighthouse", "cs_lighthouse_form", "cs_lighthouse_idle", "cs_lighthouse_act", "cs_house", "cs_house_form", "cs_house_idle", "cs_house_act", "cs_robot", "cs_robot_form", "cs_robot_idle", "cs_robot_act", "cs_skull", "cs_skull_form", "cs_skull_idle", "cs_skull_act", "cs_crown", "cs_crown_form", "cs_crown_idle", "cs_crown_act", "cs_anchor", "cs_anchor_form", "cs_anchor_idle", "cs_sword", "cs_sword_form", "cs_sword_idle", "cs_sword_act", "cs_trophy", "cs_trophy_form", "cs_trophy_idle", "cs_trophy_act", "cs_cupcake", "cs_cupcake_form", "cs_cupcake_idle", "cs_icecream", "cs_icecream_form", "cs_icecream_idle", "cs_pizza", "cs_pizza_form", "cs_pizza_idle", "cs_pizza_turn", "cs_apple", "cs_apple_form", "cs_apple_idle", "cs_bell", "cs_bell_form", "cs_bell_idle", "cs_bell_act", "cs_kite", "cs_kite_form", "cs_kite_idle", "cs_submarine", "cs_submarine_form", "cs_submarine_idle", "cs_submarine_act", "cs_submarine_turn", "cs_bicycle", "cs_bicycle_form", "cs_bicycle_idle", "cs_bicycle_act", "cs_bicycle_turn", "cs_gamepad", "cs_gamepad_form", "cs_gamepad_idle", "cs_gamepad_act", "cf_e_none", "disco_glint", "cf_x_talk_me", "sm_hat", "sm_face", "sm_nose", "sm_arm", "sm_ball", "sm_ball_melt", "sm_puddle", "cf_ref", "cf_x_talk", "cf_x_wide", "cf_x_look_l", "cf_x_look_r", "cf_x_smile", "cf_x_grin", "cf_x_oo", "cf_x_blink", "cf_v_smile_talk", "cf_v_smile_l", "cf_v_smile_r", "cf_v_grin_talk", "cf_v_grin_l", "cf_v_grin_r", "cf_v_oo_talk", "cf_v_oo_l", "cf_v_oo_r", "cf_v_closed_talk", "cf_e_smirk", "cf_v_smirk_talk", "cf_v_smirk_l", "cf_v_smirk_r", "cf_e_wink", "cf_v_wink_talk", "cf_e_laugh", "cf_v_laugh_talk", "cf_e_shocked", "cf_v_shocked_talk", "cf_v_shocked_l", "cf_v_shocked_r", "cf_e_sleepy", "cf_v_sleepy_talk", "cf_v_sleepy_l", "cf_v_sleepy_r", "cf_e_sideeye", "cf_v_sideeye_talk", "cf_v_sideeye_l", "cf_v_sideeye_r", "cf_e_sad", "cf_v_sad_talk", "cf_v_sad_l", "cf_v_sad_r", "cf_e_tongue", "cf_v_tongue_talk", "cf_v_tongue_l", "cf_v_tongue_r", "cf_e_puffed", "cf_v_puffed_talk", "cf_v_puffed_l", "cf_v_puffed_r", "cf_e_determined", "cf_v_determined_talk", "cf_v_determined_l", "cf_v_determined_r", "cf_e_evil", "cf_v_evil_talk", "cf_v_evil_l", "cf_v_evil_r", "cf_e_smug", "cf_v_smug_talk", "cf_v_smug_l", "cf_v_smug_r", "cf_e_confused", "cf_v_confused_talk", "cf_v_confused_l", "cf_v_confused_r", "cf_e_disgusted", "cf_v_disgusted_talk", "cf_v_disgusted_l", "cf_v_disgusted_r", "cf_e_nervous", "cf_v_nervous_talk", "cf_v_nervous_l", "cf_v_nervous_r", "cf_e_kissy", "cf_v_kissy_talk", "cf_v_kissy_l", "cf_v_kissy_r", "cf_e_bored", "cf_v_bored_talk", "cf_v_bored_l", "cf_v_bored_r", "cf_e_excited", "cf_v_excited_talk", "cf_v_excited_l", "cf_v_excited_r", "cf_e_thinking", "cf_v_thinking_talk", "cf_v_thinking_l", "cf_v_thinking_r", "cf_e_scared", "cf_v_scared_talk", "cf_v_scared_l", "cf_v_scared_r", "jinx_flip", "jinx_spin", "jinx_fire", "jinx_launch", "artillery", "golden_banana", "golden_mango", "tower", "eagle_roll", "tank_drive", "soldier_run", "soldier_throw", "grenade", "explosion", "eagle_glide", "eagle_flap", "plane", "title", "chef_parachute", "chef_chop", "chef_jump", "chef_fly", "chef_truck", "cf_x_look_d", "cf_v_smile_d", "cf_v_grin_d", "cf_v_oo_d", "cf_v_smirk_d", "cf_v_shocked_d", "cf_v_sleepy_d", "cf_v_sideeye_d", "cf_v_sad_d", "cf_v_tongue_d", "cf_v_puffed_d", "cf_v_determined_d", "cf_v_evil_d", "cf_v_smug_d", "cf_v_confused_d", "cf_v_disgusted_d", "cf_v_nervous_d", "cf_v_kissy_d", "cf_v_bored_d", "cf_v_excited_d", "cf_v_thinking_d", "cf_v_scared_d"].forEach(n => { const r = db.transaction("a").objectStore("a").get(n); r.onsuccess = () => { if (r.result) this.use(n, r.result); }; });
     } catch (e) {}
   },
   // a piece of art arriving from the app (sent in parts)
@@ -4843,6 +4845,120 @@ const Disco = {
   }
 };
 
+/* ================= Kapelan012: the pirate =================
+   A strip of sea fades in somewhere on the screen and a pirate ship rises onto it. A big, lovable pirate ogre drops
+   in from the top, stabs his dagger into the top of the sail and slides all the way down it, ripping it, then lands on
+   the deck. A speech bubble says "Hey, you guys!" and the ship sails off the nearest side of the screen. The wake
+   splashes up off the back of the ship into the air, the drops fly together to spell KAPELAN012, and then the letters
+   slowly drip back down into the sea. Art comes from the Art screen (PIRATE ART), or drawn stand-ins if it isn't made. */
+const Pirate = {
+  busy: false, NAME: "Kapelan012",
+  run(name) {
+    if (this.busy) return; this.busy = true; Sound.init(); MySounds.play("pirate");
+    const cv = $("#piratecv"), g = cv.getContext("2d"), W = 2560, H = 1440, S = ChefArt.sprites, t0 = performance.now();
+    // where: anywhere on screen; the ship sails off the nearest side
+    const sx0 = rand(520, W - 520), wy = rand(760, H - 170), dir = sx0 < W / 2 ? -1 : 1;
+    const SHIP_W = 640, ship = S.pirate_ship, shipH = ship ? SHIP_W * ship.h / ship.w : 520;
+    const sail = this.sailOf(ship);                                                 // the sail's box, as parts of the picture (0..1)
+    const sailTop = [sail[0] + (sail[2] - sail[0]) * .5, sail[1] + .04], sailBot = [sailTop[0], sail[3] - .04];
+    const text = name || this.NAME, LETTERS = textPointsN(text.toUpperCase(), Math.max(760, Math.min(W - 760, sx0)), Math.max(230, wy - shipH - 160), 1250, 700);
+    const drops = [], foam = [], shreds = [], T = { rise: 900, fall: 1600, slide: 2900, land: 3250, sail: 3700, sprayEnd: 6600, hold: 9000, drip: 12500, end: 14500 };
+    LETTERS.sort((a, b) => a[0] - b[0] * dir);                                    // the drops nearest the ship fly first
+    let shipX = sx0, shipV = 0, last = t0, sprayI = 0;
+    const lerp = (a, b, k) => a + (b - a) * Math.max(0, Math.min(1, k)), ease = k => { k = Math.max(0, Math.min(1, k)); return k * k * (3 - 2 * k); };
+    const frame = now => {
+      const t = now - t0, dt = Math.min(50, now - last) / 16; last = now; g.clearRect(0, 0, W, H);
+      // the ship moves off once he has landed
+      if (t > T.sail) { shipV = Math.min(10, shipV + .12 * dt); shipX += shipV * dt * -dir; }
+      const rise = ease(t / T.rise), bob = Math.sin(t / 420) * 6, roll = Math.sin(t / 700) * .025, gone = Math.abs(shipX - W / 2) > W / 2 + SHIP_W;
+      const shipTopY = wy - shipH * .86 + (1 - rise) * shipH + bob;                  // the hull's waterline sits ~86% down the picture
+      const P = (u, v) => [shipX + (u - .5) * SHIP_W * -dir, shipTopY + v * shipH];  // a point on the ship picture (it faces the way it sails)
+      // ---- the sea: a strip of waves across the screen, fading in and out
+      const seaA = Math.min(1, t / 700) * (t > T.drip ? Math.max(0, 1 - (t - T.drip) / 1800) : 1);
+      if (seaA > 0) { g.save(); g.globalAlpha = seaA; const gr = g.createLinearGradient(0, wy - 30, 0, wy + 140); gr.addColorStop(0, "rgba(60,150,220,.85)"); gr.addColorStop(1, "rgba(20,60,120,0)");
+        g.fillStyle = gr; g.beginPath(); g.moveTo(0, wy + 140); for (let x = 0; x <= W; x += 20) g.lineTo(x, wy + Math.sin(x / 90 + t / 380) * 10 + Math.sin(x / 37 - t / 260) * 4); g.lineTo(W, wy + 140); g.closePath(); g.fill();
+        g.strokeStyle = "rgba(235,250,255,.8)"; g.lineWidth = 4; g.beginPath(); for (let x = 0; x <= W; x += 20) { const y = wy + Math.sin(x / 90 + t / 380) * 10 + Math.sin(x / 37 - t / 260) * 4; x ? g.lineTo(x, y) : g.moveTo(x, y); } g.stroke(); g.restore(); }
+      // ---- the ship (behind the man while he's in front of the sail)
+      if (!gone) { g.save(); g.translate(shipX, wy); g.rotate(roll); g.translate(-shipX, -wy);
+        g.save(); g.beginPath(); g.rect(0, 0, W, wy + 8); g.clip();                  // below the waterline is hidden by the sea
+        if (ship) { g.save(); g.translate(shipX, shipTopY + shipH / 2); g.scale(-dir, 1); g.drawImage(ship.img, 0, 0, ship.w, ship.h, -SHIP_W / 2, -shipH / 2, SHIP_W, shipH); g.restore(); }
+        else this.drawShip(g, shipX, shipTopY, SHIP_W, shipH, -dir);
+        // the rip down the sail, following his dagger
+        if (t > T.fall) { const k = ease((t - T.fall) / (T.slide - T.fall)), [ax, ay] = P(...sailTop), [bx, by] = P(...sailBot), ey = ay + (by - ay) * k;
+          g.strokeStyle = "rgba(40,25,15,.85)"; g.lineWidth = 5; g.beginPath(); g.moveTo(ax, ay); for (let y = ay; y <= ey; y += 12) g.lineTo(ax + Math.sin(y / 9) * 4, y); g.stroke(); }
+        g.restore();
+        // the man: falling in, sliding down the sail holding the dagger, then standing on deck waving
+        const [tx, ty] = P(...sailTop), [bx2, by2] = P(...sailBot), deck = P(sailTop[0] + .08 * -dir * -1, .62);
+        let mx, my, pose;
+        if (t < T.rise) pose = null;
+        else if (t < T.fall) { const k = (t - T.rise) / (T.fall - T.rise); mx = tx; my = lerp(-200, ty, k * k); pose = "fall"; }
+        else if (t < T.slide) { const k = ease((t - T.fall) / (T.slide - T.fall)); mx = tx; my = lerp(ty, by2, k); pose = "slide";
+          if (Math.random() < .5) shreds.push({ x: mx + rand(-10, 10), y: my - 40, vx: rand(-2, 2), vy: rand(-1, 1), r: rand(0, 6.3), life: 1 }); }
+        else if (t < T.land) { const k = (t - T.slide) / (T.land - T.slide); mx = lerp(bx2, deck[0], k); my = lerp(by2, deck[1], k) - Math.sin(k * Math.PI) * 50; pose = "slide"; }
+        else { mx = deck[0]; my = deck[1]; pose = "wave"; }
+        if (pose) this.drawMan(g, S, pose, mx, my, -dir, t);
+        // ---- "Hey, you guys!"
+        if (t > T.land + 150 && pose === "wave") this.bubble(g, mx + 40 * -dir, my - 210, "Hey, you guys!", Math.min(1, (t - T.land - 150) / 250), -dir);
+        g.restore();
+      }
+      // ---- the wake: water splashing up off the back of the ship, flying together into the letters
+      const stern = P(.98, .8);
+      if (t > T.sail && t < T.sprayEnd && !gone) { const k = (t - T.sail) / (T.sprayEnd - T.sail), want = Math.floor(k * LETTERS.length);
+        while (sprayI < want) { const [lx, ly] = LETTERS[sprayI++]; drops.push({ x: stern[0], y: stern[1], sx: stern[0], sy: stern[1], tx: lx, ty: ly, at: t, fly: rand(800, 1300), r: rand(3.5, 6.5), drip: rand(0, 2200), vy: 0, len: 0 }); }
+        if (Math.random() < .6) foam.push({ x: stern[0] + rand(-20, 20), y: wy + rand(-6, 6), vx: dir * rand(1, 4), vy: rand(-6, -2), life: 1 }); }
+      if (sprayI < LETTERS.length && (gone || t >= T.sprayEnd)) while (sprayI < LETTERS.length) { const [lx, ly] = LETTERS[sprayI++]; drops.push({ x: W / 2 + dir * 1400, y: wy, sx: Math.max(0, Math.min(W, stern[0])), sy: wy, tx: lx, ty: ly, at: t, fly: rand(800, 1300), r: rand(3.5, 6.5), drip: rand(0, 2200), vy: 0, len: 0 }); }
+      // drops: fly in an arc to their letter spot, hold, then drip down into the sea
+      g.save();
+      for (let i = drops.length - 1; i >= 0; i--) { const d = drops[i], a = t - d.at;
+        if (a < d.fly) { const k = a / d.fly, e2 = 1 - Math.pow(1 - k, 3); d.x = lerp(d.sx, d.tx, e2); d.y = lerp(d.sy, d.ty, e2) - Math.sin(k * Math.PI) * 260; }
+        else if (t > T.hold + d.drip) { d.vy += .25 * dt; d.y += d.vy * dt; d.len = Math.min(28, d.len + d.vy * .5); if (d.y > wy) { foam.push({ x: d.x, y: wy, vx: rand(-1, 1), vy: rand(-3, -1), life: .7 }); drops.splice(i, 1); continue; } }
+        else { d.x = d.tx + Math.sin(t / 300 + i) * .8; d.y = d.ty + Math.cos(t / 260 + i) * .8; }
+        const gr = g.createRadialGradient(d.x - d.r * .3, d.y - d.r * .3, 0, d.x, d.y, d.r * 1.6); gr.addColorStop(0, "rgba(255,255,255,.95)"); gr.addColorStop(.45, "rgba(150,215,255,.85)"); gr.addColorStop(1, "rgba(60,140,220,0)");
+        g.fillStyle = gr; if (d.len > 2) { g.beginPath(); g.ellipse(d.x, d.y - d.len / 2, d.r, d.r + d.len / 2, 0, 0, 6.283); g.fill(); } else { g.beginPath(); g.arc(d.x, d.y, d.r * 1.6, 0, 6.283); g.fill(); } }
+      foam.forEach(f => { f.x += f.vx * dt; f.y += f.vy * dt; f.vy += .3 * dt; f.life -= .025 * dt; });
+      for (let i = foam.length - 1; i >= 0; i--) { const f = foam[i]; if (f.life <= 0) { foam.splice(i, 1); continue; } g.globalAlpha = f.life; g.fillStyle = "#eaf6ff"; g.beginPath(); g.arc(f.x, f.y, 4, 0, 6.283); g.fill(); }
+      shreds.forEach(q => { q.x += q.vx * dt; q.y += q.vy * dt; q.vy += .15 * dt; q.r += .1; q.life -= .02 * dt; });
+      for (let i = shreds.length - 1; i >= 0; i--) { const q = shreds[i]; if (q.life <= 0) { shreds.splice(i, 1); continue; } g.globalAlpha = q.life; g.fillStyle = "#efe2c4"; g.save(); g.translate(q.x, q.y); g.rotate(q.r); g.fillRect(-6, -3, 12, 6); g.restore(); }
+      g.restore();
+      if (t < T.end || drops.length || foam.length) requestAnimationFrame(frame); else { g.clearRect(0, 0, W, H); this.busy = false; }
+    };
+    requestAnimationFrame(frame);
+  },
+  // the sail in the ship picture: the big light, unsaturated area in the upper part (worked out once); a guess if not found
+  sailOf(sp) { if (!sp) return [.33, .1, .67, .6]; if (sp._sail) return sp._sail;
+    const c = document.createElement("canvas"); c.width = sp.w; c.height = sp.h; const g = c.getContext("2d", { willReadFrequently: true }); g.drawImage(sp.img, 0, 0, sp.w, sp.h, 0, 0, sp.w, sp.h);
+    const d = g.getImageData(0, 0, sp.w, sp.h).data; let x0 = sp.w, y0 = sp.h, x1 = 0, y1 = 0, n = 0;
+    for (let y = 0; y < sp.h * .72; y += 3) for (let x = Math.floor(sp.w * .15); x < sp.w * .85; x += 3) { const i = (y * sp.w + x) * 4, r = d[i], gg = d[i + 1], b = d[i + 2];
+      if (d[i + 3] > 200 && r > 175 && gg > 160 && b > 130 && Math.max(r, gg, b) - Math.min(r, gg, b) < 70) { n++; if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; } }
+    return sp._sail = n > 200 && (x1 - x0) > sp.w * .12 && (y1 - y0) > sp.h * .15 ? [x0 / sp.w, y0 / sp.h, x1 / sp.w, y1 / sp.h] : [.33, .1, .67, .6]; },
+  drawShip(g, cx, top, w, h, face) {
+    g.save(); g.translate(cx, top); g.scale(face, 1);
+    g.fillStyle = "#6b3e1f"; g.beginPath(); g.moveTo(-w * .48, h * .62); g.lineTo(w * .48, h * .62); g.lineTo(w * .38, h * .9); g.lineTo(-w * .4, h * .9); g.closePath(); g.fill();
+    g.fillStyle = "#4a2a14"; g.fillRect(-w * .48, h * .6, w * .96, h * .05); g.fillRect(-6, h * .04, 12, h * .6);
+    g.fillStyle = "#f1e6c8"; g.beginPath(); g.moveTo(-w * .17, h * .1); g.quadraticCurveTo(w * .05, h * .35, -w * .17, h * .6); g.lineTo(w * .17, h * .6); g.quadraticCurveTo(w * .25, h * .35, w * .17, h * .1); g.closePath(); g.fill();
+    g.fillStyle = "#111"; g.fillRect(4, h * .02, 50, 30); g.fillStyle = "#fff"; g.beginPath(); g.arc(29, h * .02 + 15, 7, 0, 6.283); g.fill();
+    g.restore(); },
+  drawMan(g, S, pose, x, y, face, t) {
+    const sp = pose === "fall" ? S.pirate_fall : pose === "slide" ? S.pirate_slide : S.pirate_wave, hgt = 190;
+    if (sp) { const w = hgt * sp.w / sp.h; g.save(); g.translate(x, y); g.scale(face, 1); g.drawImage(sp.img, 0, 0, sp.w, sp.h, -w / 2, pose === "slide" ? -20 : -hgt, w, hgt); g.restore(); return; }
+    // drawn stand-in: a big round green-grey ogre in a striped shirt with a red bandana; the dagger above him while sliding
+    g.save(); g.translate(x, y); g.scale(face, 1); const oy = pose === "slide" ? 150 : 0;
+    g.fillStyle = "#e9e3d2"; g.fillRect(-34, -120 + oy, 68, 80); g.fillStyle = "#1f4e8c"; for (let i = 0; i < 4; i++) g.fillRect(-34, -112 + i * 20 + oy, 68, 8);
+    g.fillStyle = "#3b2a20"; g.fillRect(-30, -40 + oy, 24, 40); g.fillRect(6, -40 + oy, 24, 40);
+    g.fillStyle = "#8fa07a"; g.beginPath(); g.arc(0, -150 + oy, 36, 0, 6.283); g.fill(); g.fillStyle = "#f4f0e0"; g.fillRect(-10, -132 + oy, 5, 9); g.fillRect(8, -132 + oy, 5, 9); g.fillStyle = "#c62828"; g.fillRect(-34, -184 + oy, 68, 16);
+    g.fillStyle = "#222"; g.beginPath(); g.arc(12, -154 + oy, 4, 0, 6.283); g.fill(); g.strokeStyle = "#222"; g.lineWidth = 3; g.beginPath(); g.arc(6, -140 + oy, 12, .2, 2.6); g.stroke();
+    if (pose === "slide" || pose === "fall") { g.strokeStyle = "#8fa07a"; g.lineWidth = 12; g.beginPath(); g.moveTo(-20, -110 + oy); g.lineTo(0, -195 + oy); g.moveTo(20, -110 + oy); g.lineTo(0, -195 + oy); g.stroke();
+      g.fillStyle = "#cfd6de"; g.beginPath(); g.moveTo(-5, -195 + oy); g.lineTo(5, -195 + oy); g.lineTo(0, -255 + oy); g.closePath(); g.fill(); g.fillStyle = "#5a3a1a"; g.fillRect(-7, -200 + oy, 14, 20); }
+    else { g.strokeStyle = "#8fa07a"; g.lineWidth = 12; g.beginPath(); g.moveTo(-28, -100); g.lineTo(-48, -40); g.moveTo(28, -105); g.lineTo(60 + Math.sin(t / 140) * 12, -180); g.stroke(); }
+    g.restore(); },
+  bubble(g, x, y, text, a, face) {
+    g.save(); g.globalAlpha = a; g.font = `900 46px ${FONT}`; const w = g.measureText(text).width + 56, h = 82, bx = x - w / 2, by = y - h;
+    g.fillStyle = "#fff"; g.strokeStyle = "#1b1b24"; g.lineWidth = 5; g.beginPath(); g.roundRect(bx, by, w, h, 34); g.fill(); g.stroke();
+    g.beginPath(); g.moveTo(x - 20 * face, y - 4); g.lineTo(x - 40 * face, y + 44); g.lineTo(x + 18 * face, y - 4); g.closePath(); g.fill(); g.stroke();
+    g.fillStyle = "#fff"; g.fillRect(x - 26 * Math.abs(face), y - 9, 50, 10);
+    g.fillStyle = "#1b1b24"; g.textAlign = "center"; g.textBaseline = "middle"; g.fillText(text, x, by + h / 2 + 2); g.restore(); }
+};
+
 /* ================= Kazul123 =================
    Artillery guns roll in from every side of the screen (left, right, top and bottom), all aimed at the middle.
    One by one they fire, each shooting one letter of KAZUL123 into the center, where the letters slam into place.
@@ -4980,7 +5096,7 @@ const Personal = {
 setTimeout(() => { const sel = $("#facemood"); if (sel) { sel.value = Face.mood; sel.onchange = () => Face.setMood(sel.value); } });
 const AutoFx = {
   KEY: "autoFxDay",
-  FIRST_OF_DAY: { thenapalmer: () => Mango.run(), kapelan012: () => Banana.run(), att3nchun: () => Fishy.run(), anime_chef: () => Chef.run(), tassiethedevil: () => Tank.run(), kazul123: () => Kazul.run(), partisanherojinx: () => Jinx.run() },
+  FIRST_OF_DAY: { thenapalmer: () => Mango.run(), kapelan012: () => Pirate.run(), att3nchun: () => Fishy.run(), anime_chef: () => Chef.run(), tassiethedevil: () => Tank.run(), kazul123: () => Kazul.run(), partisanherojinx: () => Jinx.run() },
   chat(login) {
     const k = (login || "").toLowerCase(), fx = this.FIRST_OF_DAY[k]; if (!fx) return;
     const d = new Date(), today = d.getFullYear() + "-" + (d.getMonth() + 1) + "-" + d.getDate();
@@ -5109,6 +5225,7 @@ window.onRemote = c => {
   else if (c.cmd === "effect" && c.name === "face") Face.toggle();
   else if (c.cmd === "effect" && c.name === "rain") Face.toggleRain();
   else if (c.cmd === "effect" && c.name === "disco") Disco.toggle();
+  else if (c.cmd === "effect" && c.name === "pirate") Pirate.run();
   else if (c.cmd === "effect" && c.name === "faceMode") Face.toggleFace();
   else if (c.cmd === "effect" && c.name === "storm") Face.toggleStorm();
   else if (c.cmd === "effect" && c.name === "cloudTank") Face.toggleTank();
@@ -5241,6 +5358,7 @@ document.querySelectorAll("#testbar [data-t]").forEach(b => b.onclick = () => {
   else if (t === "face") Face.toggle();
   else if (t === "rain") Face.toggleRain();
   else if (t === "disco") Disco.toggle();
+  else if (t === "pirate") Pirate.run();
   else if (t === "faceMode") Face.toggleFace();
   else if (t === "storm") Face.toggleStorm();
   else if (t === "cloudTank") Face.toggleTank();
@@ -5715,7 +5833,7 @@ window.KZRelay = function (topic, onMessage, servers) {
 (() => {
   const qs = new URLSearchParams(location.search), key = qs.get("ctl");
   if (!key || !window.WebSocket) return;
-  const PAGE = "html3", VERSION = "82012cd";
+  const PAGE = "html3", VERSION = "032e45f";
   let said = false;
   const relay = KZRelay("kzctl/" + key, c => {
     if (!c || c.from === "overlay" || (c.to && c.to !== "all" && c.to !== PAGE)) return;
