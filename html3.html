@@ -5511,7 +5511,8 @@ window.onRemote = c => {
   else if (c.cmd === "effect" && c.name === "bolt") Bolt.run();
   else if (c.cmd === "effect" && c.name === "smokeLap") SmokeLap.run();
   else if (c.cmd === "effect" && c.name === "scrap") { if (c.shout != null) { try { localStorage.setItem("scrapShout", String(c.shout).trim()); } catch (e) {} } ScrapHaul.run(); }
-  else if (c.cmd === "scrapShout") { try { localStorage.setItem("scrapShout", (c.text || "").trim()); } catch (e) {} }
+  else if (c.cmd === "scrapShout") { try { localStorage.setItem("scrapShout", (c.text || "").trim()); } catch (e) {}
+    if (window.remoteSend) window.remoteSend({ cmd: "scrapShoutOk", text: ScrapHaul.shout() }); }        // tell the app which word OBS will use
   else if (c.cmd === "effect" && c.name === "mango") Mango.run();
   else if (c.cmd === "effect" && c.name === "banana") Banana.run();
   else if (c.cmd === "effect" && c.name === "turkey") Turkey.run();
@@ -6185,7 +6186,7 @@ window.KZRelay = function (topic, onMessage, servers) {
 (() => {
   const qs = new URLSearchParams(location.search), key = qs.get("ctl");
   if (!key || !window.WebSocket) return;
-  const PAGE = "html3", VERSION = "6fa4061";
+  const PAGE = "html3", VERSION = "815fac7";
   let said = false;
   const relay = KZRelay("kzctl/" + key, c => {
     if (!c || c.from === "overlay" || (c.to && c.to !== "all" && c.to !== PAGE)) return;
