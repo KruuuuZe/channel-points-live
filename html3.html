@@ -5173,7 +5173,7 @@ setTimeout(() => { const sel = $("#facemood"); if (sel) { sel.value = Face.mood;
 const AutoFx = {
   KEY: "autoFxDay",
   REDEEM: { jawa929: () => ScrapHaul.run() },                                // played only by the "Play my Effect" redeem
-  FIRST_OF_DAY: { thenapalmer: () => Mango.run(), kapelan012: () => Pirate.run(), att3nchun: () => Fishy.run(), anime_chef: () => Chef.run(), tassiethedevil: () => Tank.run(), kazul123: () => Kazul.run(), partisanherojinx: () => Jinx.run() },
+  FIRST_OF_DAY: { jawa929: () => ScrapHaul.run(), thenapalmer: () => Mango.run(), kapelan012: () => Pirate.run(), att3nchun: () => Fishy.run(), anime_chef: () => Chef.run(), tassiethedevil: () => Tank.run(), kazul123: () => Kazul.run(), partisanherojinx: () => Jinx.run() },
   chat(login) {
     const k = (login || "").toLowerCase(), fx = this.FIRST_OF_DAY[k]; if (!fx) return;
     const d = new Date(), today = d.getFullYear() + "-" + (d.getMonth() + 1) + "-" + d.getDate();
@@ -5510,7 +5510,7 @@ window.onRemote = c => {
   else if (c.cmd === "firstsReset") { AutoFx.reset(); toast("First-chat effects reset: each viewer's next chat plays theirs again", false, 5000); }
   else if (c.cmd === "effect" && c.name === "bolt") Bolt.run();
   else if (c.cmd === "effect" && c.name === "smokeLap") SmokeLap.run();
-  else if (c.cmd === "effect" && c.name === "scrap") ScrapHaul.run();
+  else if (c.cmd === "effect" && c.name === "scrap") { if (c.shout != null) { try { localStorage.setItem("scrapShout", String(c.shout).trim()); } catch (e) {} } ScrapHaul.run(); }
   else if (c.cmd === "scrapShout") { try { localStorage.setItem("scrapShout", (c.text || "").trim()); } catch (e) {} }
   else if (c.cmd === "effect" && c.name === "mango") Mango.run();
   else if (c.cmd === "effect" && c.name === "banana") Banana.run();
@@ -6185,7 +6185,7 @@ window.KZRelay = function (topic, onMessage, servers) {
 (() => {
   const qs = new URLSearchParams(location.search), key = qs.get("ctl");
   if (!key || !window.WebSocket) return;
-  const PAGE = "html3", VERSION = "5f6167a";
+  const PAGE = "html3", VERSION = "6fa4061";
   let said = false;
   const relay = KZRelay("kzctl/" + key, c => {
     if (!c || c.from === "overlay" || (c.to && c.to !== "all" && c.to !== PAGE)) return;
