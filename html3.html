@@ -339,6 +339,7 @@ body.fit #stage{background:radial-gradient(1200px 700px at 30% 20%,#1a103322,tra
 #facecv{position:absolute;inset:0;width:2560px;height:1440px;pointer-events:none;z-index:8}
 #discocv{position:absolute;inset:0;width:2560px;height:1440px;pointer-events:none;z-index:7}
 #piratecv{position:absolute;inset:0;width:2560px;height:1440px;pointer-events:none;z-index:9}
+#smokelapcv{position:absolute;inset:0;width:2560px;height:1440px;pointer-events:none;z-index:9}
 /* ---------- Kazul123: artillery from every side ---------- */
 #kazcv{position:absolute;inset:0;width:2560px;height:1440px;pointer-events:none;z-index:7}
 /* ---------- Silverhand (canvas + a red shade over the whole screen) ---------- */
@@ -428,6 +429,7 @@ body.fit #stage{background:radial-gradient(1200px 700px at 30% 20%,#1a103322,tra
   <canvas id="facecv" width="2560" height="1440"></canvas>
   <canvas id="discocv" width="2560" height="1440"></canvas>
   <canvas id="piratecv" width="2560" height="1440"></canvas>
+  <canvas id="smokelapcv" width="2560" height="1440"></canvas>
   <canvas id="tankcv" width="2560" height="1440"></canvas>
   <div id="pane"></div>
   <canvas id="holes" width="2560" height="1440"></canvas>
@@ -538,7 +540,7 @@ body.fit #stage{background:radial-gradient(1200px 700px at 30% 20%,#1a103322,tra
   <button class="b-scrap" data-t="scroopboard">!scroopleaderboard</button>
   <button class="b-bolt" data-t="bolt">⚡ Bolt</button><button class="snd" data-snd="bolt" title="Add a sound for this effect">🔊+</button>
   <button class="b-mango" data-t="mango">🥭 Mango</button><button class="snd" data-snd="mango" title="Add a sound for this effect">🔊+</button>
-  <button class="b-banana" data-t="banana">🍌 Banana</button><button class="b-banana" data-t="pirate">🏴‍☠️ Kapelan012 pirate</button><button class="snd" data-snd="pirate" title="Add a sound for the pirate">🔊+</button><button class="snd" data-snd="banana" title="Add a sound for this effect">🔊+</button>
+  <button class="b-banana" data-t="banana">🍌 Banana</button><button class="b-banana" data-t="pirate">🏴‍☠️ Kapelan012 pirate</button><button class="b-smoke" data-t="smokeLap">🌀 Smoke lap</button><button class="snd" data-snd="smokeLap" title="Add a sound for the smoke lap">🔊+</button><button class="snd" data-snd="pirate" title="Add a sound for the pirate">🔊+</button><button class="snd" data-snd="banana" title="Add a sound for this effect">🔊+</button>
   <button class="b-turkey" data-t="turkey">🦃 Turkey</button><button class="snd" data-snd="turkey" title="Add a sound for this effect">🔊+</button>
   <button class="b-penguin" data-t="penguin">🐧 Penguin</button><button class="snd" data-snd="penguin" title="Add a sound for this effect">🔊+</button>
   <button class="b-fish" data-t="fish">🐟 ATT3NCHUN</button><button class="snd" data-snd="fish" title="Add a sound for this effect">🔊+</button>
@@ -4146,18 +4148,23 @@ const Face = {
         return true;
       });
       // ---- rain, while it's switched on (Rain on/off button)
-      // rain: thin fast streaks falling from under the cloud with a slight slant, each a little different in length,
-      // speed and brightness; they burst into tiny droplets and ripples when they hit the bottom of the screen
-      if (this.on && (this.rain || performance.now() < this.rainTill)) for (let i = 0; i < 6; i++) { const v = rand(24, 34);
-        this.drops.push({ x: x + rand(-230, 230) * SC * (1 + .3 * this.tankM), y: y + rand(30, 70) * SC, v, len: v * rand(.9, 1.4), a: rand(.22, .55), w: rand(1, 2.1) }); }
+      // rain in the logo's colours (lime green and purple, a few white): bold, glowing streaks that are easy to see on stream,
+      // falling from under the cloud with a slight slant; they burst into tiny droplets and ripples at the bottom of the screen
+      const RAINC = ["163,230,53", "168,85,247", "163,230,53", "168,85,247", "236,255,210"];
+      if (this.on && (this.rain || performance.now() < this.rainTill)) for (let i = 0; i < 7; i++) { const v = rand(20, 28);
+        this.drops.push({ x: x + rand(-250, 250) * SC * (1 + .3 * this.tankM), y: y + rand(30, 70) * SC, v, len: v * rand(2, 2.8), a: rand(.8, 1), w: rand(4, 5.5), c: RAINC[Math.floor(Math.random() * RAINC.length)] }); }
       const wind = .1, sp = this.splash || (this.splash = []);
       g.lineCap = "round";
       this.drops = this.drops.filter(d => { const s = dt / 16; d.y += d.v * s; d.x += d.v * wind * s;
-        if (d.y > H - 4) { if (sp.length < 400) { sp.push({ x: d.x, y: H - 4, r: 1, a: d.a * .55, ring: true }); for (let k = 0; k < 2; k++) sp.push({ x: d.x, y: H - 6, vx: rand(-2.2, 2.2), vy: rand(-4.5, -2), a: d.a, life: 1 }); } return false; }
-        const gr = g.createLinearGradient(d.x, d.y, d.x - d.len * wind, d.y - d.len); gr.addColorStop(0, `rgba(210,225,245,${d.a})`); gr.addColorStop(1, "rgba(210,225,245,0)");
-        g.strokeStyle = gr; g.lineWidth = d.w; g.beginPath(); g.moveTo(d.x, d.y); g.lineTo(d.x - d.len * wind, d.y - d.len); g.stroke(); return true; });
-      this.splash = sp.filter(q => { if (q.ring) { q.r += .9 * dt / 16; q.a *= .9; if (q.a < .02) return false; g.strokeStyle = `rgba(210,225,245,${q.a})`; g.lineWidth = 1.2; g.beginPath(); g.ellipse(q.x, q.y, q.r * 2.2, q.r * .5, 0, 0, 6.283); g.stroke(); return true; }
-        q.x += q.vx; q.y += q.vy; q.vy += .35; q.life -= .06; if (q.life <= 0 || q.y > H) return false; g.fillStyle = `rgba(215,228,248,${q.a * q.life})`; g.beginPath(); g.arc(q.x, q.y, 1.4, 0, 6.283); g.fill(); return true; });
+        const c = d.c || "210,225,245";
+        if (d.y > H - 4) { if (sp.length < 400) { sp.push({ x: d.x, y: H - 4, r: 1, a: d.a * .6, ring: true, c }); for (let k = 0; k < 2; k++) sp.push({ x: d.x, y: H - 6, vx: rand(-2.2, 2.2), vy: rand(-4.5, -2), a: d.a, life: 1, c }); } return false; }
+        const ex = d.x - d.len * wind, ey = d.y - d.len;
+        let gr = g.createLinearGradient(d.x, d.y, ex, ey); gr.addColorStop(0, `rgba(${c},${d.a * .28})`); gr.addColorStop(1, `rgba(${c},0)`);   // soft glow around it
+        g.strokeStyle = gr; g.lineWidth = d.w * 3.2; g.beginPath(); g.moveTo(d.x, d.y); g.lineTo(ex, ey); g.stroke();
+        gr = g.createLinearGradient(d.x, d.y, ex, ey); gr.addColorStop(0, `rgba(${c},${d.a})`); gr.addColorStop(1, `rgba(${c},0)`);
+        g.strokeStyle = gr; g.lineWidth = d.w; g.beginPath(); g.moveTo(d.x, d.y); g.lineTo(ex, ey); g.stroke(); return true; });
+      this.splash = sp.filter(q => { if (q.ring) { q.r += .9 * dt / 16; q.a *= .9; if (q.a < .02) return false; g.strokeStyle = `rgba(${q.c || "210,225,245"},${q.a})`; g.lineWidth = 2; g.beginPath(); g.ellipse(q.x, q.y, q.r * 2.2, q.r * .5, 0, 0, 6.283); g.stroke(); return true; }
+        q.x += q.vx; q.y += q.vy; q.vy += .35; q.life -= .06; if (q.life <= 0 || q.y > H) return false; g.fillStyle = `rgba(${q.c || "215,228,248"},${q.a * q.life})`; g.beginPath(); g.arc(q.x, q.y, 2.2, 0, 6.283); g.fill(); return true; });
       // ---- and once in a while it shoots a bolt of lightning out of the cloud
       if (this.on && faceMode && this.stormK < .3 && t > nextBolt) {
         nextBolt = t + rand(8000, 20000);
@@ -5267,11 +5274,66 @@ const Bolt = {
   }
 };
 
+/* ================= smoke lap =================
+   Two soft ribbons of smoke, one lime green and one purple (the logo's colours), twisting around each other like a
+   spiral, run a lap of the screen the same way the lightning lap does: from the bottom left corner up the left side,
+   across the top, down the right side and back along the bottom to where they started. The smoke they leave behind
+   curls, spreads and slowly fades. */
+const SmokeLap = {
+  busy: false, W: 2560, H: 1440, M: 70, DUR: 10000, R: 46,
+  COLS: [[150, 225, 45], [140, 70, 235]],
+  // wispy smoke puffs: lumpy clusters of soft blobs (a few different ones per colour, so the smoke never looks repeated)
+  sprite(c, v) { const k = c.join(",") + "/" + v; this.spr = this.spr || {}; if (this.spr[k]) return this.spr[k];
+    const cv = document.createElement("canvas"); cv.width = cv.height = 160; const g = cv.getContext("2d"), col = c.join(",");
+    for (let i = 0; i < 16; i++) { const a = Math.random() * 6.283, d = Math.pow(Math.random(), .7) * 38, x = 80 + Math.cos(a) * d, y = 80 + Math.sin(a) * d, r = rand(16, 34);
+      const gr = g.createRadialGradient(x, y, 0, x, y, r); gr.addColorStop(0, `rgba(${col},.32)`); gr.addColorStop(.5, `rgba(${col},.14)`); gr.addColorStop(1, `rgba(${col},0)`);
+      g.fillStyle = gr; g.beginPath(); g.arc(x, y, r, 0, 6.283); g.fill(); }
+    return this.spr[k] = cv; },
+  // a point on the lap (k from 0 to 1) and which way it's heading
+  at(k) { const { W, H, M } = this, a = H - 2 * M, b = W - 2 * M, L = 2 * a + 2 * b; let d = k * L;
+    if (d < a) return [M, H - M - d, 0, -1]; d -= a;
+    if (d < b) return [M + d, M, 1, 0]; d -= b;
+    if (d < a) return [W - M, M + d, 0, 1]; d -= a;
+    return [W - M - Math.min(d, b), H - M, -1, 0]; },
+  run() {
+    if (this.busy) return; this.busy = true; Sound.init(); MySounds.play("smokeLap");
+    const cv = $("#smokelapcv"), g = cv.getContext("2d"), { W, H, DUR, R } = this, t0 = performance.now(), puffs = [];
+    const ease = k => k;                                                         // a steady pace all the way round
+    let last = t0, emitK = 0;
+    const frame = now => {
+      const t = now - t0, dt = Math.min(50, now - last) / 16; last = now;
+      // lay smoke along the way the head travelled since last frame (evenly spaced, so fast corners don't leave gaps)
+      if (t < DUR) { const k1 = ease(Math.min(1, t / DUR)), step = .0019;
+        for (; emitK < k1; emitK += step) { const [x, y, dx, dy] = this.at(emitK), tw = emitK * 40 + t / 1100;    // how far the spiral has twisted
+          this.COLS.forEach((c, si) => { const ph = tw + si * Math.PI, off = Math.sin(ph) * R * rand(.85, 1.15), front = Math.cos(ph);
+            const px = x + -dy * off + rand(-6, 6), py = y + dx * off + rand(-6, 6);
+            puffs.push({ x: px, y: py, c, v: Math.floor(Math.random() * 4), r: rand(20, 32) * (1 + front * .2), grow: rand(.7, 1.2), a: .5 + front * .2, life: 1, fade: rand(.007, .011),
+              vx: -dy * Math.sin(ph) * rand(.3, .8) + rand(-.35, .35), vy: dx * Math.sin(ph) * rand(.3, .8) + rand(-.5, .1), rot: rand(0, 6.28), spin: rand(-.012, .012), z: front }); });
+          if (Math.random() < .3) puffs.push({ x: x + rand(-14, 14), y: y + rand(-14, 14), c: [230, 236, 255], v: Math.floor(Math.random() * 4), r: rand(14, 22), grow: .8, a: .3, life: 1, fade: .013, vx: rand(-.2, .2), vy: rand(-.3, 0), rot: rand(0, 6.28), spin: 0, z: 0 }); } }
+      g.clearRect(0, 0, W, H);
+      puffs.sort((a, b) => a.z - b.z);                                                   // the strand on the far side is drawn first
+      for (let i = puffs.length - 1; i >= 0; i--) { const p = puffs[i]; p.life -= p.fade * dt; if (p.life <= 0) puffs.splice(i, 1); }
+      for (const p of puffs) {      // smoke drifts on a gentle swirling breeze, rises a little, spreads out and thins away
+        p.vx += Math.sin(p.y / 95 + t / 760 + p.v) * .05 * dt; p.vy += Math.cos(p.x / 120 + t / 840 + p.v) * .045 * dt;
+        p.x += p.vx * dt; p.y += p.vy * dt - .08 * dt; p.vx *= Math.pow(.98, dt); p.vy *= Math.pow(.98, dt); p.r += p.grow * dt * p.life; p.rot += p.spin * dt;
+        const a = Math.min(1, p.a * Math.pow(p.life, 1.4) * Math.min(1, (1 - p.life) * 14 + .25)); if (a <= .01) continue;
+        g.globalAlpha = a; g.save(); g.translate(p.x, p.y); g.rotate(p.rot); g.drawImage(this.sprite(p.c, p.v), -p.r * 1.7, -p.r * 1.7, p.r * 3.4, p.r * 3.4); g.restore(); }
+      g.globalAlpha = 1;
+      // the head: a soft glowing knot where the two ribbons meet
+      if (t < DUR) { const [x, y] = this.at(ease(Math.min(1, t / DUR))), gr = g.createRadialGradient(x, y, 0, x, y, 70);
+        gr.addColorStop(0, "rgba(245,255,235,.55)"); gr.addColorStop(.4, "rgba(190,150,255,.25)"); gr.addColorStop(1, "rgba(160,230,60,0)"); g.fillStyle = gr; g.beginPath(); g.arc(x, y, 70, 0, 6.283); g.fill(); }
+      if (t < DUR || puffs.length) requestAnimationFrame(frame); else { g.clearRect(0, 0, W, H); this.busy = false; }
+    };
+    requestAnimationFrame(frame);
+  }
+};
+
 /* commands from the app's Control screen (see remote.js) */
 window.onRemote = c => {
   if (c.cmd === "stars") Wanted.set(+c.n || 0);
   else if (c.cmd === "firstsReset") { AutoFx.reset(); toast("First-chat effects reset: each viewer's next chat plays theirs again", false, 5000); }
   else if (c.cmd === "effect" && c.name === "bolt") Bolt.run();
+  else if (c.cmd === "effect" && c.name === "smokeLap") SmokeLap.run();
   else if (c.cmd === "effect" && c.name === "mango") Mango.run();
   else if (c.cmd === "effect" && c.name === "banana") Banana.run();
   else if (c.cmd === "effect" && c.name === "turkey") Turkey.run();
@@ -5331,9 +5393,9 @@ window.onRemote = c => {
 const FxLine = {
   q: [], running: false, until: 0,
   // the effects in line, and how to tell each one is still playing (a busy flag, or how long it lasts)
-  MODS: { Mango: null, Banana: null, Fishy: null, Chef: null, Tank: null, Kazul: null, Jinx: null, Pirate: null, Turkey: 7600, Penguin: 10600, Eagle: 9000, Bolt: null },
+  MODS: { SmokeLap: null, Mango: null, Banana: null, Fishy: null, Chef: null, Tank: null, Kazul: null, Jinx: null, Pirate: null, Turkey: 7600, Penguin: 10600, Eagle: 9000, Bolt: null },
   playing() { if (performance.now() < this.until) return true;
-    return [Mango, Banana, Fishy, Chef, Tank, Kazul, Jinx, Pirate].some(m => m.busy) || (Bolt.runs && Bolt.runs.length > 0); },
+    return [Mango, Banana, Fishy, Chef, Tank, Kazul, Jinx, Pirate, SmokeLap].some(m => m.busy) || (Bolt.runs && Bolt.runs.length > 0); },
   push(fn) { this.q.push(fn); if (this.q.length > 40) this.q.shift(); this.pump(); },
   pump() { if (this.running) return; const fn = this.q.shift(); if (!fn) return; this.running = true;
     const go = () => { if (this.playing()) return setTimeout(go, 300);                 // something still on screen (e.g. it started before the line existed)
@@ -5343,7 +5405,7 @@ const FxLine = {
       setTimeout(wait, 300); };
     go(); }
 };
-for (const [name, ms] of Object.entries(FxLine.MODS)) { const m = { Mango, Banana, Fishy, Chef, Tank, Kazul, Jinx, Pirate, Turkey, Penguin, Eagle, Bolt }[name], orig = m.run.bind(m);
+for (const [name, ms] of Object.entries(FxLine.MODS)) { const m = { SmokeLap, Mango, Banana, Fishy, Chef, Tank, Kazul, Jinx, Pirate, Turkey, Penguin, Eagle, Bolt }[name], orig = m.run.bind(m);
   m.run = (...a) => FxLine.push(() => { if (ms) FxLine.until = performance.now() + ms; orig(...a); }); }
 
 /* one alert at a time, in order */
@@ -5441,6 +5503,7 @@ document.querySelectorAll("#testbar [data-t]").forEach(b => b.onclick = () => {
   else if (t === "rain") Face.toggleRain();
   else if (t === "disco") Disco.toggle();
   else if (t === "pirate") Pirate.run();
+  else if (t === "smokeLap") SmokeLap.run();
   else if (t === "faceMode") Face.toggleFace();
   else if (t === "storm") Face.toggleStorm();
   else if (t === "cloudTank") Face.toggleTank();
@@ -5943,7 +6006,7 @@ window.KZRelay = function (topic, onMessage, servers) {
 (() => {
   const qs = new URLSearchParams(location.search), key = qs.get("ctl");
   if (!key || !window.WebSocket) return;
-  const PAGE = "html3", VERSION = "cae8ecf";
+  const PAGE = "html3", VERSION = "667ddaa";
   let said = false;
   const relay = KZRelay("kzctl/" + key, c => {
     if (!c || c.from === "overlay" || (c.to && c.to !== "all" && c.to !== PAGE)) return;
