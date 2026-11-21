@@ -5296,10 +5296,11 @@ const Bolt = {
    Art: the app's 🎨 Art screen, SCRAP HAUL ART; drawn stand-ins until it's sent. */
 const ScrapHaul = {
   busy: false, NAME: "Jawa929", SHOUT: "JACKPOT!",
+  shout() { let v = ""; try { v = (localStorage.getItem("scrapShout") || "").trim(); } catch (e) {} return v || this.SHOUT; },   // the word typed in the Control screen
   run() {
     if (this.busy) return; this.busy = true; Sound.init(); MySounds.play("scrap");
     const cv = $("#scrapcv"), g = cv.getContext("2d"), W = 2560, H = 1440, S = ChefArt.sprites, t0 = performance.now(), GY = H - 26;
-    const TW = 820, PW = 560, PH = 250, HW = 900, GUYH = 230;
+    const TW = 820, PW = 560, PH = 250, HW = 900, GUYH = 230, SHOUT = this.shout();
     const px = rand(680, 1480), truckStop = px + 150 + TW / 2, truckIn = W + TW / 2 + 60;
     const T = { back: 3300, dump: 3500, dumpEnd: 6600, leave: 6900, rumble: 9300, pop: 10100, popEnd: 11000, run: 13600, hIn: 13000, end: 26000 };
     const bits = [], dust = [], reds = [];
@@ -5369,7 +5370,7 @@ const ScrapHaul = {
       const drawGuy = () => { if (!show) return; if (guy) put(guy, gf, gx, gy, { h: GUYH, flip }); else this.drawGuy(g, gx, gy, GUYH, t, t >= T.run); };
       // while he's still coming up out of the heap he's behind it; after that he's on top
       if (t < T.pop + (T.popEnd - T.pop) * .45 && !S.scrap_guy_pop) { drawGuy(); drawPile(); } else { drawPile(); drawGuy(); }
-      if (show && t > T.popEnd - 200 && t < T.run + 400) Pirate.bubble(g, gx + 20, gy - GUYH - 75, this.SHOUT, Math.min(1, (t - T.popEnd + 200) / 250), 1);
+      if (show && t > T.popEnd - 200 && t < T.run + 400) Pirate.bubble(g, gx + 20, gy - GUYH - 75, SHOUT, Math.min(1, (t - T.popEnd + 200) / 250), 1);
       // sparkles off the gold
       if (show && t > T.pop + 300 && Math.random() < .5) dust.push({ spark: 1, x: gx + rand(-60, 60), y: gy - GUYH * rand(.75, 1.05), vx: 0, vy: rand(-.6, -.1), r: rand(3, 6), life: 1 });
       // ---------- the harvester
@@ -5503,6 +5504,7 @@ window.onRemote = c => {
   else if (c.cmd === "effect" && c.name === "bolt") Bolt.run();
   else if (c.cmd === "effect" && c.name === "smokeLap") SmokeLap.run();
   else if (c.cmd === "effect" && c.name === "scrap") ScrapHaul.run();
+  else if (c.cmd === "scrapShout") { try { localStorage.setItem("scrapShout", (c.text || "").trim()); } catch (e) {} }
   else if (c.cmd === "effect" && c.name === "mango") Mango.run();
   else if (c.cmd === "effect" && c.name === "banana") Banana.run();
   else if (c.cmd === "effect" && c.name === "turkey") Turkey.run();
@@ -6176,7 +6178,7 @@ window.KZRelay = function (topic, onMessage, servers) {
 (() => {
   const qs = new URLSearchParams(location.search), key = qs.get("ctl");
   if (!key || !window.WebSocket) return;
-  const PAGE = "html3", VERSION = "b52b0fe";
+  const PAGE = "html3", VERSION = "2bc683f";
   let said = false;
   const relay = KZRelay("kzctl/" + key, c => {
     if (!c || c.from === "overlay" || (c.to && c.to !== "all" && c.to !== PAGE)) return;
