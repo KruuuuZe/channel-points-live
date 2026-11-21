@@ -340,6 +340,7 @@ body.fit #stage{background:radial-gradient(1200px 700px at 30% 20%,#1a103322,tra
 #discocv{position:absolute;inset:0;width:2560px;height:1440px;pointer-events:none;z-index:7}
 #piratecv{position:absolute;inset:0;width:2560px;height:1440px;pointer-events:none;z-index:9}
 #smokelapcv{position:absolute;inset:0;width:2560px;height:1440px;pointer-events:none;z-index:9}
+#scrapcv{position:absolute;inset:0;width:2560px;height:1440px;pointer-events:none;z-index:9}
 /* ---------- Kazul123: artillery from every side ---------- */
 #kazcv{position:absolute;inset:0;width:2560px;height:1440px;pointer-events:none;z-index:7}
 /* ---------- Silverhand (canvas + a red shade over the whole screen) ---------- */
@@ -430,6 +431,7 @@ body.fit #stage{background:radial-gradient(1200px 700px at 30% 20%,#1a103322,tra
   <canvas id="discocv" width="2560" height="1440"></canvas>
   <canvas id="piratecv" width="2560" height="1440"></canvas>
   <canvas id="smokelapcv" width="2560" height="1440"></canvas>
+  <canvas id="scrapcv" width="2560" height="1440"></canvas>
   <canvas id="tankcv" width="2560" height="1440"></canvas>
   <div id="pane"></div>
   <canvas id="holes" width="2560" height="1440"></canvas>
@@ -540,7 +542,7 @@ body.fit #stage{background:radial-gradient(1200px 700px at 30% 20%,#1a103322,tra
   <button class="b-scrap" data-t="scroopboard">!scroopleaderboard</button>
   <button class="b-bolt" data-t="bolt">⚡ Bolt</button><button class="snd" data-snd="bolt" title="Add a sound for this effect">🔊+</button>
   <button class="b-mango" data-t="mango">🥭 Mango</button><button class="snd" data-snd="mango" title="Add a sound for this effect">🔊+</button>
-  <button class="b-banana" data-t="banana">🍌 Banana</button><button class="b-banana" data-t="pirate">🏴‍☠️ Kapelan012 pirate</button><button class="b-smoke" data-t="smokeLap">🌀 Smoke lap</button><button class="snd" data-snd="smokeLap" title="Add a sound for the smoke lap">🔊+</button><button class="snd" data-snd="pirate" title="Add a sound for the pirate">🔊+</button><button class="snd" data-snd="banana" title="Add a sound for this effect">🔊+</button>
+  <button class="b-banana" data-t="banana">🍌 Banana</button><button class="b-banana" data-t="pirate">🏴‍☠️ Kapelan012 pirate</button><button class="b-smoke" data-t="smokeLap">🌀 Smoke lap</button><button class="b-banana" data-t="scrap">🛞 Jawa929 scrap haul</button><button class="snd" data-snd="scrap" title="Add a sound for the scrap haul">🔊+</button><button class="snd" data-snd="smokeLap" title="Add a sound for the smoke lap">🔊+</button><button class="snd" data-snd="pirate" title="Add a sound for the pirate">🔊+</button><button class="snd" data-snd="banana" title="Add a sound for this effect">🔊+</button>
   <button class="b-turkey" data-t="turkey">🦃 Turkey</button><button class="snd" data-snd="turkey" title="Add a sound for this effect">🔊+</button>
   <button class="b-penguin" data-t="penguin">🐧 Penguin</button><button class="snd" data-snd="penguin" title="Add a sound for this effect">🔊+</button>
   <button class="b-fish" data-t="fish">🐟 ATT3NCHUN</button><button class="snd" data-snd="fish" title="Add a sound for this effect">🔊+</button>
@@ -2871,7 +2873,7 @@ const ChefArt = {
   use(name, a) { const img = new Image(); img.onload = () => { this.sprites[name] = Object.assign({ img }, a); if (name === "tower" && Lurk.up) Lurk.paint(); }; img.src = a.url; },
   async load() {
     try { const db = await this.open();
-      ["pirate_ship", "pirate_wave", "pirate_fall", "pirate_slide", "pirate_waving", "cs__base", "cs_tank", "cs_tank_form", "cs_tank_idle", "cs_tank_act", "cs_tank_turn", "cs_dog", "cs_dog_form", "cs_dog_idle", "cs_dog_act", "cs_dog_turn", "cs_cat", "cs_cat_form", "cs_cat_idle", "cs_cat_act", "cs_cat_turn", "cs_fish", "cs_fish_form", "cs_fish_idle", "cs_fish_act", "cs_fish_turn", "cs_whale", "cs_whale_form", "cs_whale_idle", "cs_whale_act", "cs_whale_turn", "cs_bunny", "cs_bunny_form", "cs_bunny_idle", "cs_bunny_act", "cs_bunny_turn", "cs_turtle", "cs_turtle_form", "cs_turtle_idle", "cs_turtle_act", "cs_turtle_turn", "cs_duck", "cs_duck_form", "cs_duck_idle", "cs_duck_act", "cs_duck_turn", "cs_elephant", "cs_elephant_form", "cs_elephant_idle", "cs_elephant_act", "cs_elephant_turn", "cs_dino", "cs_dino_form", "cs_dino_idle", "cs_dino_act", "cs_dino_turn", "cs_dragon", "cs_dragon_form", "cs_dragon_idle", "cs_dragon_act", "cs_dragon_turn", "cs_butterfly", "cs_butterfly_form", "cs_butterfly_idle", "cs_butterfly_act", "cs_bird", "cs_bird_form", "cs_bird_idle", "cs_bird_act", "cs_bird_turn", "cs_snail", "cs_snail_form", "cs_snail_idle", "cs_snail_turn", "cs_octopus", "cs_octopus_form", "cs_octopus_idle", "cs_octopus_act", "cs_crab", "cs_crab_form", "cs_crab_idle", "cs_crab_act", "cs_plane", "cs_plane_form", "cs_plane_idle", "cs_plane_act", "cs_plane_turn", "cs_rocket", "cs_rocket_form", "cs_rocket_idle", "cs_rocket_act", "cs_car", "cs_car_form", "cs_car_idle", "cs_car_act", "cs_car_turn", "cs_train", "cs_train_form", "cs_train_idle", "cs_train_act", "cs_train_turn", "cs_boat", "cs_boat_form", "cs_boat_idle", "cs_heli", "cs_heli_form", "cs_heli_idle", "cs_heli_turn", "cs_ufo", "cs_ufo_form", "cs_ufo_idle", "cs_ufo_act", "cs_ufo_turn", "cs_heart", "cs_heart_form", "cs_heart_idle", "cs_heart_act", "cs_star", "cs_star_form", "cs_star_idle", "cs_star_act", "cs_moon", "cs_moon_form", "cs_moon_idle", "cs_mushroom", "cs_mushroom_form", "cs_mushroom_idle", "cs_tree", "cs_tree_form", "cs_tree_idle", "cs_castle", "cs_castle_form", "cs_castle_idle", "cs_ghost", "cs_ghost_form", "cs_ghost_idle", "cs_ghost_act", "cs_pig", "cs_pig_form", "cs_pig_idle", "cs_pig_act", "cs_pig_turn", "cs_sheep", "cs_sheep_form", "cs_sheep_idle", "cs_sheep_act", "cs_sheep_turn", "cs_lion", "cs_lion_form", "cs_lion_idle", "cs_lion_act", "cs_lion_turn", "cs_giraffe", "cs_giraffe_form", "cs_giraffe_idle", "cs_giraffe_turn", "cs_horse", "cs_horse_form", "cs_horse_idle", "cs_horse_act", "cs_horse_turn", "cs_cow", "cs_cow_form", "cs_cow_idle", "cs_cow_act", "cs_cow_turn", "cs_penguin", "cs_penguin_form", "cs_penguin_idle", "cs_penguin_act", "cs_owl", "cs_owl_form", "cs_owl_idle", "cs_owl_act", "cs_frog", "cs_frog_form", "cs_frog_idle", "cs_frog_act", "cs_frog_turn", "cs_snake", "cs_snake_form", "cs_snake_idle", "cs_snake_act", "cs_snake_turn", "cs_shark", "cs_shark_form", "cs_shark_idle", "cs_shark_act", "cs_shark_turn", "cs_dolphin", "cs_dolphin_form", "cs_dolphin_idle", "cs_dolphin_act", "cs_dolphin_turn", "cs_bee", "cs_bee_form", "cs_bee_idle", "cs_bee_act", "cs_bee_turn", "cs_spider", "cs_spider_form", "cs_spider_idle", "cs_mouse", "cs_mouse_form", "cs_mouse_idle", "cs_mouse_act", "cs_mouse_turn", "cs_fox", "cs_fox_form", "cs_fox_idle", "cs_fox_act", "cs_fox_turn", "cs_bear", "cs_bear_form", "cs_bear_idle", "cs_bear_act", "cs_bear_turn", "cs_kangaroo", "cs_kangaroo_form", "cs_kangaroo_idle", "cs_kangaroo_act", "cs_kangaroo_turn", "cs_flamingo", "cs_flamingo_form", "cs_flamingo_idle", "cs_flamingo_turn", "cs_seahorse", "cs_seahorse_form", "cs_seahorse_idle", "cs_seahorse_turn", "cs_jellyfish", "cs_jellyfish_form", "cs_jellyfish_idle", "cs_jellyfish_act", "cs_unicorn", "cs_unicorn_form", "cs_unicorn_idle", "cs_unicorn_act", "cs_unicorn_turn", "cs_guitar", "cs_guitar_form", "cs_guitar_idle", "cs_guitar_act", "cs_umbrella", "cs_umbrella_form", "cs_umbrella_idle", "cs_umbrella_act", "cs_balloon", "cs_balloon_form", "cs_balloon_idle", "cs_balloon_act", "cs_lighthouse", "cs_lighthouse_form", "cs_lighthouse_idle", "cs_lighthouse_act", "cs_house", "cs_house_form", "cs_house_idle", "cs_house_act", "cs_robot", "cs_robot_form", "cs_robot_idle", "cs_robot_act", "cs_skull", "cs_skull_form", "cs_skull_idle", "cs_skull_act", "cs_crown", "cs_crown_form", "cs_crown_idle", "cs_crown_act", "cs_anchor", "cs_anchor_form", "cs_anchor_idle", "cs_sword", "cs_sword_form", "cs_sword_idle", "cs_sword_act", "cs_trophy", "cs_trophy_form", "cs_trophy_idle", "cs_trophy_act", "cs_cupcake", "cs_cupcake_form", "cs_cupcake_idle", "cs_icecream", "cs_icecream_form", "cs_icecream_idle", "cs_pizza", "cs_pizza_form", "cs_pizza_idle", "cs_pizza_turn", "cs_apple", "cs_apple_form", "cs_apple_idle", "cs_bell", "cs_bell_form", "cs_bell_idle", "cs_bell_act", "cs_kite", "cs_kite_form", "cs_kite_idle", "cs_submarine", "cs_submarine_form", "cs_submarine_idle", "cs_submarine_act", "cs_submarine_turn", "cs_bicycle", "cs_bicycle_form", "cs_bicycle_idle", "cs_bicycle_act", "cs_bicycle_turn", "cs_gamepad", "cs_gamepad_form", "cs_gamepad_idle", "cs_gamepad_act", "cf_e_none", "disco_glint", "cf_x_talk_me", "sm_hat", "sm_face", "sm_nose", "sm_arm", "sm_ball", "sm_ball_melt", "sm_puddle", "cf_ref", "cf_x_talk", "cf_x_wide", "cf_x_look_l", "cf_x_look_r", "cf_x_smile", "cf_x_grin", "cf_x_oo", "cf_x_blink", "cf_v_smile_talk", "cf_v_smile_l", "cf_v_smile_r", "cf_v_grin_talk", "cf_v_grin_l", "cf_v_grin_r", "cf_v_oo_talk", "cf_v_oo_l", "cf_v_oo_r", "cf_v_closed_talk", "cf_e_smirk", "cf_v_smirk_talk", "cf_v_smirk_l", "cf_v_smirk_r", "cf_e_wink", "cf_v_wink_talk", "cf_e_laugh", "cf_v_laugh_talk", "cf_e_shocked", "cf_v_shocked_talk", "cf_v_shocked_l", "cf_v_shocked_r", "cf_e_sleepy", "cf_v_sleepy_talk", "cf_v_sleepy_l", "cf_v_sleepy_r", "cf_e_sideeye", "cf_v_sideeye_talk", "cf_v_sideeye_l", "cf_v_sideeye_r", "cf_e_sad", "cf_v_sad_talk", "cf_v_sad_l", "cf_v_sad_r", "cf_e_tongue", "cf_v_tongue_talk", "cf_v_tongue_l", "cf_v_tongue_r", "cf_e_puffed", "cf_v_puffed_talk", "cf_v_puffed_l", "cf_v_puffed_r", "cf_e_determined", "cf_v_determined_talk", "cf_v_determined_l", "cf_v_determined_r", "cf_e_evil", "cf_v_evil_talk", "cf_v_evil_l", "cf_v_evil_r", "cf_e_smug", "cf_v_smug_talk", "cf_v_smug_l", "cf_v_smug_r", "cf_e_confused", "cf_v_confused_talk", "cf_v_confused_l", "cf_v_confused_r", "cf_e_disgusted", "cf_v_disgusted_talk", "cf_v_disgusted_l", "cf_v_disgusted_r", "cf_e_nervous", "cf_v_nervous_talk", "cf_v_nervous_l", "cf_v_nervous_r", "cf_e_kissy", "cf_v_kissy_talk", "cf_v_kissy_l", "cf_v_kissy_r", "cf_e_bored", "cf_v_bored_talk", "cf_v_bored_l", "cf_v_bored_r", "cf_e_excited", "cf_v_excited_talk", "cf_v_excited_l", "cf_v_excited_r", "cf_e_thinking", "cf_v_thinking_talk", "cf_v_thinking_l", "cf_v_thinking_r", "cf_e_scared", "cf_v_scared_talk", "cf_v_scared_l", "cf_v_scared_r", "jinx_flip", "jinx_spin", "jinx_fire", "jinx_launch", "artillery", "golden_banana", "golden_mango", "tower", "eagle_roll", "tank_drive", "soldier_run", "soldier_throw", "grenade", "explosion", "eagle_glide", "eagle_flap", "plane", "title", "chef_parachute", "chef_chop", "chef_jump", "chef_fly", "chef_truck", "cf_x_look_d", "cf_v_smile_d", "cf_v_grin_d", "cf_v_oo_d", "cf_v_smirk_d", "cf_v_shocked_d", "cf_v_sleepy_d", "cf_v_sideeye_d", "cf_v_sad_d", "cf_v_tongue_d", "cf_v_puffed_d", "cf_v_determined_d", "cf_v_evil_d", "cf_v_smug_d", "cf_v_confused_d", "cf_v_disgusted_d", "cf_v_nervous_d", "cf_v_kissy_d", "cf_v_bored_d", "cf_v_excited_d", "cf_v_thinking_d", "cf_v_scared_d"].forEach(n => { const r = db.transaction("a").objectStore("a").get(n); r.onsuccess = () => { if (r.result) this.use(n, r.result); }; });
+      ["pirate_ship", "pirate_wave", "pirate_fall", "pirate_slide", "pirate_waving", "scrap_truck", "scrap_truck_empty", "scrap_truck_dump", "scrap_pile", "scrap_guy", "scrap_guy_pop", "scrap_guy_cheer", "scrap_guy_run", "scrap_harvester", "scrap_harvester_go", "cs__base", "cs_tank", "cs_tank_form", "cs_tank_idle", "cs_tank_act", "cs_tank_turn", "cs_dog", "cs_dog_form", "cs_dog_idle", "cs_dog_act", "cs_dog_turn", "cs_cat", "cs_cat_form", "cs_cat_idle", "cs_cat_act", "cs_cat_turn", "cs_fish", "cs_fish_form", "cs_fish_idle", "cs_fish_act", "cs_fish_turn", "cs_whale", "cs_whale_form", "cs_whale_idle", "cs_whale_act", "cs_whale_turn", "cs_bunny", "cs_bunny_form", "cs_bunny_idle", "cs_bunny_act", "cs_bunny_turn", "cs_turtle", "cs_turtle_form", "cs_turtle_idle", "cs_turtle_act", "cs_turtle_turn", "cs_duck", "cs_duck_form", "cs_duck_idle", "cs_duck_act", "cs_duck_turn", "cs_elephant", "cs_elephant_form", "cs_elephant_idle", "cs_elephant_act", "cs_elephant_turn", "cs_dino", "cs_dino_form", "cs_dino_idle", "cs_dino_act", "cs_dino_turn", "cs_dragon", "cs_dragon_form", "cs_dragon_idle", "cs_dragon_act", "cs_dragon_turn", "cs_butterfly", "cs_butterfly_form", "cs_butterfly_idle", "cs_butterfly_act", "cs_bird", "cs_bird_form", "cs_bird_idle", "cs_bird_act", "cs_bird_turn", "cs_snail", "cs_snail_form", "cs_snail_idle", "cs_snail_turn", "cs_octopus", "cs_octopus_form", "cs_octopus_idle", "cs_octopus_act", "cs_crab", "cs_crab_form", "cs_crab_idle", "cs_crab_act", "cs_plane", "cs_plane_form", "cs_plane_idle", "cs_plane_act", "cs_plane_turn", "cs_rocket", "cs_rocket_form", "cs_rocket_idle", "cs_rocket_act", "cs_car", "cs_car_form", "cs_car_idle", "cs_car_act", "cs_car_turn", "cs_train", "cs_train_form", "cs_train_idle", "cs_train_act", "cs_train_turn", "cs_boat", "cs_boat_form", "cs_boat_idle", "cs_heli", "cs_heli_form", "cs_heli_idle", "cs_heli_turn", "cs_ufo", "cs_ufo_form", "cs_ufo_idle", "cs_ufo_act", "cs_ufo_turn", "cs_heart", "cs_heart_form", "cs_heart_idle", "cs_heart_act", "cs_star", "cs_star_form", "cs_star_idle", "cs_star_act", "cs_moon", "cs_moon_form", "cs_moon_idle", "cs_mushroom", "cs_mushroom_form", "cs_mushroom_idle", "cs_tree", "cs_tree_form", "cs_tree_idle", "cs_castle", "cs_castle_form", "cs_castle_idle", "cs_ghost", "cs_ghost_form", "cs_ghost_idle", "cs_ghost_act", "cs_pig", "cs_pig_form", "cs_pig_idle", "cs_pig_act", "cs_pig_turn", "cs_sheep", "cs_sheep_form", "cs_sheep_idle", "cs_sheep_act", "cs_sheep_turn", "cs_lion", "cs_lion_form", "cs_lion_idle", "cs_lion_act", "cs_lion_turn", "cs_giraffe", "cs_giraffe_form", "cs_giraffe_idle", "cs_giraffe_turn", "cs_horse", "cs_horse_form", "cs_horse_idle", "cs_horse_act", "cs_horse_turn", "cs_cow", "cs_cow_form", "cs_cow_idle", "cs_cow_act", "cs_cow_turn", "cs_penguin", "cs_penguin_form", "cs_penguin_idle", "cs_penguin_act", "cs_owl", "cs_owl_form", "cs_owl_idle", "cs_owl_act", "cs_frog", "cs_frog_form", "cs_frog_idle", "cs_frog_act", "cs_frog_turn", "cs_snake", "cs_snake_form", "cs_snake_idle", "cs_snake_act", "cs_snake_turn", "cs_shark", "cs_shark_form", "cs_shark_idle", "cs_shark_act", "cs_shark_turn", "cs_dolphin", "cs_dolphin_form", "cs_dolphin_idle", "cs_dolphin_act", "cs_dolphin_turn", "cs_bee", "cs_bee_form", "cs_bee_idle", "cs_bee_act", "cs_bee_turn", "cs_spider", "cs_spider_form", "cs_spider_idle", "cs_mouse", "cs_mouse_form", "cs_mouse_idle", "cs_mouse_act", "cs_mouse_turn", "cs_fox", "cs_fox_form", "cs_fox_idle", "cs_fox_act", "cs_fox_turn", "cs_bear", "cs_bear_form", "cs_bear_idle", "cs_bear_act", "cs_bear_turn", "cs_kangaroo", "cs_kangaroo_form", "cs_kangaroo_idle", "cs_kangaroo_act", "cs_kangaroo_turn", "cs_flamingo", "cs_flamingo_form", "cs_flamingo_idle", "cs_flamingo_turn", "cs_seahorse", "cs_seahorse_form", "cs_seahorse_idle", "cs_seahorse_turn", "cs_jellyfish", "cs_jellyfish_form", "cs_jellyfish_idle", "cs_jellyfish_act", "cs_unicorn", "cs_unicorn_form", "cs_unicorn_idle", "cs_unicorn_act", "cs_unicorn_turn", "cs_guitar", "cs_guitar_form", "cs_guitar_idle", "cs_guitar_act", "cs_umbrella", "cs_umbrella_form", "cs_umbrella_idle", "cs_umbrella_act", "cs_balloon", "cs_balloon_form", "cs_balloon_idle", "cs_balloon_act", "cs_lighthouse", "cs_lighthouse_form", "cs_lighthouse_idle", "cs_lighthouse_act", "cs_house", "cs_house_form", "cs_house_idle", "cs_house_act", "cs_robot", "cs_robot_form", "cs_robot_idle", "cs_robot_act", "cs_skull", "cs_skull_form", "cs_skull_idle", "cs_skull_act", "cs_crown", "cs_crown_form", "cs_crown_idle", "cs_crown_act", "cs_anchor", "cs_anchor_form", "cs_anchor_idle", "cs_sword", "cs_sword_form", "cs_sword_idle", "cs_sword_act", "cs_trophy", "cs_trophy_form", "cs_trophy_idle", "cs_trophy_act", "cs_cupcake", "cs_cupcake_form", "cs_cupcake_idle", "cs_icecream", "cs_icecream_form", "cs_icecream_idle", "cs_pizza", "cs_pizza_form", "cs_pizza_idle", "cs_pizza_turn", "cs_apple", "cs_apple_form", "cs_apple_idle", "cs_bell", "cs_bell_form", "cs_bell_idle", "cs_bell_act", "cs_kite", "cs_kite_form", "cs_kite_idle", "cs_submarine", "cs_submarine_form", "cs_submarine_idle", "cs_submarine_act", "cs_submarine_turn", "cs_bicycle", "cs_bicycle_form", "cs_bicycle_idle", "cs_bicycle_act", "cs_bicycle_turn", "cs_gamepad", "cs_gamepad_form", "cs_gamepad_idle", "cs_gamepad_act", "cf_e_none", "disco_glint", "cf_x_talk_me", "sm_hat", "sm_face", "sm_nose", "sm_arm", "sm_ball", "sm_ball_melt", "sm_puddle", "cf_ref", "cf_x_talk", "cf_x_wide", "cf_x_look_l", "cf_x_look_r", "cf_x_smile", "cf_x_grin", "cf_x_oo", "cf_x_blink", "cf_v_smile_talk", "cf_v_smile_l", "cf_v_smile_r", "cf_v_grin_talk", "cf_v_grin_l", "cf_v_grin_r", "cf_v_oo_talk", "cf_v_oo_l", "cf_v_oo_r", "cf_v_closed_talk", "cf_e_smirk", "cf_v_smirk_talk", "cf_v_smirk_l", "cf_v_smirk_r", "cf_e_wink", "cf_v_wink_talk", "cf_e_laugh", "cf_v_laugh_talk", "cf_e_shocked", "cf_v_shocked_talk", "cf_v_shocked_l", "cf_v_shocked_r", "cf_e_sleepy", "cf_v_sleepy_talk", "cf_v_sleepy_l", "cf_v_sleepy_r", "cf_e_sideeye", "cf_v_sideeye_talk", "cf_v_sideeye_l", "cf_v_sideeye_r", "cf_e_sad", "cf_v_sad_talk", "cf_v_sad_l", "cf_v_sad_r", "cf_e_tongue", "cf_v_tongue_talk", "cf_v_tongue_l", "cf_v_tongue_r", "cf_e_puffed", "cf_v_puffed_talk", "cf_v_puffed_l", "cf_v_puffed_r", "cf_e_determined", "cf_v_determined_talk", "cf_v_determined_l", "cf_v_determined_r", "cf_e_evil", "cf_v_evil_talk", "cf_v_evil_l", "cf_v_evil_r", "cf_e_smug", "cf_v_smug_talk", "cf_v_smug_l", "cf_v_smug_r", "cf_e_confused", "cf_v_confused_talk", "cf_v_confused_l", "cf_v_confused_r", "cf_e_disgusted", "cf_v_disgusted_talk", "cf_v_disgusted_l", "cf_v_disgusted_r", "cf_e_nervous", "cf_v_nervous_talk", "cf_v_nervous_l", "cf_v_nervous_r", "cf_e_kissy", "cf_v_kissy_talk", "cf_v_kissy_l", "cf_v_kissy_r", "cf_e_bored", "cf_v_bored_talk", "cf_v_bored_l", "cf_v_bored_r", "cf_e_excited", "cf_v_excited_talk", "cf_v_excited_l", "cf_v_excited_r", "cf_e_thinking", "cf_v_thinking_talk", "cf_v_thinking_l", "cf_v_thinking_r", "cf_e_scared", "cf_v_scared_talk", "cf_v_scared_l", "cf_v_scared_r", "jinx_flip", "jinx_spin", "jinx_fire", "jinx_launch", "artillery", "golden_banana", "golden_mango", "tower", "eagle_roll", "tank_drive", "soldier_run", "soldier_throw", "grenade", "explosion", "eagle_glide", "eagle_flap", "plane", "title", "chef_parachute", "chef_chop", "chef_jump", "chef_fly", "chef_truck", "cf_x_look_d", "cf_v_smile_d", "cf_v_grin_d", "cf_v_oo_d", "cf_v_smirk_d", "cf_v_shocked_d", "cf_v_sleepy_d", "cf_v_sideeye_d", "cf_v_sad_d", "cf_v_tongue_d", "cf_v_puffed_d", "cf_v_determined_d", "cf_v_evil_d", "cf_v_smug_d", "cf_v_confused_d", "cf_v_disgusted_d", "cf_v_nervous_d", "cf_v_kissy_d", "cf_v_bored_d", "cf_v_excited_d", "cf_v_thinking_d", "cf_v_scared_d"].forEach(n => { const r = db.transaction("a").objectStore("a").get(n); r.onsuccess = () => { if (r.result) this.use(n, r.result); }; });
     } catch (e) {}
   },
   // a piece of art arriving from the app (sent in parts)
@@ -5154,6 +5156,7 @@ const Personal = {
     const title = (ev.reward && ev.reward.title) || "";
     if (!this.REWARD.test(title)) return;
     const k = (ev.user_login || "").toLowerCase();
+    const rx = AutoFx.REDEEM[k]; if (rx) { rx(); return; }            // effects that only play on the redeem
     const fx = AutoFx.FIRST_OF_DAY[k];
     if (fx) { fx(); return; }
     const raid = Object.keys(CUSTOM_RAIDS).find(x => x.toLowerCase() === k);
@@ -5169,6 +5172,7 @@ const Personal = {
 setTimeout(() => { const sel = $("#facemood"); if (sel) { sel.value = Face.mood; sel.onchange = () => Face.setMood(sel.value); } });
 const AutoFx = {
   KEY: "autoFxDay",
+  REDEEM: { jawa929: () => ScrapHaul.run() },                                // played only by the "Play my Effect" redeem
   FIRST_OF_DAY: { thenapalmer: () => Mango.run(), kapelan012: () => Pirate.run(), att3nchun: () => Fishy.run(), anime_chef: () => Chef.run(), tassiethedevil: () => Tank.run(), kazul123: () => Kazul.run(), partisanherojinx: () => Jinx.run() },
   chat(login) {
     const k = (login || "").toLowerCase(), fx = this.FIRST_OF_DAY[k]; if (!fx) return;
@@ -5284,6 +5288,157 @@ const Bolt = {
   }
 };
 
+/* ================= Jawa929's scrap haul (his "Play my Effect" redeem) =================
+   A loaded scrap truck backs in from the right (beep, beep), tips its load out in a heap and drives off. The heap
+   rumbles, and a scrappy little junkyard gremlin (an original character) bursts out of it holding gold loot, shouts
+   "JACKPOT!" with it held high, and runs off to the left. Then a scrap harvester rolls in from the right with its
+   toothed rollers spinning, chews up the whole heap (bits flying) and trundles off the left side.
+   Art: the app's 🎨 Art screen, SCRAP HAUL ART; drawn stand-ins until it's sent. */
+const ScrapHaul = {
+  busy: false, NAME: "Jawa929", SHOUT: "JACKPOT!",
+  run() {
+    if (this.busy) return; this.busy = true; Sound.init(); MySounds.play("scrap");
+    const cv = $("#scrapcv"), g = cv.getContext("2d"), W = 2560, H = 1440, S = ChefArt.sprites, t0 = performance.now(), GY = H - 26;
+    const TW = 820, PW = 560, PH = 250, HW = 900, GUYH = 230;
+    const px = rand(680, 1480), truckStop = px + 150 + TW / 2, truckIn = W + TW / 2 + 60;
+    const T = { back: 3300, dump: 3500, dumpEnd: 6600, leave: 6900, rumble: 9300, pop: 10100, popEnd: 11000, run: 13600, hIn: 13000, end: 26000 };
+    const bits = [], dust = [], reds = [];
+    // the red dust letters his running feet kick up: laid out across the lower middle of the screen
+    const LET = textPointsN(this.NAME, W / 2, GY - 560, 1300, 650).map(([x, y]) => ({ x, y })); let letI = 0;
+    let truckX = truckIn, last = t0, beepAt = 0, hX = W + HW / 2 + 40, eaten = 0, guyX = px, guyY = 0, guyVY = 0, nextGrind = 0, ranOff = false;
+    const lerp = (a, b, k) => a + (b - a) * Math.max(0, Math.min(1, k)), ease = k => { k = Math.max(0, Math.min(1, k)); return k * k * (3 - 2 * k); };
+    const fig = sp => Pirate.figOf(sp);
+    // a picture (or one frame of an animation) standing on the ground at (cx, gy), sized by its own drawn width or height
+    const put = (sp, f, cx, gy, o) => { const b = fig(sp), k = o.w ? o.w / (b.x1 - b.x0) : o.h / (b.y1 - b.y0);
+      g.save(); g.translate(cx, gy); if (o.rot) g.rotate(o.rot); g.scale((o.flip ? -1 : 1) * (o.sx || 1), o.sy || 1);
+      g.drawImage(sp.img, f * sp.w, 0, sp.w, sp.h, -(b.x0 + b.x1) / 2 * k, -b.y1 * k, sp.w * k, sp.h * k); g.restore(); };
+    const loopF = (sp, t) => sp && sp.frames > 1 ? Math.floor(Math.max(0, t) / (sp.ms || 100)) % sp.frames : 0;
+    const onceF = (sp, t, dur) => sp && sp.frames > 1 ? Math.min(sp.frames - 1, Math.floor(Math.max(0, t) / dur * sp.frames)) : 0;
+    const beep = () => { if (!Sound.ctx) return; const c = Sound.ctx, o = c.createOscillator(), v = c.createGain(), t = c.currentTime;
+      o.type = "square"; o.frequency.value = 1050; v.gain.setValueAtTime(0, t); v.gain.linearRampToValueAtTime(.05, t + .01); v.gain.setValueAtTime(.05, t + .22); v.gain.linearRampToValueAtTime(0, t + .25);
+      o.connect(v); v.connect(Sound.out || c.destination); o.start(t); o.stop(t + .3); };
+    const crash = (vol, dur) => { if (Sound.ctx) Sound.burst(Sound.ctx.currentTime, dur || .5, vol || .05, "lowpass", 900, 120); };
+    const chunk = (x, y, vx, vy, big) => bits.push({ x, y, vx, vy, r: rand(0, 6.3), spin: rand(-.2, .2), s: big ? rand(14, 26) : rand(6, 14), tyre: Math.random() < .25,
+      c: ["#5b4a3a", "#7a5a3a", "#6d6d6d", "#8a4b2a", "#3b3b3b"][Math.floor(Math.random() * 5)], life: 1 });
+    const puffAt = (x, y, n, dark) => { for (let i = 0; i < n; i++) dust.push({ x: x + rand(-20, 20), y: y + rand(-8, 4), vx: rand(-1.2, 1.2), vy: rand(-1.4, -.3), r: rand(14, 26), a: dark ? .35 : .28, c: dark ? "70,64,58" : "170,150,120", life: 1 }); };
+    const frame = now => {
+      const t = now - t0, dt = Math.min(50, now - last) / 16; last = now; g.clearRect(0, 0, W, H);
+      // ---------- the truck
+      let truck = null, tf = 0, tRot = 0, loaded = true;
+      if (t < T.dump) { truckX = lerp(truckIn, truckStop, 1 - Math.pow(1 - Math.min(1, t / T.back), 2.2));
+        if (t < T.back - 150 && t - beepAt > 520) { beepAt = t; beep(); }
+        if (Math.random() < .3 && t < T.back) puffAt(truckX + TW * .3, GY, 1); }
+      else if (t < T.leave) { const k = (t - T.dump) / (T.dumpEnd - T.dump);
+        if (S.scrap_truck_dump) { truck = S.scrap_truck_dump; tf = onceF(truck, t - T.dump, T.dumpEnd - T.dump); }
+        else { tRot = -Math.sin(Math.min(1, k * 1.4) * Math.PI) * .07; loaded = k < .5; }
+        if (k > .12 && k < .75 && Math.random() < .55) chunk(truckX - TW / 2 + rand(0, 40), GY - rand(150, 230), rand(-3.5, -1), rand(-2, 1), Math.random() < .3);
+        if (k > .15 && k < .7 && Math.random() < .3) crash(.02, .2); }
+      else { const a = t - T.leave; truckX = truckStop + a * a * .00011 + a * .05; loaded = false; if (Math.random() < .5) puffAt(truckX - TW * .25, GY, 1, true); }
+      if (t >= T.leave || (!S.scrap_truck_dump && t >= T.dumpEnd)) loaded = false;
+      if (truckX - TW / 2 < W + 40) {
+        const sp = truck || (loaded ? S.scrap_truck : (S.scrap_truck_empty || S.scrap_truck)), bob = t < T.back || t > T.leave ? Math.sin(t / 60) * 1.5 : 0;
+        if (sp) { g.save(); if (tRot) { g.translate(truckX + TW * .3, GY); g.rotate(tRot); g.translate(-(truckX + TW * .3), -GY); } put(sp, tf, truckX, GY + bob, { w: TW }); g.restore(); }
+        else this.drawTruck(g, truckX, GY + bob, TW, loaded, tRot);
+      }
+      // ---------- the heap: builds up as the load comes off, rumbles, then gets eaten from the right
+      const grow = ease((t - T.dump - 500) / 2300), shake = t > T.rumble && t < T.pop ? Math.sin(t / 25) * 4 : 0;
+      const pileFront = hX - HW / 2 + 60;                                                // the harvester's rollers
+      const drawPile = () => { if (grow <= 0) return; g.save();
+        if (t > T.hIn) { g.beginPath(); g.rect(0, 0, Math.max(0, pileFront), H); g.clip(); }
+        if (S.scrap_pile) put(S.scrap_pile, 0, px + shake, GY, { w: PW, sx: .6 + .4 * grow, sy: grow });
+        else this.drawPile(g, px + shake, GY, PW, PH * grow);
+        g.restore(); };
+      // ---------- the gremlin
+      const guyTop = GY - PH * .6;
+      let guy = null, gf = 0, gx = px, gy = guyTop, flip = false, show = false;
+      if (t >= T.pop && !ranOff) { show = true;
+        if (t < T.popEnd) { const k = (t - T.pop) / (T.popEnd - T.pop);
+          if (S.scrap_guy_pop) { guy = S.scrap_guy_pop; gf = onceF(guy, t - T.pop, T.popEnd - T.pop); }
+          else { guy = S.scrap_guy_cheer || S.scrap_guy; gy = guyTop + 160 - Math.sin(Math.min(1, k * 1.3) * Math.PI * .5) * 160 - Math.sin(k * Math.PI) * 60; } }
+        else if (t < T.run) { guy = S.scrap_guy_cheer || S.scrap_guy; gf = loopF(guy, t - T.popEnd); }
+        else { if (!guyVY && guyY === 0) { guyX = px; guyY = guyTop; guyVY = -9; }
+          guyX -= 9 * dt; if (guyY < GY) { guyVY += .7 * dt; guyY = Math.min(GY, guyY + guyVY * dt); }
+          guy = S.scrap_guy_run || S.scrap_guy; gf = loopF(guy, t - T.run); gx = guyX; gy = guyY; flip = !!S.scrap_guy_run;     // the run art runs right: mirrored to run left
+          // every step kicks up red dust that flies up and settles into the letters of his name
+          const want = Math.min(LET.length, Math.floor((t - T.run) / 1500 * LET.length));
+          if (letI < want) { const near = LET.slice(letI).sort((a, b) => Math.abs(a.x - guyX) - Math.abs(b.x - guyX)); LET.splice(letI, LET.length - letI, ...near);
+            for (; letI < want; letI++) { const L = LET[letI]; reds.push({ sx: guyX + rand(-20, 20), sy: GY - 4, x: guyX, y: GY, tx: L.x, ty: L.y, at: t, fly: rand(650, 1100), r: rand(4.5, 7.5), drift: rand(0, 1800) }); } }
+          if (Math.random() < .7) dust.push({ x: guyX + rand(-15, 15), y: GY - rand(0, 6), vx: rand(.5, 2.5), vy: rand(-1.6, -.4), r: rand(8, 16), a: .4, c: "176,72,48", life: 1 });
+          if (guyX < -200) ranOff = true; } }
+      if (t >= T.pop && t < T.pop + 60 && !this._burst) { this._burst = 1; for (let i = 0; i < 26; i++) chunk(px + rand(-60, 60), guyTop + 20, rand(-7, 7), rand(-14, -5), Math.random() < .4); crash(.06, .6); }
+      const drawGuy = () => { if (!show) return; if (guy) put(guy, gf, gx, gy, { h: GUYH, flip }); else this.drawGuy(g, gx, gy, GUYH, t, t >= T.run); };
+      // while he's still coming up out of the heap he's behind it; after that he's on top
+      if (t < T.pop + (T.popEnd - T.pop) * .45 && !S.scrap_guy_pop) { drawGuy(); drawPile(); } else { drawPile(); drawGuy(); }
+      if (show && t > T.popEnd - 200 && t < T.run + 400) Pirate.bubble(g, gx + 20, gy - GUYH - 30, this.SHOUT, Math.min(1, (t - T.popEnd + 200) / 250), 1);
+      // sparkles off the gold
+      if (show && t > T.pop + 300 && Math.random() < .5) dust.push({ spark: 1, x: gx + rand(-60, 60), y: gy - GUYH * rand(.75, 1.05), vx: 0, vy: rand(-.6, -.1), r: rand(3, 6), life: 1 });
+      // ---------- the harvester
+      if (t > T.hIn) { const over = pileFront < px + PW / 2 && pileFront > px - PW / 2 - 40 && grow > 0, sp = over ? 3.2 : 6.2;
+        hX -= sp * dt;
+        if (over) { eaten = 1; if (Math.random() < .8) chunk(pileFront + rand(-10, 30), GY - rand(60, 200), rand(1, 6), rand(-11, -4), Math.random() < .3);
+          if (t > nextGrind) { nextGrind = t + 140; crash(.03, .18); } }
+        if (Math.random() < .25) puffAt(hX + HW * .25, GY - 360, 1, true);                // exhaust
+        const hs = S.scrap_harvester_go || S.scrap_harvester, rumble = Math.sin(t / 45) * 1.5;
+        if (hs) put(hs, loopF(hs, t - T.hIn), hX, GY + rumble, { w: HW, flip: true });
+        else this.drawHarvester(g, hX, GY + rumble, HW, t); }
+      // ---------- flying scrap, dust and sparkles
+      for (let i = bits.length - 1; i >= 0; i--) { const b = bits[i]; b.vy += .45 * dt; b.x += b.vx * dt; b.y += b.vy * dt; b.r += b.spin * dt;
+        if (b.y > GY - 4) { b.y = GY - 4; b.vy *= -.25; b.vx *= .6; b.life -= .04 * dt; } if (b.life <= 0 || b.x < -100 || b.x > W + 100) { bits.splice(i, 1); continue; }
+        g.save(); g.globalAlpha = Math.min(1, b.life * 2); g.translate(b.x, b.y); g.rotate(b.r);
+        if (b.tyre) { g.strokeStyle = "#222"; g.lineWidth = b.s * .35; g.beginPath(); g.arc(0, 0, b.s * .6, 0, 6.283); g.stroke(); }
+        else { g.fillStyle = b.c; g.fillRect(-b.s / 2, -b.s / 5, b.s, b.s / 2.5); }
+        g.restore(); }
+      for (let i = dust.length - 1; i >= 0; i--) { const d = dust[i]; d.x += d.vx * dt; d.y += d.vy * dt; d.life -= (d.spark ? .035 : .012) * dt; if (d.life <= 0) { dust.splice(i, 1); continue; }
+        if (d.spark) { g.save(); g.globalAlpha = d.life; g.fillStyle = "#fff6c0"; g.shadowColor = "#ffd34a"; g.shadowBlur = 12; g.translate(d.x, d.y); g.rotate(.785);
+          g.fillRect(-d.r / 2, -d.r * 1.6, d.r, d.r * 3.2); g.fillRect(-d.r * 1.6, -d.r / 2, d.r * 3.2, d.r); g.restore(); continue; }
+        d.r += .5 * dt; g.globalAlpha = d.a * d.life; g.fillStyle = `rgb(${d.c})`; g.beginPath(); g.arc(d.x, d.y, d.r, 0, 6.283); g.fill(); }
+      // ---------- the red dust letters: fly up from his feet, hang there a while, then drift apart and fade like settling dust
+      g.globalAlpha = 1;
+      for (let i = reds.length - 1; i >= 0; i--) { const d = reds[i], a = t - d.at; let al = 1;
+        if (a < d.fly) { const k = a / d.fly, e = 1 - Math.pow(1 - k, 3); d.x = lerp(d.sx, d.tx, e); d.y = lerp(d.sy, d.ty, e) - Math.sin(k * Math.PI) * 120; al = .35 + .65 * k; }
+        else { const h = a - d.fly - 4200 - d.drift; d.x = d.tx + Math.sin(t / 500 + i) * .7; d.y = d.ty + Math.cos(t / 430 + i) * .7;
+          if (h > 0) { d.x += h * .012 * Math.sin(i * 1.7); d.y += h * .02; al = 1 - h / 2200; if (al <= 0) { reds.splice(i, 1); continue; } } }
+        const gr = g.createRadialGradient(d.x, d.y, 0, d.x, d.y, d.r * 1.8); gr.addColorStop(0, `rgba(214,82,52,${.95 * al})`); gr.addColorStop(.5, `rgba(178,58,38,${.6 * al})`); gr.addColorStop(1, "rgba(150,40,30,0)");
+        g.fillStyle = gr; g.beginPath(); g.arc(d.x, d.y, d.r * 1.8, 0, 6.283); g.fill(); }
+      g.globalAlpha = 1;
+      const done = t > T.hIn && hX + HW / 2 < -40 && !bits.length && !reds.length;
+      if (!done && t < T.end + 8000) requestAnimationFrame(frame); else { g.clearRect(0, 0, W, H); this._burst = 0; this.busy = false; }
+    };
+    requestAnimationFrame(frame);
+  },
+  // ---- drawn stand-ins (until the art is made and sent)
+  drawTruck(g, cx, gy, w, loaded, rot) {
+    const h = w * .42; g.save(); g.translate(cx + w * .3, gy); g.rotate(rot || 0); g.translate(-(cx + w * .3), -gy); g.translate(cx, gy);
+    g.fillStyle = "#6f6a48"; g.fillRect(-w * .5, -h * .62, w * .62, h * .4);                     // bed
+    g.fillStyle = "#5c573b"; for (let i = 0; i < 6; i++) g.fillRect(-w * .5 + i * w * .12, -h * .78, 10, h * .18);
+    g.fillRect(-w * .5, -h * .8, w * .62, 8);
+    if (loaded) { g.fillStyle = "#3b3b3b"; for (let i = 0; i < 6; i++) { g.beginPath(); g.arc(-w * .44 + i * w * .1, -h * .66, 22, 0, 6.283); g.fill(); } g.fillStyle = "#7a5a3a"; g.fillRect(-w * .38, -h * .9, w * .3, 12); }
+    g.fillStyle = "#7d7752"; g.fillRect(w * .14, -h * .9, w * .2, h * .68); g.fillStyle = "#9db4c0"; g.fillRect(w * .19, -h * .82, w * .12, h * .2);   // cab
+    g.fillStyle = "#6f6a48"; g.beginPath(); g.moveTo(w * .34, -h * .62); g.lineTo(w * .5, -h * .5); g.lineTo(w * .5, -h * .22); g.lineTo(w * .34, -h * .22); g.closePath(); g.fill();   // hood
+    g.fillStyle = "#222"; [-w * .38, -w * .22, w * .38].forEach(x => { g.beginPath(); g.arc(x, -h * .17, h * .17, 0, 6.283); g.fill(); g.fillStyle = "#555"; g.beginPath(); g.arc(x, -h * .17, h * .07, 0, 6.283); g.fill(); g.fillStyle = "#222"; });
+    g.restore(); },
+  drawPile(g, cx, gy, w, h) { if (h <= 2) return; g.save(); g.translate(cx, gy);
+    g.fillStyle = "#4a3f35"; g.beginPath(); g.moveTo(-w / 2, 0); g.quadraticCurveTo(-w * .2, -h * 1.1, 0, -h); g.quadraticCurveTo(w * .25, -h * 1.05, w / 2, 0); g.closePath(); g.fill();
+    g.strokeStyle = "#1f1f1f"; g.lineWidth = 12; [[-.25, .35], [.05, .55], [.28, .3], [-.05, .2], [.15, .8]].forEach(([u, v]) => { g.beginPath(); g.ellipse(u * w, -v * h, w * .07, w * .05, u, 0, 6.283); g.stroke(); });
+    g.fillStyle = "#8a4b2a"; [[-.3, .2, .4], [.1, .45, -.3], [.3, .15, .2]].forEach(([u, v, r]) => { g.save(); g.translate(u * w, -v * h); g.rotate(r); g.fillRect(-50, -6, 100, 12); g.restore(); });
+    g.restore(); },
+  drawGuy(g, x, y, h, t, running) { g.save(); g.translate(x, y); if (running) g.scale(-1, 1); const k = h / 230, step = running ? Math.sin(t / 60) * 14 : 0;
+    g.scale(k, k); g.fillStyle = "#4a3a2a"; g.fillRect(-28 + step, -40, 24, 40); g.fillRect(4 - step, -40, 24, 40);
+    g.fillStyle = "#d4a52a"; g.fillRect(-34, -130, 68, 92); g.fillStyle = "#7a5a3a"; g.fillRect(-34, -70, 68, 10);
+    g.fillStyle = "#8fa07a"; g.beginPath(); g.arc(0, -160, 34, 0, 6.283); g.fill(); g.beginPath(); g.moveTo(-30, -165); g.lineTo(-70, -185); g.lineTo(-28, -150); g.fill(); g.beginPath(); g.moveTo(30, -165); g.lineTo(70, -185); g.lineTo(28, -150); g.fill();
+    g.fillStyle = "#b8862e"; g.fillRect(-26, -190, 52, 14); g.fillStyle = "#222"; g.beginPath(); g.arc(-10, -160, 4, 0, 6.283); g.arc(10, -160, 4, 0, 6.283); g.fill();
+    g.fillStyle = "#ffd34a"; g.shadowColor = "#ffd34a"; g.shadowBlur = 16; g.beginPath(); g.arc(0, running ? -100 : -232, 26, 0, 6.283); g.fill(); g.restore(); },
+  drawHarvester(g, cx, gy, w, t) { const h = w * .5; g.save(); g.translate(cx, gy); g.scale(-1, 1);   // faces left
+    g.fillStyle = "#2b2b2b"; g.beginPath(); g.roundRect(-w * .45, -h * .3, w * .75, h * .3, 40); g.fill();      // tracks
+    g.fillStyle = "#c06a2a"; g.fillRect(-w * .42, -h * .62, w * .32, h * .3); g.fillRect(-w * .1, -h * .95, w * .3, h * .65);   // hopper, cab
+    g.fillStyle = "#3a3a3a"; g.beginPath(); g.ellipse(w * .05, -h * .95, w * .16, h * .08, 0, Math.PI, 0); g.fill(); g.fillStyle = "#ffcc33"; g.fillRect(w * .02, -h * 1.06, 30, 16);
+    g.strokeStyle = "#555"; g.lineWidth = 22; g.beginPath(); g.moveTo(w * .2, -h * .5); g.lineTo(w * .4, -h * .3); g.stroke();
+    const rx = w * .45, ry = -h * .22, R = h * .24, a = t / 90;                                               // the spinning toothed rollers
+    g.fillStyle = "#6b6b6b"; g.beginPath(); for (let i = 0; i < 24; i++) { const an = a + i / 24 * 6.283, rr = i % 2 ? R : R * 1.18; g.lineTo(rx + Math.cos(an) * rr, ry + Math.sin(an) * rr); } g.closePath(); g.fill();
+    g.fillStyle = "#3a3a3a"; g.beginPath(); g.arc(rx, ry, R * .35, 0, 6.283); g.fill();
+    g.restore(); }
+};
+
 /* ================= smoke lap =================
    Two soft ribbons of smoke, one lime green and one purple (the logo's colours), twisting around each other like a
    spiral, run a lap of the screen the same way the lightning lap does: from the bottom left corner up the left side,
@@ -5344,6 +5499,7 @@ window.onRemote = c => {
   else if (c.cmd === "firstsReset") { AutoFx.reset(); toast("First-chat effects reset: each viewer's next chat plays theirs again", false, 5000); }
   else if (c.cmd === "effect" && c.name === "bolt") Bolt.run();
   else if (c.cmd === "effect" && c.name === "smokeLap") SmokeLap.run();
+  else if (c.cmd === "effect" && c.name === "scrap") ScrapHaul.run();
   else if (c.cmd === "effect" && c.name === "mango") Mango.run();
   else if (c.cmd === "effect" && c.name === "banana") Banana.run();
   else if (c.cmd === "effect" && c.name === "turkey") Turkey.run();
@@ -5403,9 +5559,9 @@ window.onRemote = c => {
 const FxLine = {
   q: [], running: false, until: 0,
   // the effects in line, and how to tell each one is still playing (a busy flag, or how long it lasts)
-  MODS: { SmokeLap: null, Mango: null, Banana: null, Fishy: null, Chef: null, Tank: null, Kazul: null, Jinx: null, Pirate: null, Turkey: 7600, Penguin: 10600, Eagle: 9000, Bolt: null },
+  MODS: { ScrapHaul: null, SmokeLap: null, Mango: null, Banana: null, Fishy: null, Chef: null, Tank: null, Kazul: null, Jinx: null, Pirate: null, Turkey: 7600, Penguin: 10600, Eagle: 9000, Bolt: null },
   playing() { if (performance.now() < this.until) return true;
-    return [Mango, Banana, Fishy, Chef, Tank, Kazul, Jinx, Pirate, SmokeLap].some(m => m.busy) || (Bolt.runs && Bolt.runs.length > 0); },
+    return [Mango, Banana, Fishy, Chef, Tank, Kazul, Jinx, Pirate, SmokeLap, ScrapHaul].some(m => m.busy) || (Bolt.runs && Bolt.runs.length > 0); },
   push(fn) { this.q.push(fn); if (this.q.length > 40) this.q.shift(); this.pump(); },
   pump() { if (this.running) return; const fn = this.q.shift(); if (!fn) return; this.running = true;
     const go = () => { if (this.playing()) return setTimeout(go, 300);                 // something still on screen (e.g. it started before the line existed)
@@ -5415,7 +5571,7 @@ const FxLine = {
       setTimeout(wait, 300); };
     go(); }
 };
-for (const [name, ms] of Object.entries(FxLine.MODS)) { const m = { SmokeLap, Mango, Banana, Fishy, Chef, Tank, Kazul, Jinx, Pirate, Turkey, Penguin, Eagle, Bolt }[name], orig = m.run.bind(m);
+for (const [name, ms] of Object.entries(FxLine.MODS)) { const m = { ScrapHaul, SmokeLap, Mango, Banana, Fishy, Chef, Tank, Kazul, Jinx, Pirate, Turkey, Penguin, Eagle, Bolt }[name], orig = m.run.bind(m);
   m.run = (...a) => FxLine.push(() => { if (ms) FxLine.until = performance.now() + ms; orig(...a); }); }
 
 /* one alert at a time, in order */
@@ -5514,6 +5670,7 @@ document.querySelectorAll("#testbar [data-t]").forEach(b => b.onclick = () => {
   else if (t === "disco") Disco.toggle();
   else if (t === "pirate") Pirate.run();
   else if (t === "smokeLap") SmokeLap.run();
+  else if (t === "scrap") ScrapHaul.run();
   else if (t === "faceMode") Face.toggleFace();
   else if (t === "storm") Face.toggleStorm();
   else if (t === "cloudTank") Face.toggleTank();
@@ -6016,7 +6173,7 @@ window.KZRelay = function (topic, onMessage, servers) {
 (() => {
   const qs = new URLSearchParams(location.search), key = qs.get("ctl");
   if (!key || !window.WebSocket) return;
-  const PAGE = "html3", VERSION = "4082347";
+  const PAGE = "html3", VERSION = "e1520e9";
   let said = false;
   const relay = KZRelay("kzctl/" + key, c => {
     if (!c || c.from === "overlay" || (c.to && c.to !== "all" && c.to !== PAGE)) return;
