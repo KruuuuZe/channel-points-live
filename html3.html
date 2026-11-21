@@ -5310,7 +5310,12 @@ const ScrapHaul = {
     const lerp = (a, b, k) => a + (b - a) * Math.max(0, Math.min(1, k)), ease = k => { k = Math.max(0, Math.min(1, k)); return k * k * (3 - 2 * k); };
     const fig = sp => Pirate.figOf(sp);
     // a picture (or one frame of an animation) standing on the ground at (cx, gy), sized by its own drawn width or height
-    const put = (sp, f, cx, gy, o) => { const b = fig(sp), k = o.w ? o.w / (b.x1 - b.x0) : o.h / (b.y1 - b.y0);
+    // one frame's drawn box (the animation is sized and placed by one frame, so the truck doesn't jump as the bed tips)
+    const box = (sp, f) => { sp._boxes = sp._boxes || {}; if (sp._boxes[f]) return sp._boxes[f]; const c = document.createElement("canvas"); c.width = sp.w; c.height = sp.h;
+      const x = c.getContext("2d", { willReadFrequently: true }); x.drawImage(sp.img, f * sp.w, 0, sp.w, sp.h, 0, 0, sp.w, sp.h); const d = x.getImageData(0, 0, sp.w, sp.h).data;
+      let x0 = sp.w, y0 = sp.h, x1 = 0, y1 = 0; for (let y = 0; y < sp.h; y += 2) for (let X = 0; X < sp.w; X += 2) if (d[(y * sp.w + X) * 4 + 3] > 60) { if (X < x0) x0 = X; if (X > x1) x1 = X; if (y < y0) y0 = y; if (y > y1) y1 = y; }
+      return sp._boxes[f] = x1 > x0 ? { x0, y0, x1, y1 } : { x0: 0, y0: 0, x1: sp.w, y1: sp.h }; };
+    const put = (sp, f, cx, gy, o) => { const b = o.ref != null ? box(sp, o.ref) : fig(sp), k = o.w ? o.w / (b.x1 - b.x0) : o.h / (b.y1 - b.y0);
       g.save(); g.translate(cx, gy); if (o.rot) g.rotate(o.rot); g.scale((o.flip ? -1 : 1) * (o.sx || 1), o.sy || 1);
       g.drawImage(sp.img, f * sp.w, 0, sp.w, sp.h, -(b.x0 + b.x1) / 2 * k, -b.y1 * k, sp.w * k, sp.h * k); g.restore(); };
     const loopF = (sp, t) => sp && sp.frames > 1 ? Math.floor(Math.max(0, t) / (sp.ms || 100)) % sp.frames : 0;
@@ -5327,18 +5332,17 @@ const ScrapHaul = {
       // ---------- the truck
       let truck = null, tf = 0, tRot = 0, loaded = true;
       if (t < T.dump) { truckX = lerp(truckIn, truckStop, 1 - Math.pow(1 - Math.min(1, t / T.back), 2.2));
-        if (t < T.back - 150 && t - beepAt > 520) { beepAt = t; beep(); }
         if (Math.random() < .3 && t < T.back) puffAt(truckX + TW * .3, GY, 1); }
       else if (t < T.leave) { const k = (t - T.dump) / (T.dumpEnd - T.dump);
         if (S.scrap_truck_dump) { truck = S.scrap_truck_dump; tf = onceF(truck, t - T.dump, T.dumpEnd - T.dump); }
-        else { tRot = -Math.sin(Math.min(1, k * 1.4) * Math.PI) * .07; loaded = k < .5; }
+        else loaded = k < .5;
         if (k > .12 && k < .75 && Math.random() < .55) chunk(truckX - TW / 2 + rand(0, 40), GY - rand(150, 230), rand(-3.5, -1), rand(-2, 1), Math.random() < .3);
         if (k > .15 && k < .7 && Math.random() < .3) crash(.02, .2); }
       else { const a = t - T.leave; truckX = truckStop + a * a * .00011 + a * .05; loaded = false; if (Math.random() < .5) puffAt(truckX - TW * .25, GY, 1, true); }
       if (t >= T.leave || (!S.scrap_truck_dump && t >= T.dumpEnd)) loaded = false;
       if (truckX - TW / 2 < W + 40) {
         const sp = truck || (loaded ? S.scrap_truck : (S.scrap_truck_empty || S.scrap_truck)), bob = t < T.back || t > T.leave ? Math.sin(t / 60) * 1.5 : 0;
-        if (sp) { g.save(); if (tRot) { g.translate(truckX + TW * .3, GY); g.rotate(tRot); g.translate(-(truckX + TW * .3), -GY); } put(sp, tf, truckX, GY + bob, { w: TW }); g.restore(); }
+        if (sp) { g.save(); if (tRot) { g.translate(truckX + TW * .3, GY); g.rotate(tRot); g.translate(-(truckX + TW * .3), -GY); } put(sp, tf, truckX, GY + bob, sp === S.scrap_truck_dump ? { w: TW, ref: 0 } : { w: TW }); g.restore(); }
         else this.drawTruck(g, truckX, GY + bob, TW, loaded, tRot);
       }
       // ---------- the heap: builds up as the load comes off, rumbles, then gets eaten from the right
@@ -5363,8 +5367,8 @@ const ScrapHaul = {
           // every step kicks up red dust that flies up and settles into the letters of his name
           const want = Math.min(LET.length, Math.floor((t - T.run) / 1500 * LET.length));
           if (letI < want) { const near = LET.slice(letI).sort((a, b) => Math.abs(a.x - guyX) - Math.abs(b.x - guyX)); LET.splice(letI, LET.length - letI, ...near);
-            for (; letI < want; letI++) { const L = LET[letI]; reds.push({ sx: guyX + rand(-20, 20), sy: GY - 4, x: guyX, y: GY, tx: L.x, ty: L.y, at: t, fly: rand(650, 1100), r: rand(4.5, 7.5), drift: rand(0, 1800) }); } }
-          if (Math.random() < .7) dust.push({ x: guyX + rand(-15, 15), y: GY - rand(0, 6), vx: rand(.5, 2.5), vy: rand(-1.6, -.4), r: rand(8, 16), a: .4, c: "176,72,48", life: 1 });
+            for (; letI < want; letI++) { const L = LET[letI]; reds.push({ sx: guyX + rand(-20, 20), sy: GY - 4, x: guyX, y: GY, tx: L.x + rand(-3, 3), ty: L.y + rand(-3, 3), at: t, fly: rand(650, 1100), r: rand(4.5, 7), drift: rand(0, 1800), smoke: Math.random() < .35 }); } }
+          if (Math.random() < .7) dust.push({ x: guyX + rand(-15, 15), y: GY - rand(0, 6), vx: rand(.5, 2.5), vy: rand(-1.6, -.4), r: rand(8, 16), a: .4, c: Math.random() < .4 ? "150,144,136" : "128,96,64", life: 1 });
           if (guyX < -200) ranOff = true; } }
       if (t >= T.pop && t < T.pop + 60 && !this._burst) { this._burst = 1; for (let i = 0; i < 26; i++) chunk(px + rand(-60, 60), guyTop + 20, rand(-7, 7), rand(-14, -5), Math.random() < .4); crash(.06, .6); }
       const drawGuy = () => { if (!show) return; if (guy) put(guy, gf, gx, gy, { h: GUYH, flip }); else this.drawGuy(g, gx, gy, GUYH, t, t >= T.run); };
@@ -5399,8 +5403,11 @@ const ScrapHaul = {
         if (a < d.fly) { const k = a / d.fly, e = 1 - Math.pow(1 - k, 3); d.x = lerp(d.sx, d.tx, e); d.y = lerp(d.sy, d.ty, e) - Math.sin(k * Math.PI) * 120; al = .35 + .65 * k; }
         else { const h = a - d.fly - 4200 - d.drift; d.x = d.tx + Math.sin(t / 500 + i) * .7; d.y = d.ty + Math.cos(t / 430 + i) * .7;
           if (h > 0) { d.x += h * .012 * Math.sin(i * 1.7); d.y += h * .02; al = 1 - h / 2200; if (al <= 0) { reds.splice(i, 1); continue; } } }
-        const gr = g.createRadialGradient(d.x, d.y, 0, d.x, d.y, d.r * 1.8); gr.addColorStop(0, `rgba(214,82,52,${.95 * al})`); gr.addColorStop(.5, `rgba(178,58,38,${.6 * al})`); gr.addColorStop(1, "rgba(150,40,30,0)");
-        g.fillStyle = gr; g.beginPath(); g.arc(d.x, d.y, d.r * 1.8, 0, 6.283); g.fill(); }
+        // a soft puff of dirt (brown) or smoke (grey), slowly swelling and swirling, so the name reads as a cloud of kicked-up dust
+        const R = d.r * (2.4 + Math.min(1, Math.max(0, a - d.fly) / 3000) * .9), c = d.smoke ? "150,144,136" : "128,96,64", w = d.smoke ? .55 : .8;
+        const ox = Math.sin(t / 700 + i * .7) * 2.5, oy = Math.cos(t / 820 + i * 1.3) * 2;
+        const gr = g.createRadialGradient(d.x + ox, d.y + oy, 0, d.x + ox, d.y + oy, R); gr.addColorStop(0, `rgba(${c},${w * al})`); gr.addColorStop(.55, `rgba(${c},${w * .45 * al})`); gr.addColorStop(1, `rgba(${c},0)`);
+        g.fillStyle = gr; g.beginPath(); g.arc(d.x + ox, d.y + oy, R, 0, 6.283); g.fill(); }
       g.globalAlpha = 1;
       const done = t > T.hIn && hX + HW / 2 < -40 && !bits.length && !reds.length;
       if (!done && t < T.end + 8000) requestAnimationFrame(frame); else { g.clearRect(0, 0, W, H); this._burst = 0; this.busy = false; }
@@ -6178,7 +6185,7 @@ window.KZRelay = function (topic, onMessage, servers) {
 (() => {
   const qs = new URLSearchParams(location.search), key = qs.get("ctl");
   if (!key || !window.WebSocket) return;
-  const PAGE = "html3", VERSION = "4b21c36";
+  const PAGE = "html3", VERSION = "5f6167a";
   let said = false;
   const relay = KZRelay("kzctl/" + key, c => {
     if (!c || c.from === "overlay" || (c.to && c.to !== "all" && c.to !== PAGE)) return;
