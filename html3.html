@@ -545,7 +545,7 @@ body.fit #stage{background:radial-gradient(1200px 700px at 30% 20%,#1a103322,tra
   <button class="b-tank" data-t="tank">💥 Silverhand</button><button class="snd" data-snd="tank" title="Add a sound for this effect">🔊+</button>
   <button class="b-kaz" data-t="kazul">💣 Kazul123</button><button class="snd" data-snd="kazul" title="Add a sound for this effect">🔊+</button>
   <button class="b-jinx" data-t="jinx">🔥 JINX</button><button class="snd" data-snd="jinx" title="Add a sound for this effect">🔊+</button>
-  <button class="b-smoke" data-t="smoke">💨 Smoke on/off</button><button class="b-smoke" data-t="face">😶 Face on/off</button><button class="b-smoke" data-t="rain">🌧 Rain on/off</button><button class="b-smoke" data-t="faceMode">🙂 Face on/off</button><button class="b-smoke" data-t="storm">⛈ Storm on/off</button><button class="b-smoke" data-t="cloudTank">🪖 Cloud tank on/off</button><button class="b-smoke" data-t="cloudFire">💥 Fire</button><button class="b-smoke" data-t="disco">🪩 Disco on/off</button><button class="snd" data-snd="disco" title="Add a sound for the disco ball">🔊+</button><select id="facemood" title="Cloud face expression"><option value="none">☁️ No face</option><option value="neutral">😐 Neutral</option><option value="smile">🙂 Smile</option><option value="grin">😁 Big grin</option><option value="oo">😗 Oo</option><option value="closed">😌 Eyes closed</option><option value="smirk">😏 Smirk</option><option value="wink">😉 Wink</option><option value="laugh">😆 Laughing</option><option value="shocked">😲 Shocked</option><option value="sleepy">😪 Sleepy</option><option value="sideeye">🤨 Side-eye</option><option value="sad">😢 Sad</option><option value="tongue">😛 Tongue out</option><option value="puffed">🐡 Cheeks puffed</option><option value="determined">😤 Determined</option><option value="evil">😈 Evil grin</option><option value="smug">😌 Smug</option><option value="confused">😕 Confused</option><option value="disgusted">🤢 Disgusted</option><option value="nervous">😬 Nervous</option><option value="kissy">😘 Kissy face</option><option value="bored">😑 Bored</option><option value="excited">🤩 Excited</option><option value="thinking">🤔 Thinking</option><option value="scared">😨 Scared</option></select><button class="snd" data-snd="smoke" title="Add a sound for this effect">🔊+</button>
+  <button class="b-smoke" data-t="smoke">💨 Smoke on/off</button><button class="b-smoke" data-t="face">😶 Face on/off</button><button class="b-smoke" data-t="rain">🌧 Rain on/off</button><button class="b-smoke" data-t="faceMode">🙂 Face on/off</button><button class="b-smoke" data-t="storm">⛈ Storm on/off</button><button class="b-smoke" data-t="cloudTank">🪖 Cloud tank on/off</button><button class="b-smoke" data-t="cloudFire">💥 Fire</button><button class="b-smoke" data-t="cloudDog">🐶 Cloud dog on/off</button><button class="b-smoke" data-t="cloudBark">🐶 Bark</button><button class="snd" data-snd="bark" title="Add a bark sound">🔊+</button><button class="b-smoke" data-t="disco">🪩 Disco on/off</button><button class="snd" data-snd="disco" title="Add a sound for the disco ball">🔊+</button><select id="facemood" title="Cloud face expression"><option value="none">☁️ No face</option><option value="neutral">😐 Neutral</option><option value="smile">🙂 Smile</option><option value="grin">😁 Big grin</option><option value="oo">😗 Oo</option><option value="closed">😌 Eyes closed</option><option value="smirk">😏 Smirk</option><option value="wink">😉 Wink</option><option value="laugh">😆 Laughing</option><option value="shocked">😲 Shocked</option><option value="sleepy">😪 Sleepy</option><option value="sideeye">🤨 Side-eye</option><option value="sad">😢 Sad</option><option value="tongue">😛 Tongue out</option><option value="puffed">🐡 Cheeks puffed</option><option value="determined">😤 Determined</option><option value="evil">😈 Evil grin</option><option value="smug">😌 Smug</option><option value="confused">😕 Confused</option><option value="disgusted">🤢 Disgusted</option><option value="nervous">😬 Nervous</option><option value="kissy">😘 Kissy face</option><option value="bored">😑 Bored</option><option value="excited">🤩 Excited</option><option value="thinking">🤔 Thinking</option><option value="scared">😨 Scared</option></select><button class="snd" data-snd="smoke" title="Add a sound for this effect">🔊+</button>
   <button class="b-chat" data-t="chat">Chat</button><button class="snd" data-snd="chat" title="Add a sound for this alert">🔊+</button>
 </div>
 
@@ -3611,9 +3611,21 @@ const Face = {
   toggleFace() { this.faceOn = !this.faceOn; try { localStorage.setItem("kz_face_on", this.faceOn ? "1" : "0"); } catch {} },
   storm: false, stormK: 0, tank: false, tankM: 0, tankTo: null, flip: 1,
   toggleStorm() { this.storm = !this.storm; },
-  toggleTank() { this.tank = !this.tank; this.tankTo = null; if (this.tank && !this.on) this.toggle(); },
-  shots: [], fireAt: 0,
-  fire() { if (this.tank && this.tankM > .7 && performance.now() - this.fireAt > 450) { this.fireAt = performance.now(); this.wantFire = true; } },
+  kind: "tank", kindWant: "tank", ang: 0, angTo: 0,
+  shapeToggle(k) { if (this.tank && this.kindWant === k) this.tank = false; else { this.tank = true; this.kindWant = k; } this.tankTo = null; if (this.tank && !this.on) this.toggle(); },
+  toggleTank() { this.shapeToggle("tank"); },
+  toggleDog() { this.shapeToggle("dog"); },
+  barkAt: -1e9,
+  bark() { if (this.tank && this.kind === "dog" && this.tankM > .7 && performance.now() - this.barkAt > 450) { this.barkAt = performance.now(); this.wantBark = true; } },
+  shots: [], fireAt: 0, woofs: [],
+  // a little synthesized bark (used unless a bark sound was added with the 🔊+ button)
+  barkSound() { const c = Sound.ctx; if (!c) return; const t0 = c.currentTime;
+    [0, .16].forEach(d => { const o = c.createOscillator(), g = c.createGain(), f = c.createBiquadFilter(); o.type = "sawtooth";
+      o.frequency.setValueAtTime(520, t0 + d); o.frequency.exponentialRampToValueAtTime(230, t0 + d + .11); f.type = "lowpass"; f.frequency.value = 1400; f.Q.value = 6;
+      g.gain.setValueAtTime(.0001, t0 + d); g.gain.exponentialRampToValueAtTime(.35, t0 + d + .012); g.gain.exponentialRampToValueAtTime(.0001, t0 + d + .13);
+      o.connect(f); f.connect(g); g.connect(c.destination); o.start(t0 + d); o.stop(t0 + d + .15); });
+    Sound.burst(t0, .1, .06, "bandpass", 1200); },
+  fire() { if (this.tank && this.kind === "tank" && this.tankM > .7 && performance.now() - this.fireAt > 450) { this.fireAt = performance.now(); this.wantFire = true; } },
   goTo(nx, ny) { const p = [Math.max(0, Math.min(1, nx)) * 2560, Math.max(0, Math.min(1, ny)) * 1440];
     if (this.tank) this.tankTo = p; else { this.steerTo = p; this.steerAt = performance.now(); } },
   rain: false,
@@ -3685,18 +3697,18 @@ const Face = {
     // it stays along the top of the screen (always fully on screen): hovers a while, then glides to a new spot.
     // Every so often it goes down to the bottom, but only down the left or right edge (never through the middle),
     // stays there a while, then goes back up the same edge.
-    const SC = this.SC, MX = 195, TOP = [205, 228], LOW = H - 180, CORNER = [W - 430, H - 260];
+    const SC = this.SC, MX = 195, TOP = [205, 228], LOW = H - 180, CORNER = [W - 430, H - 200];
     let route = [], snowing = null, snowTo = null, goingHome = false, wasTank = false, nextFlash = 2000, nextStormBolt = 4000;
     const flashes = [], storms = [];
     // the big poof of smoke the cloud appears in (and vanishes in when it's turned off)
     const poof = (px, py, t) => {
-        for (let i = 0; i < 70; i++) { const a = rand(-Math.PI, 0) + rand(-.4, .4) - .5, sp = rand(4, 16);
-        this.puffs.push({ x: px + rand(-60, 60) * SC, y: py + rand(-40, 60) * SC, vx: Math.cos(a) * sp * .7, vy: Math.sin(a) * sp * .55, r: rand(30, 70) * .65, born: t, life: rand(1400, 2600) }); }
+        for (let i = 0; i < 70; i++) { const a = rand(-Math.PI, 0), sp = rand(4, 16);
+        this.puffs.push({ x: px + rand(-60, 60) * SC, y: py - 35 + rand(-40, 60) * SC, vx: Math.cos(a) * sp * .7, vy: Math.sin(a) * sp * .55, r: rand(30, 70) * .65, born: t, life: rand(1400, 2600) }); }
       // a solid bank of smoke filling everything under the cloud down to the bottom of the screen, reaching about
       // 100px past the cloud on each side, that billows a little and thins out as the cloud forms
       const half = 150 * SC * 2 + 100;
-      for (let gx = px - half; gx <= px + half; gx += 34) for (let gy = py - 90; gy <= H + 30; gy += 34) {
-        const u = (gx - px) / half, top = py - 90 + u * u * 110 + rand(-25, 25);        // a rounded, lumpy top, not a box
+      for (let gx = px - half; gx <= px + half; gx += 34) for (let gy = py - 150; gy <= H + 30; gy += 34) {
+        const u = (gx - px) / half, top = py - 150 + u * u * 110 + rand(-25, 25);        // a rounded, lumpy top, not a box
         if (gy < top) continue;
         this.puffs.push({ x: gx + rand(-22, 22) + Math.sign(u) * (Math.abs(u) > .9 ? rand(-10, 30) : 0), y: gy + rand(-14, 14), vx: rand(-.8, .8) + (gx - px) * .004, vy: rand(-.9, .2), r: rand(34, 52), born: t, life: rand(1800, 2900) }); }
     };
@@ -3736,7 +3748,8 @@ const Face = {
         route = []; snowTo = null; moveAt = 0; hoverUntil = Infinity; wasTank = true;
         if (this.tankTo) { const tx = Math.max(300, Math.min(W - 300, this.tankTo[0])), ty = Math.max(170, Math.min(H - 140, this.tankTo[1])), s = dt / 16;
           const vx = Math.max(-13, Math.min(13, (tx - px) * .05)), vy = Math.max(-10, Math.min(10, (ty - py) * .05));
-          px += vx * s; py += vy * s; if (Math.abs(vx) > .6) this.flipTo = Math.sign(vx); }
+          px += vx * s; py += vy * s; if (Math.abs(vx) > .6) this.angTo = vx > 0 ? 0 : Math.PI;
+          this.speed = Math.hypot(vx, vy); this.walk = (this.walk || 0) + this.speed * .028 * s; }
       } else if (goingHome) wasTank = false;
       else if (wasTank && this.tankM < .05) {
         wasTank = false; const top = rand(...TOP);
@@ -3780,22 +3793,32 @@ const Face = {
         px = fromX + (toX - fromX) * e; py = fromY + (toY - fromY) * e; moving = k < 1 ? 1 : 0;
         if (k >= 1) { hoverUntil = t + (route.length ? (snowTo !== null || goingHome ? 60 : 250) : rand(20000, 60000)); moveAt = 0; } }
       const dir = moving ? Math.sign(toX - fromX) : 0;
-      this.tankM += ((this.tank ? 1 : 0) - this.tankM) * (this.tank ? .018 : .009);   // back to a cloud: slower and softer
+      // morphing: into the wanted shape, or back to a cloud (slower and softer). Switching tank <-> dog goes through
+      // the cloud first.
+      const shapeOn = this.tank && this.kind === this.kindWant;
+      this.tankM += ((shapeOn ? 1 : 0) - this.tankM) * (shapeOn ? .018 : .009);
+      if (this.tankM < .03) this.kind = this.kindWant;
+      if (!this.tank || !shapeOn) this.speed = 0;
       if (!this.tank && this.tankWas) { this.tankWas = false;                         // a soft poof as it puffs back up into a cloud
         for (let i = 0; i < 40; i++) { const a = rand(0, 6.283), sp = rand(1, 4); this.puffs.push({ x: px + rand(-160, 160), y: py + rand(-30, 50), vx: Math.cos(a) * sp, vy: Math.sin(a) * sp * .6 - 1, r: rand(22, 40), born: t, life: rand(1600, 2800) }); } }
       if (this.tank) this.tankWas = true; this.stormK += ((this.storm ? 1 : 0) - this.stormK) * .012;
-      this.flip += ((this.flipTo || 1) - this.flip) * .06;
+      this.ang += (this.angTo - this.ang) * .03;                                     // turning around takes about a second
       this.pos = [px, py];
       // the eyes look straight ahead (at the top and at the bottom)
       this.lookTo = [0, 0];
       this.recoil = (this.recoil || 0) * .86;
-      const bob = 1 - this.tankM * .75, sq = 1, x = px + Math.sin(t / 2300) * 18 * bob - this.recoil * (this.flip < 0 ? -1 : 1), y = py + (Math.sin(t / 900) * 12 + Math.sin(t / 2700) * 9) * bob;
+      const bob = 1 - this.tankM * .75, sq = 1, x = px + Math.sin(t / 2300) * 18 * bob - this.recoil * Math.cos(this.ang), y = py + (Math.sin(t / 900) * 12 + Math.sin(t / 2700) * 9) * bob;
       // ---- FIRE: a plume of cloud bursts out of the end of the gun, the tank kicks back, and a cloud cannonball flies
       // straight ahead the way the gun points until it leaves the screen
-      if (this.wantFire) { this.wantFire = false; const ts0 = SC * (1 + .3 * this.tankM), d = this.flip < 0 ? -1 : 1, mx = x + 350 * d * ts0, my = y - 30 * ts0;
+      if (this.wantFire) { this.wantFire = false; const ts0 = SC * (1 + .3 * this.tankM), d = Math.cos(this.ang) < 0 ? -1 : 1, mx = x + 350 * Math.cos(this.ang) * ts0, my = y - 30 * ts0;
         for (let i = 0; i < 34; i++) { const a = (d > 0 ? 0 : Math.PI) + rand(-.55, .55), sp = rand(3, 13); this.puffs.push({ x: mx, y: my + rand(-6, 6), vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - .6, r: rand(14, 30), born: t, life: rand(900, 2000) }); }
         for (let i = 0; i < 10; i++) this.puffs.push({ x: mx - d * rand(0, 40), y: my + rand(-10, 10), vx: rand(-1, 1), vy: rand(-2.5, -.5), r: rand(20, 34), born: t, life: rand(1400, 2400) });
         this.shots.push({ x: mx + d * 20, y: my, vx: d * 30, born: t, spin: rand(0, 6.28) }); this.recoil = 16;
+      }
+      // ---- BARK: the dog's head jerks up with its mouth open, a little puff of cloud pops out, and "WOOF!" floats up
+      if (this.wantBark) { this.wantBark = false; const ts0 = SC * (1 + .3 * this.tankM), c = Math.cos(this.ang), mx = x + 255 * c * ts0, my = y - 40 * ts0;
+        for (let i = 0; i < 16; i++) { const a = (c >= 0 ? 0 : Math.PI) + rand(-.6, .6) - .3 * Math.sign(c || 1), sp = rand(2, 7); this.puffs.push({ x: mx, y: my, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - .5, r: rand(10, 18), born: t, life: rand(700, 1300) }); }
+        this.woofs.push({ x: mx + 40 * Math.sign(c || 1), y: my - 50, born: t }); Sound.init(); if (MySounds.urls.bark) MySounds.play("bark"); else this.barkSound();
       }
       // ---- snowflakes falling from the cloud, and the snowmen at the bottom
       // each flake has its own size (bigger ones are "closer": brighter and a bit faster), its own gentle sway, and the
@@ -3819,7 +3842,7 @@ const Face = {
       const AS = ChefArt.sprites, faceMode = this.faceOn && this.tankM < .03, noFace = !faceMode || this.mood === "none";
       const artCloud = faceMode && !!AS.cf_ref && !(this.mood === "none" && !AS.cf_e_none);
       if (artCloud) this.drawArtCloud(lg, AS, t);
-      else RealCloud.draw(lg, t, this.tankM, this.stormK, this.flip);
+      else RealCloud.draw(lg, t, this.tankM, this.stormK, this.ang, this.kind, { walk: this.speed > .8 ? this.walk : 0, bark: Math.max(0, 1 - (performance.now() - this.barkAt) / 380) * (performance.now() - this.barkAt < 380 ? 1 : 0) });
       lg.globalCompositeOperation = "source-atop";
       if (faceMode) { lg.globalAlpha = .2 + .08 * Math.sin(t / 1300); lg.drawImage(Smoke.lime, -260 + Math.sin(t / 2100) * 60, -40, 240, 180);
         lg.globalAlpha = .22 + .08 * Math.sin(t / 1700 + 2); lg.drawImage(Smoke.purple, 30 + Math.sin(t / 1900) * 60, -60, 260, 190); }
@@ -3949,6 +3972,10 @@ const Face = {
         g.save(); g.globalAlpha = flick * (1 - k * .6); g.lineJoin = "round"; g.shadowColor = b.c; g.shadowBlur = 24;
         [[9, b.c], [3, "#fff"]].forEach(([lw, col]) => { g.lineWidth = lw; g.strokeStyle = col; g.beginPath(); b.pts.forEach(([u, v], i) => i ? g.lineTo(u, v) : g.moveTo(u, v)); g.stroke(); });
         g.restore(); return true; });
+      // ---- "WOOF!" in soft cloud-white letters, floating up and fading
+      this.woofs = this.woofs.filter(w => { const k = (t - w.born) / 1100; if (k >= 1) return false; g.save(); g.globalAlpha = Math.min(1, (1 - k) * 2) * Math.min(1, k * 8);
+        g.font = `900 ${Math.round(44 + 10 * Math.sin(Math.min(1, k * 4) * Math.PI))}px ${FONT}`; g.textAlign = "center"; g.lineWidth = 8; g.strokeStyle = "rgba(120,135,160,.6)"; g.strokeText("WOOF!", w.x, w.y - k * 60);
+        g.fillStyle = "#fff"; g.shadowColor = "rgba(255,255,255,.8)"; g.shadowBlur = 12; g.fillText("WOOF!", w.x, w.y - k * 60); g.restore(); return true; });
       // ---- cloud cannonballs in flight: a tight spinning ball of cloud leaving a puffy trail
       this.shots = this.shots.filter(b => { const s = dt / 16; b.x += b.vx * s; b.spin += .2 * s; if (b.x < -150 || b.x > W + 150) return false;
         if (this.puffs.length < 900) this.puffs.push({ x: b.x - Math.sign(b.vx) * 18, y: b.y + rand(-5, 5), vx: -b.vx * .05, vy: rand(-.4, .2), r: rand(14, 24), born: t, life: rand(800, 1500) });
@@ -3961,7 +3988,7 @@ const Face = {
         const r = q.r * (1 + k * 2.2); g.globalAlpha = .65 * (1 - k) * Math.min(1, k * 10); g.drawImage(i % 3 ? Smoke.light : Smoke.hi, q.x - r, q.y - r, r * 2, r * 2);
       }
       g.globalAlpha = 1;
-      if (this.a > .01 || this.puffs.length || this.drops.length || this.on || this.snowmen.length || this.flakes.length || storms.length || this.shots.length) requestAnimationFrame(frame); else { g.clearRect(0, 0, W, H); this.run = false; }
+      if (this.a > .01 || this.puffs.length || this.drops.length || this.on || this.snowmen.length || this.flakes.length || storms.length || this.shots.length || this.woofs.length) requestAnimationFrame(frame); else { g.clearRect(0, 0, W, H); this.run = false; }
     };
     requestAnimationFrame(frame);
   }
@@ -3983,21 +4010,32 @@ const RealCloud = {
     for (let i = 0; i < 40; i++) { const x = -268 + i / 39 * 536 + rr(-8, 8), r = rr(26, 58) + (top(x) < -80 ? 14 : 0); home.push([x, top(x) + r * rr(.35, .7), r]); }   // the billowing outline
     for (let i = 0; i < 58; i++) { let x, y; do { x = -250 + (i % 10) / 9 * 500 + rr(-25, 25); y = rr(-200, 60); } while (y < top(x) + 45); home.push([x, y, rr(56, 76)]); }   // the body (spread evenly so it never shows holes)
     for (let i = 0; i < 22; i++) home.push([-260 + i / 21 * 520 + rr(-6, 6), rr(42, 58), rr(36, 48)]);                            // the flat base
-    // the tank, facing right: tracks, hull, turret, gun barrel (with a muzzle at the end); `dark` makes parts shadowy
-    const tank = [];
-    for (let i = 0; i < 18; i++) tank.push([-255 + i / 17 * 510, 98, 32, .45]);                                                    // tracks: lower run
-    for (let i = 0; i < 14; i++) tank.push([-240 + i / 13 * 480, 74, 30, .35]);                                                    // tracks: upper run
-    tank.push([-272, 84, 30, .45], [272, 84, 30, .45]);                                                                              // track ends (the round sprockets)
-    for (let i = 0; i < 36; i++) { let x, y; do { x = rr(-235, 245); y = rr(16, 52); } while (x > 185 && y < 16 + (x - 185) * .55); tank.push([x, y, rr(36, 44), .1]); }   // hull, sloped at the front
-    for (let i = 0; i < 24; i++) { const a = rr(-Math.PI, 0), rk = Math.sqrt(rr(.05, 1)); tank.push([-25 + Math.cos(a) * 110 * rk, 6 + Math.sin(a) * 62 * rk, rr(30, 38), 0]); }   // turret dome
-    for (let i = 0; i < 24; i++) tank.push([82 + i / 23 * 246, -30, 17, .05]);                                                     // gun barrel (packed tight so it reads as one tube)
-    tank.push([342, -30, 21, .15]);                                                                                                  // muzzle
-    while (tank.length < this.N) tank.push([rr(-200, 200), rr(20, 40), 30, .2]);
-    // pair cloud puffs with tank spots by sorting both left to right, so they flow sideways without crossing much
+    // each shape spot: [x, y, radius, dark, z (depth: + is toward you), part]. Shapes face right; z lets them turn
+    // around in 3D (seen from the front halfway through a turn) instead of flipping
+    const tank = [], LR = i => (i % 2 ? 48 : -48);
+    for (let i = 0; i < 18; i++) tank.push([-255 + (i >> 1) / 8 * 510, 98, 32, .45, LR(i), "track"]);                             // tracks (left and right): lower run
+    for (let i = 0; i < 14; i++) tank.push([-240 + (i >> 1) / 6 * 480, 74, 30, .35, LR(i), "track"]);                             // upper run
+    tank.push([-272, 84, 30, .45, -48, "track"], [272, 84, 30, .45, 48, "track"]);                                                 // sprockets
+    for (let i = 0; i < 36; i++) { let x, y; do { x = rr(-235, 245); y = rr(16, 52); } while (x > 185 && y < 16 + (x - 185) * .55); tank.push([x, y, rr(36, 44), .1, rr(-40, 40), "hull"]); }   // hull, sloped at the front
+    for (let i = 0; i < 24; i++) { const a = rr(-Math.PI, 0), rk = Math.sqrt(rr(.05, 1)); tank.push([-25 + Math.cos(a) * 110 * rk, 6 + Math.sin(a) * 62 * rk, rr(30, 38), 0, rr(-34, 34), "turret"]); }   // turret dome
+    for (let i = 0; i < 24; i++) tank.push([82 + i / 23 * 246, -30, 17, .05, 0, "barrel"]);                                       // gun barrel
+    tank.push([342, -30, 21, .15, 0, "barrel"]);                                                                                     // muzzle
+    // a dog, facing right: round body, head with a snout and a dark nose, floppy ears, four legs, a curly tail
+    const dog = [];
+    for (let i = 0; i < 46; i++) { const a = rr(0, 6.283), rk = Math.sqrt(rr(0, 1)); dog.push([-10 + Math.cos(a) * 140 * rk, 10 + Math.sin(a) * 52 * rk, rr(32, 42), .05, rr(-40, 40), "body"]); }
+    for (let i = 0; i < 20; i++) { const a = rr(0, 6.283), rk = Math.sqrt(rr(0, 1)); dog.push([160 + Math.cos(a) * 48 * rk, -62 + Math.sin(a) * 44 * rk, rr(26, 32), 0, rr(-28, 28), "head"]); }
+    for (let i = 0; i < 9; i++) dog.push([205 + i / 8 * 42, -46 + rr(-6, 6), rr(18, 22), 0, rr(-12, 12), i > 5 ? "jaw" : "snout"]);
+    dog.push([252, -52, 12, .9, 0, "nose"], [176, -78, 8, .95, 26, "eye"], [176, -78, 8, .95, -26, "eye"]);
+    for (let i = 0; i < 8; i++) { const e = i < 4 ? 1 : -1, k = (i % 4) / 3; dog.push([132 - k * 6, -82 + k * 58, rr(15, 19), .2, e * 40, "ear"]); }
+    [[-95, 1, "legBL"], [-95, -1, "legBR"], [85, 1, "legFL"], [85, -1, "legFR"]].forEach(([lx, e, part]) => { for (let i = 0; i < 6; i++) dog.push([lx + rr(-6, 6), 50 + i / 5 * 66, rr(19, 23), .1, e * 30, part]); });
+    for (let i = 0; i < 6; i++) { const k = i / 5; dog.push([-150 - k * 40, -10 - k * 70 - Math.sin(k * 3) * 10, 18 - k * 4, .05, 0, "tail"]); }
+    [tank, dog].forEach(L => { while (L.length < this.N) L.push([rr(-120, 120), rr(0, 40), 30, .1, 0, "fill"]); L.length = this.N; });
+    // pair cloud puffs with shape spots by sorting both left to right, so they flow sideways without crossing much
     home.forEach((h, i) => h.push(i < 40));                                          // which puffs make the outline
-    const hs = home.map((h, i) => [h, i]).sort((a, b) => a[0][0] - b[0][0]), ts = tank.slice(0, this.N).sort((a, b) => a[0] - b[0]);
-    this.P = hs.map(([h], k) => ({ hx: h[0], hy: h[1], hr: h[2], edge: h[3], tx: ts[k][0], ty: ts[k][1], tr: ts[k][2], dark: ts[k][3],
-      p1: rr(0, 6.28), p2: rr(0, 6.28), p3: rr(0, 6.28), w1: rr(1 / 9000, 1 / 4500), w2: rr(1 / 14000, 1 / 7000), w3: rr(1 / 10000, 1 / 5000), A: rr(7, 15), delay: (ts[k][0] + 340) / 680 * .35 }));
+    const hs = home.map((h, i) => [h, i]).sort((a, b) => a[0][0] - b[0][0]);
+    const sorted = { tank: tank.slice().sort((a, b) => a[0] - b[0]), dog: dog.slice().sort((a, b) => a[0] - b[0]) };
+    this.P = hs.map(([h], k) => ({ hx: h[0], hy: h[1], hr: h[2], edge: h[3], S: { tank: sorted.tank[k], dog: sorted.dog[k] },
+      p1: rr(0, 6.28), p2: rr(0, 6.28), p3: rr(0, 6.28), w1: rr(1 / 9000, 1 / 4500), w2: rr(1 / 14000, 1 / 7000), w3: rr(1 / 10000, 1 / 5000), A: rr(7, 15) }));
     // draw order: back-to-front looks best low to high for the cloud
     this.P.sort((a, b) => b.hy - a.hy);
     // little round billows sitting on the upper puffs (cauliflower tops), each riding along with its puff
@@ -4012,20 +4050,33 @@ const RealCloud = {
     g.fillStyle = gr; g.fillRect(0, 0, 128, 128); return this.tex[key] = c;
   },
   mix: (a, b, k) => a.map((v, i) => v + (b[i] - v) * k),
-  /* lg: the layer, already moved to the cloud's middle. m: 0 cloud .. 1 tank. s: 0 normal .. 1 storm. flip: -1..1 */
+  /* lg: the layer, already moved to the cloud's middle. m: 0 cloud .. 1 shape. s: 0 normal .. 1 storm.
+     ang: which way the shape faces (0 = right, π = left; in between it's turning). kind: "tank" or "dog".
+     an: { walk (step phase, 0 when standing), bark (0..1 while barking) } */
   side: 1,
-  draw(lg, t, m, s, flip) {
+  draw(lg, t, m, s, ang, kind, an) {
     this.init();
-    if (m > .02) this.side = flip < 0 ? -1 : 1;                                       // remember which way the tank faces
+    const ca = Math.cos(ang), sa = Math.sin(ang);
+    if (m > .02) this.side = ca < 0 ? -1 : 1;                                         // the cloud faces the way the shape last faced
     const lit = this.puff(this.mix([255, 255, 255], [128, 134, 150], s)), mid = this.puff(this.mix([206, 213, 228], [84, 89, 104], s)), sh = this.puff(this.mix([128, 138, 160], [42, 45, 58], s));
     const ease = k => k <= 0 ? 0 : k >= 1 ? 1 : k * k * (3 - 2 * k), swell = 1 + .05 * Math.sin(t / 11000);
+    an = an || {};
     const pos = this.P.map(p => {
-      const k = ease((m * 1.35 - p.delay) / 1), wob = 1 - k * .7;
+      const T = p.S[kind || "tank"], k = ease((m * 1.35 - (T[0] + 340) / 680 * .35) / 1);
       const hx = p.hx + (Math.sin(t * p.w1 + p.p1) + .5 * Math.sin(t * p.w2 + p.p2)) * p.A, hy = (p.hy - 62) * swell + 62 + (Math.cos(t * p.w1 * .9 + p.p2) + .5 * Math.sin(t * p.w2 + p.p3)) * p.A * .7;
-      const hr = p.hr * (1 + .1 * Math.sin(t * p.w3 + p.p3)), tx = p.tx * flip + Math.sin(t / 1800 + p.p1) * 2, ty = p.ty + Math.cos(t / 2100 + p.p2) * 2;
-      const hxs = hx * this.side;                                                    // the cloud faces the same way the tank did
-      return [hxs + (tx - hxs) * k, hy + (ty - hy) * k, hr + (p.tr - hr) * k, p.dark * k, p.kids, 1 - k, p.edge];
+      const hr = p.hr * (1 + .1 * Math.sin(t * p.w3 + p.p3));
+      // the shape spot, moved by its part's animation (walking legs, wagging tail, barking head)
+      let [sx, sy, sr, dk, sz, part] = T; sx += Math.sin(t / 1800 + p.p1) * 2; sy += Math.cos(t / 2100 + p.p2) * 2;
+      if (part.startsWith("leg") && an.walk) { const ph = an.walk + (part === "legFL" || part === "legBR" ? 0 : Math.PI), low = (sy - 50) / 66; sx += Math.sin(ph) * 16 * low; sy -= Math.max(0, Math.cos(ph)) * 10 * low; }
+      if (part === "tail") { const k2 = (-150 - T[0]) / 40; sx += Math.sin(t / 110) * 14 * k2; sy += Math.cos(t / 110) * 4 * k2; }
+      if (an.bark && (part === "head" || part === "snout" || part === "nose" || part === "eye" || part === "ear" || part === "jaw")) { const b = Math.sin(an.bark * Math.PI); sx += b * 10; sy -= b * 16; if (part === "jaw") sy += b * 22; }
+      if (part === "body" && an.walk) sy += Math.sin(an.walk * 2) * 2;
+      // turning: rotate the spot around the up axis, so halfway through a turn you see it from the front
+      const tx = sx * ca + sz * sa, depth = -sx * sa + sz * ca;
+      const hxs = hx * this.side;                                                    // the cloud faces the same way the shape did
+      return [hxs + (tx - hxs) * k, hy + (sy - hy) * k, hr + (sr - hr) * k, dk * k, p.kids, 1 - k, p.edge, depth * k + (1 - k) * (1000 - hy)];
     });
+    if (m > .05) pos.sort((a, b) => a[7] - b[7]);                                    // far side first, near side last
     // three passes: a dark underside/shadow, the grey-blue body, then sunlit white on the upper side of every billow
     // shading follows height: the base is soft blue-grey, the tops are sunlit white; only the outline billows get a
     // shadowed edge, so the inside stays smooth like a real cloud
@@ -4560,6 +4611,8 @@ window.onRemote = c => {
   else if (c.cmd === "effect" && c.name === "storm") Face.toggleStorm();
   else if (c.cmd === "effect" && c.name === "cloudTank") Face.toggleTank();
   else if (c.cmd === "effect" && c.name === "cloudFire") Face.fire();
+  else if (c.cmd === "effect" && c.name === "cloudDog") Face.toggleDog();
+  else if (c.cmd === "effect" && c.name === "cloudBark") Face.bark();
   else if (c.cmd === "cloudGo") Face.goTo(+c.x, +c.y);
   else if (c.cmd === "faceMood") Face.setMood(c.name);
   else if (c.cmd === "faceTalk") Face.setNeutralTalk(c.name);
@@ -4685,6 +4738,8 @@ document.querySelectorAll("#testbar [data-t]").forEach(b => b.onclick = () => {
   else if (t === "storm") Face.toggleStorm();
   else if (t === "cloudTank") Face.toggleTank();
   else if (t === "cloudFire") Face.fire();
+  else if (t === "cloudDog") Face.toggleDog();
+  else if (t === "cloudBark") Face.bark();
   else if (t === "chat") Lurk.leave(name);
 });
 
@@ -5153,7 +5208,7 @@ window.KZRelay = function (topic, onMessage, servers) {
 (() => {
   const qs = new URLSearchParams(location.search), key = qs.get("ctl");
   if (!key || !window.WebSocket) return;
-  const PAGE = "html3", VERSION = "83aee8f";
+  const PAGE = "html3", VERSION = "414b84c";
   let said = false;
   const relay = KZRelay("kzctl/" + key, c => {
     if (!c || c.from === "overlay" || (c.to && c.to !== "all" && c.to !== PAGE)) return;
