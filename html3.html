@@ -3613,6 +3613,27 @@ const Face = {
   // the darkness slider in the app: 0 = bright white .. 1 = dark storm grey (lightning strikes still only with Storm on)
   darkTo: 0, darkM: 0,
   setDark(v) { this.darkTo = Math.max(0, Math.min(1, +v || 0)); },
+  // the size slider: .5 (half) .. 2 (double)
+  sizeTo: 1, sizeM: 1,
+  setSize(v) { this.sizeTo = Math.max(.5, Math.min(2, +v || 1)); },
+  // effects: tap one to play it (the puffs fly out into it and back); tap it again while it plays to end it early
+  fx: null,
+  // big letters as evenly spread points (for the word effects)
+  fxText(text, size, n) { const all = textPoints(text, 1280, 720, 2250, 1e9, { size }); if (all.length <= n) return all;
+    const out = [], step = all.length / n; for (let i = 0; i < n; i++) out.push(all[Math.floor(i * step)]); return out; },
+  startFx(key) { const d = FX[key]; if (!d) return; const now = performance.now();
+    if (this.fx && this.fx.key === key && now < this.fx.endAt) { this.fx.endAt = now; return; }
+    if (!this.on) this.toggle(); RealCloud.init();
+    this.fx = { key, d, at: now, endAt: now + (d.dur || 12000), N: d.N || 200, pts: d.text ? this.fxText(d.text, d.tsize || 300, d.N || 200) : null };
+    if (this.fx.pts) { const P = this.fx.pts; for (let i = P.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [P[i], P[j]] = [P[j], P[i]]; } } },
+  /* the glow colour slider: 0 = natural blue-white lightning, otherwise a colour around the colour wheel. glowCols()
+     gives [core, mid, outer] colours for the lightning inside the cloud, its halo and the bolts. */
+  hue: 0,
+  setHue(v) { this.hue = Math.max(0, Math.min(1, +v || 0)); this._gc = null; },
+  glowCols() { if (this._gc) return this._gc; const h = this.hue;
+    if (h < .01) return this._gc = ["235,240,255", "190,205,255", "150,170,255"];
+    const rgb = l => { const c = document.createElement("canvas").getContext("2d"); c.fillStyle = `hsl(${(h * 360) | 0},100%,${l}%)`; c.fillRect(0, 0, 1, 1); return [...c.getImageData(0, 0, 1, 1).data].slice(0, 3).join(","); };
+    return this._gc = [rgb(88), rgb(70), rgb(58)]; },
   toggleStorm() { this.storm = !this.storm; },
   kind: "tank", kindWant: "tank", ang: 0, angTo: 0,
   shapeToggle(k) { if (this.tank && this.kindWant === k) this.tank = false; else { this.tank = true; this.kindWant = k; } this.tankTo = null; if (this.tank && !this.on) this.toggle(); },
@@ -3712,7 +3733,7 @@ const Face = {
     // it stays along the top of the screen (always fully on screen): hovers a while, then glides to a new spot.
     // Every so often it goes down to the bottom, but only down the left or right edge (never through the middle),
     // stays there a while, then goes back up the same edge.
-    const SC = this.SC, MX = 195, TOP = [205, 228], LOW = H - 180, CORNER = [W - 430, H - 200];
+    let SC = this.SC; const MX = 195, TOP = [205, 228], LOW = H - 180, CORNER = [W - 430, H - 200];
     let route = [], snowing = null, snowTo = null, goingHome = false, wasTank = false, nextFlash = 2000, nextStormBolt = 4000;
     const flashes = [], storms = [];
     // the big poof of smoke the cloud appears in (and vanishes in when it's turned off)
@@ -3733,6 +3754,7 @@ const Face = {
     const frame = now => {
       const t = now - t0, dt = Math.min(50, now - last); last = now; g.clearRect(0, 0, W, H);
       this.a += ((this.on ? 1 : 0) - this.a) * .05;
+      this.sizeM += (this.sizeTo - this.sizeM) * .05; SC = this.SC * this.sizeM;
       const lv = Voice.sample(), st = this.expression(t, lv), E = this.E;
       // ---- entrance: when it comes out, it bursts out of the bottom-right corner as a poof of smoke and forms up
       if (this.on && this.a < .06 && t - enterAt > 2500) {
@@ -3807,6 +3829,10 @@ const Face = {
       if (moveAt > hoverUntil) { const k = Math.min(1, (t - moveAt) / moveDur), e = k < .5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2;
         px = fromX + (toX - fromX) * e; py = fromY + (toY - fromY) * e; moving = k < 1 ? 1 : 0;
         if (k >= 1) { hoverUntil = t + (route.length ? (snowTo !== null || goingHome ? 60 : 250) : rand(20000, 60000)); moveAt = 0; } }
+      // at any size, keep the whole cloud (or shape) on screen (not while it's coming out of / going back into its poof)
+      if (!goingHome && t - enterAt > 2600) { const hw = 165 * this.sizeM * (1 + .5 * this.tankM), top = 180 * this.sizeM, bot = 140 * this.sizeM;
+        px = Math.max(hw, Math.min(W - hw, px)); py = Math.max(top + 12, Math.min(H - bot, py)); }
+      if (this.fx) hoverUntil = Math.max(hoverUntil, t + 3000);                       // it stays put while an effect plays
       const dir = moving ? Math.sign(toX - fromX) : 0;
       // morphing: into the wanted shape, or back to a cloud (slower and softer). Switching tank <-> dog goes through
       // the cloud first.
@@ -3853,13 +3879,18 @@ const Face = {
         if (this.actFresh && act) { this.actFresh = false;
           if (act.text) { const [tx2, ty2] = lp(act.textAt ? act.textAt[0] : 120, act.textAt ? act.textAt[1] : -150); this.woofs.push({ x: tx2 + 30 * dirc, y: Math.max(60, ty2), born: t, text: act.text }); }
           if (act.puffs) spray(act.puffs);
-          if (act.glow) { const [gx, gy] = lp(act.puffs ? act.puffs.x + 60 : 0, act.puffs ? act.puffs.y : 0); this.glow2.push({ x: gx, y: gy, born: t, dur: act.dur || 900, c: act.glow, dx: 9 * dirc }); }
+          if (act.rain) this.rainTill = Math.max(this.rainTill, performance.now() + act.rain);
+          if (act.glow) { const [gx, gy] = act.glowAt ? lp(...act.glowAt) : lp(act.puffs ? act.puffs.x + 60 : 0, act.puffs ? act.puffs.y : 0); this.glow2.push({ x: gx, y: gy, born: t, dur: act.dur || 900, c: act.glow, dx: 9 * dirc }); }
           if (act.sparkle) for (let i = 0; i < act.sparkle; i++) { const [sx, sy] = lp(rand(-230, 230), rand(-170, 90)); this.sparks.push({ x: sx, y: sy, born: t + rand(0, 500), s: rand(.5, 1.2) }); }
         }
         if (act && ak < 1) {
           if (act.steam && ak < .75 && Math.random() < .6) { const [sx, sy] = lp(act.steam.x, act.steam.y); this.puffs.push({ x: sx + rand(-8, 8), y: sy, vx: rand(-.8, .8) - dirc * 1.5, vy: rand(-5, -3), r: rand(14, 26), born: t, life: rand(1400, 2400) }); }
           if (act.trail && this.puffs.length < 900) { const [sx, sy] = lp(-255, 0); for (let i = 0; i < 2; i++) this.puffs.push({ x: sx + rand(-6, 6), y: sy + rand(-6, 6), vx: -dirc * rand(.2, .8), vy: rand(-.2, .2), r: rand(14, 22), born: t, life: rand(2600, 4000), keep: true }); }
           if (act.blast && (ak < .45 || ak > .55) && this.puffs.length < 900) { const [sx, sy] = lp(0, 125); for (let i = 0; i < 3; i++) this.puffs.push({ x: sx + rand(-14, 14), y: sy, vx: rand(-1.5, 1.5), vy: rand(4, 9), r: rand(14, 26), born: t, life: rand(700, 1400) }); }
+          if (act.sweep) { const [lx2, ly2] = lp(...act.sweep), k = Math.min(1, ak * 6, (1 - ak) * 6), ba = ak * Math.PI * 4, len = 2600;
+            g.save(); g.globalCompositeOperation = "lighter"; const gr = g.createRadialGradient(lx2, ly2, 0, lx2, ly2, len); gr.addColorStop(0, `rgba(255,250,215,${.55 * k})`); gr.addColorStop(1, "rgba(255,250,215,0)");
+            g.fillStyle = gr; g.beginPath(); g.moveTo(lx2, ly2); g.arc(lx2, ly2, len, ba - .09, ba + .09); g.closePath(); g.fill();
+            const gl = g.createRadialGradient(lx2, ly2, 0, lx2, ly2, 90); gl.addColorStop(0, `rgba(255,250,215,${.8 * k})`); gl.addColorStop(1, "rgba(255,250,215,0)"); g.fillStyle = gl; g.fillRect(lx2 - 90, ly2 - 90, 180, 180); g.restore(); }
           if (act.beam) { const [bx, by] = lp(0, 55), k = Math.min(1, ak * 5, (1 - ak) * 5), wTop = 70 * ts0 * 2, wBot = 260;
             g.save(); g.globalCompositeOperation = "lighter"; const gr = g.createLinearGradient(0, by, 0, H); gr.addColorStop(0, `rgba(200,255,210,${.42 * k})`); gr.addColorStop(1, `rgba(200,255,210,${.08 * k})`);
             g.fillStyle = gr; g.beginPath(); g.moveTo(bx - wTop / 2, by); g.lineTo(bx + wTop / 2, by); g.lineTo(bx + wBot, H); g.lineTo(bx - wBot, H); g.closePath(); g.fill();
@@ -3908,7 +3939,7 @@ const Face = {
       if (this.on && shade > .35 && t > nextFlash) { nextFlash = t + rand(1200, 4200) / Math.max(.5, shade); flashes.push({ x: rand(-200, 200), y: rand(-150, 40), at: t, pat: Math.random() < .5 ? [0, 90, 160, 300] : [0, 140], str: Math.min(1, (shade - .3) * 1.6) }); }
       for (let i = flashes.length - 1; i >= 0; i--) { const f = flashes[i], a = t - f.at; if (a > 700) { flashes.splice(i, 1); continue; }
         let k = 0; f.pat.forEach((st, j) => { if (j % 2 === 0) { const e = a - st; if (e >= 0 && e < 260) k = Math.max(k, Math.exp(-e / 90)); } });
-        if (k > .01) { const gr = lg.createRadialGradient(f.x, f.y, 0, f.x, f.y, 240); gr.addColorStop(0, `rgba(235,240,255,${.85 * k})`); gr.addColorStop(.5, `rgba(190,205,255,${.4 * k})`); gr.addColorStop(1, "rgba(190,205,255,0)");
+        if (k > .01) { const gr = lg.createRadialGradient(f.x, f.y, 0, f.x, f.y, 240); const GC = this.glowCols(); gr.addColorStop(0, `rgba(${GC[0]},${.85 * k})`); gr.addColorStop(.5, `rgba(${GC[1]},${.4 * k})`); gr.addColorStop(1, `rgba(${GC[1]},0)`);
           lg.globalAlpha = f.str == null ? 1 : f.str; lg.fillStyle = gr; lg.fillRect(f.x - 240, f.y - 240, 480, 480); f.k = k * (f.str == null ? 1 : f.str); } else f.k = 0; }
       if (faceMode && t > nextGlow) { nextGlow = t + rand(1500, 4000); this.glows.push({ x: rand(-180, 180), y: rand(-60, 60), born: t, dur: rand(500, 900), c: Math.random() < .5 ? [190, 140, 255] : [190, 245, 140] }); }
       this.glows = this.glows.filter(f => { const k = (t - f.born) / f.dur; if (k >= 1) return false; const env = Math.sin(k * Math.PI) * (.8 + .2 * Math.sin(k * 50)), [r, gg, b] = f.c;
@@ -3923,16 +3954,31 @@ const Face = {
       }
       for (let i = storms.length - 1; i >= 0; i--) { const b = storms[i], a = t - b.at; if (a > 650) { storms.splice(i, 1); continue; }
         const k = a < 70 ? 1 : a < 130 ? .25 : a < 230 ? 1 : Math.max(0, 1 - (a - 230) / 420);
-        g.save(); g.globalAlpha = .06 * k; g.fillStyle = "rgb(205,215,255)"; g.fillRect(0, 0, W, H); g.restore();
+        g.save(); g.globalAlpha = .06 * k; g.fillStyle = `rgb(${this.glowCols()[1]})`; g.fillRect(0, 0, W, H); g.restore();
         g.save(); g.lineJoin = "round"; g.lineCap = "round"; g.globalCompositeOperation = "lighter";
-        b.segs.forEach(sg => { [[sg.w * 5, `rgba(150,170,255,${.18 * k})`, 30], [sg.w * 2, `rgba(200,215,255,${.55 * k})`, 12], [sg.w, `rgba(255,255,255,${k})`, 0]].forEach(([lw, col, bl]) => {
-          g.lineWidth = lw; g.strokeStyle = col; g.shadowColor = "rgba(170,190,255,.9)"; g.shadowBlur = bl; g.beginPath(); sg.pts.forEach(([u, v], j) => j ? g.lineTo(u, v) : g.moveTo(u, v)); g.stroke(); }); });
+        const GC = this.glowCols(); b.segs.forEach(sg => { [[sg.w * 5, `rgba(${GC[2]},${.18 * k})`, 30], [sg.w * 2, `rgba(${GC[1]},${.55 * k})`, 12], [sg.w, `rgba(255,255,255,${k})`, 0]].forEach(([lw, col, bl]) => {
+          g.lineWidth = lw; g.strokeStyle = col; g.shadowColor = `rgba(${GC[1]},.9)`; g.shadowBlur = bl; g.beginPath(); sg.pts.forEach(([u, v], j) => j ? g.lineTo(u, v) : g.moveTo(u, v)); g.stroke(); }); });
         g.restore(); }
-      g.globalAlpha = this.a; g.save(); g.filter = artCloud ? "blur(.4px)" : "blur(1.6px)"; const ts = SC * (1 + .3 * this.tankM) * (A.s || 1);
+      // effects: how far out the puffs are (0 = all in the cloud, 1 = all in the pattern)
+      let fxMix = 0; const fx = this.fx, nowP = performance.now();
+      if (fx) { const ein = Math.min(1, (nowP - fx.at) / 1500), eout = Math.max(0, Math.min(1, (nowP - fx.endAt) / 1500)); fxMix = ein * (1 - eout); if (eout >= 1) this.fx = null; }
+      const cloudA = 1 - Math.min(1, fxMix * 1.6);
+      g.globalAlpha = this.a * cloudA; g.save(); g.filter = artCloud ? "blur(.4px)" : "blur(1.6px)"; const ts = SC * (1 + .3 * this.tankM) * (A.s || 1);
       g.drawImage(layer, x - LW / 2 * es * ts, y - (LH / 2 + 30) * es * ts, LW * es * ts, LH * es * ts); g.restore();
+      // ---- the effect itself: every puff flies from its place in the cloud to its place in the pattern (a little
+      // staggered, so they stream out), with the cloud's own soft shading
+      if (fx && fxMix > 0) { const u = (nowP - fx.at) / 1000, C = { lv: Voice.level || 0, pts: fx.pts }, P = RealCloud.P, sd = RealCloud.side, sh = RealCloud.puff(RealCloud.mix([128, 138, 160], [42, 45, 58], shade)), lit = RealCloud.puff(RealCloud.mix([255, 255, 255], [128, 134, 150], shade));
+        const ease = k => k <= 0 ? 0 : k >= 1 ? 1 : k * k * (3 - 2 * k), list = [];
+        for (let i = 0; i < fx.N; i++) { const q = P[i % P.length], k = ease(fxMix * 1.45 - (i / fx.N) * .45), [tx, ty, tr, ta = 1] = fx.d.f(i, fx.N, u, C);
+          const sx = x + q.hx * sd * ts + (i >= P.length ? Math.sin(i) * 20 : 0), sy = y + q.hy * ts + (i >= P.length ? Math.cos(i) * 14 : 0);
+          list.push([sx + (tx - sx) * k, sy + (ty - sy) * k, q.hr * ts * (1 - k) + tr * k, (1 - k) * (i < P.length ? 1 : 0) + ta * k]); }
+        g.save();
+        list.forEach(([px2, py2, r, a]) => { if (a <= .02) return; g.globalAlpha = this.a * a * .9; g.drawImage(sh, px2 - r * .92, py2 - r * .8, r * 2, r * 2); });
+        list.forEach(([px2, py2, r, a]) => { if (a <= .02) return; g.globalAlpha = this.a * a; g.drawImage(lit, px2 - r * .95, py2 - r * 1.05, r * 1.8, r * 1.8); });
+        g.restore(); }
       // storm: a soft glow around the cloud when the lightning inside it flashes
       flashes.forEach(f => { if (!f.k) return; const fx = x + f.x * SC, fy = y + f.y * SC, R = 300; g.save(); g.globalCompositeOperation = "lighter"; const gr = g.createRadialGradient(fx, fy, 0, fx, fy, R);
-        gr.addColorStop(0, `rgba(170,190,255,${.22 * f.k})`); gr.addColorStop(1, "rgba(170,190,255,0)"); g.fillStyle = gr; g.fillRect(fx - R, fy - R, R * 2, R * 2); g.restore(); });
+        gr.addColorStop(0, `rgba(${this.glowCols()[1]},${.3 * f.k})`); gr.addColorStop(1, `rgba(${this.glowCols()[1]},0)`); g.fillStyle = gr; g.fillRect(fx - R, fy - R, R * 2, R * 2); g.restore(); });
       // ---- the face: art from the Art screen if it's been made, otherwise drawn
       if (artCloud || noFace) {} else {
       g.save(); g.translate(x, y + 10 * SC); g.scale(sq * SC, SC / Math.sqrt(sq)); g.filter = "blur(.8px)";
@@ -4124,6 +4170,147 @@ const SHAPES = {
   sheep: { e: "🐑", n: "Sheep", tail: -150, prims: [E(-10, 8, 140, 80), E(140, 0, 40, 48, "head", .3), L(122, -26, 96, -14, 10, "ear", .3), ...legs4(-85, 65, 70, 115, 11, .4), E(-150, 0, 22, 22, "tail"), E(152, -10, 5, 6, "eye", .95, 30)],
     act: { text: "BAA!", jerk: 1 } },
 };
+// 40 more shapes (same drawing parts as above)
+Object.assign(SHAPES, {
+  lion: { e: "🦁", n: "Lion", tail: -135, prims: [E(-20, 25, 120, 52), E(112, -30, 80, 74, "head", .05), E(130, -24, 46, 42, "head"), ...legs4(-90, 60, 65, 112, 17), L(-135, 15, -195, -12, 9, "tail"), E(-200, -18, 17, 17, "tail"), E(146, -34, 6, 7, "eye", .95, 40), E(170, -12, 8, 6, "nose", .8, 30)],
+    act: { text: "ROAR!", jerk: 1, shake: 8, dur: 1000 } },
+  giraffe: { e: "🦒", n: "Giraffe", tail: -135, prims: [E(-30, 10, 110, 46), L(60, -10, 128, -185, 22, "head"), E(150, -200, 40, 24, "head"), L(140, -220, 136, -248, 5, "ear"), L(156, -220, 160, -248, 5, "ear"), ...legs4(-100, 45, 40, 118, 11), L(-135, 0, -150, 50, 5, "tail"),
+      ...[[-60, -5], [0, 20], [40, -10], [-20, 30]].map(([x, y]) => E(x, y, 16, 13, "spot", .45, 50))] },
+  horse: { e: "🐴", n: "Horse", tail: -140, prims: [E(-20, 0, 125, 52), L(80, -20, 130, -95, 26, "head"), E(165, -96, 48, 26, "head"), L(85, -40, 125, -112, 8, "mane", .15, 20), ...legs4(-95, 70, 40, 118, 12), L(-140, -5, -185, 60, 14, "tail"), E(172, -104, 5, 6, "eye", .95, 26)],
+    act: { text: "NEIGH!", hop: 70, jerk: 1 } },
+  cow: { e: "🐄", n: "Cow", tail: -145, prims: [E(-10, 5, 140, 62), E(150, -15, 45, 42, "head"), L(135, -55, 120, -80, 7, "ear", .2), L(165, -55, 180, -80, 7, "ear", .2), ...legs4(-95, 70, 50, 115, 15), E(20, 62, 22, 14, "body", .2, 0),
+      L(-145, -10, -160, 60, 6, "tail"), E(-60, -10, 32, 24, "spot", .5, 64), E(40, 22, 28, 20, "spot", .5, 64), E(160, -22, 6, 7, "eye", .95, 40)], act: { text: "MOO!", jerk: 1 } },
+  penguin: { e: "🐧", n: "Penguin", tail: 0, prims: [E(0, 0, 70, 108), L(55, -75, 100, -68, 10, "jaw", .25), E(-12, 12, 22, 60, "wing", .15, 50), L(-15, 108, 38, 112, 10, "legFL", .3), E(28, -80, 6, 7, "eye", .95, 40), E(15, 25, 40, 70, "belly", -.3, 40)],
+    act: { text: "NOOT NOOT!", hop: 50, shake: 4 } },
+  owl: { e: "🦉", n: "Owl", tail: 0, prims: [E(0, 10, 86, 106), T3(-62, -78, -42, -132, -25, -84, "ear"), T3(62, -78, 42, -132, 25, -84, "ear"), E(-32, -40, 25, 25, "eyeW", -.3, 70), E(32, -40, 25, 25, "eyeW", -.3, 70),
+      E(-32, -40, 10, 10, "eye", .95, 90), E(32, -40, 10, 10, "eye", .95, 90), T3(-9, -15, 9, -15, 0, 6, "jaw", .45, 90), L(-30, 110, -10, 112, 7, "legBL", .3), L(30, 110, 10, 112, 7, "legFL", .3)],
+    act: { text: "HOOT!", spin: 1, dur: 1300 } },
+  frog: { e: "🐸", n: "Frog", tail: 0, prims: [E(0, 35, 110, 58), E(82, -8, 70, 45, "head"), E(56, -55, 24, 24, "head"), E(106, -55, 24, 24, "head"), E(56, -58, 9, 9, "eye", .95, 40), E(106, -58, 9, 9, "eye", .95, 40),
+      L(-80, 60, -142, 100, 20, "legBL"), L(-142, 100, -92, 112, 14, "legBL"), L(60, 60, 75, 110, 12, "legFL")], act: { text: "RIBBIT!", hop: 130 } },
+  snake: { e: "🐍", n: "Snake", tail: 0, prims: [L(-262, 62, -180, 22, 20, "snake"), L(-180, 22, -100, 62, 22, "snake"), L(-100, 62, -20, 22, 24, "snake"), L(-20, 22, 60, 62, 24, "snake"), L(60, 62, 128, 12, 22, "snake"), E(160, 2, 38, 26, "head"), L(196, 4, 228, 2, 4, "jaw", .6), E(170, -6, 5, 6, "eye", .95, 22)],
+    act: { text: "HISSS!", shake: 6, jerk: 1 } },
+  shark: { e: "🦈", n: "Shark", tail: -165, prims: [E(0, 0, 180, 52), T3(-20, -40, 25, -130, 60, -40, "fin"), T3(-165, 0, -238, -82, -228, 70, "tail"), T3(40, 30, 0, 92, 80, 40, "fin"), E(130, -12, 6, 7, "eye", .95, 40), L(120, 22, 170, 18, 5, "jaw", .4, 40)],
+    act: { text: "CHOMP!", jerk: 1, shake: 5 } },
+  dolphin: { e: "🐬", n: "Dolphin", tail: -160, prims: [E(0, 0, 170, 46), L(160, 6, 216, 16, 14, "jaw"), T3(-10, -40, 20, -96, 52, -40, "fin"), T3(-160, 0, -230, -52, -225, 46, "tail"), T3(40, 30, 10, 75, 70, 34, "fin"), E(120, -8, 6, 7, "eye", .95, 34)],
+    act: { hop: 230, dur: 1300, puffs: { x: 0, y: 60, a: -90, spread: 70, n: 22, sp: [3, 9], r: [8, 16] } } },
+  bee: { e: "🐝", n: "Bee", tail: 0, prims: [E(0, 0, 90, 60), E(-20, 0, 14, 58, "stripe", .6, 60), E(25, 0, 14, 56, "stripe", .6, 60), E(95, -5, 38, 36, "head"), E(-10, -75, 40, 55, "wing", -.2, -10), E(30, -72, 36, 50, "wing", -.2, -10), T3(-88, -10, -88, 10, -125, 0, "tail", .3), E(110, -12, 6, 7, "eye", .95, 34)],
+    act: { text: "BUZZ!", shake: 9, hop: 30 } },
+  spider: { e: "🕷️", n: "Spider", tail: 0, prims: [E(0, 10, 62, 54), E(0, -58, 38, 34, "head"), E(-14, -64, 7, 7, "eye", .95, 40), E(14, -64, 7, 7, "eye", .95, 40),
+      ...[-1, 1].flatMap(d => [-30, -5, 20, 45].map((y, i) => [L(d * 50, y - 10, d * (130 + i * 10), y - 70 + i * 20, 12, "leg", .2, 0), L(d * (130 + i * 10), y - 70 + i * 20, d * (175 + i * 8), y + 60, 11, "leg", .2, 0)]).flat())] },
+  mouse: { e: "🐭", n: "Mouse", tail: -110, prims: [E(-20, 40, 95, 55), E(85, 10, 48, 42, "head"), E(70, -36, 30, 30, "ear"), E(106, -38, 30, 30, "ear"), L(-110, 50, -230, 22, 6, "tail"), L(-230, 22, -262, -8, 5, "tail"), E(130, 14, 7, 6, "nose", .8, 20), E(100, 0, 5, 6, "eye", .95, 34)],
+    act: { text: "SQUEAK!", hop: 45 } },
+  fox: { e: "🦊", n: "Fox", tail: -130, prims: [E(-20, 30, 115, 48), E(110, -15, 48, 40, "head"), T3(140, -28, 140, 8, 202, -4, "jaw"), T3(88, -45, 104, -108, 122, -48, "ear"), T3(114, -45, 136, -102, 146, -40, "ear"), E(-168, -5, 70, 32, "tail"), ...legs4(-85, 65, 60, 112, 11), E(124, -22, 6, 7, "eye", .95, 36)],
+    act: { text: "YIP!", hop: 80 } },
+  bear: { e: "🐻", n: "Bear", tail: 0, prims: [E(-15, 10, 140, 82), E(140, -30, 58, 54, "head"), E(120, -82, 20, 20, "ear"), E(165, -80, 20, 20, "ear"), E(192, -15, 26, 22, "jaw", .08), ...legs4(-90, 70, 70, 115, 26), E(156, -42, 6, 7, "eye", .95, 44), E(214, -20, 8, 6, "nose", .85, 20)],
+    act: { text: "GRRR!", shake: 8, jerk: 1 } },
+  kangaroo: { e: "🦘", n: "Kangaroo", tail: -90, prims: [E(-10, 10, 85, 75), L(40, -40, 70, -95, 22, "head"), E(82, -110, 34, 28, "head"), L(70, -130, 60, -170, 9, "ear"), L(86, -130, 92, -170, 9, "ear"), L(-80, 50, -222, 105, 22, "tail"), L(-30, 70, 42, 112, 22, "legBL"), L(60, -10, 92, 22, 8, "arm"), E(92, -116, 5, 6, "eye", .95, 26)],
+    act: { hop: 210, dur: 1000 } },
+  flamingo: { e: "🦩", n: "Flamingo", tail: 0, prims: [E(0, -40, 80, 44), L(60, -60, 92, -150, 9, "head"), L(92, -150, 62, -200, 9, "head"), E(72, -205, 20, 16, "head"), L(86, -200, 106, -180, 6, "jaw", .5), L(0, 0, 0, 112, 5, "legFL", .3, 0), L(0, 40, -36, 56, 4, "legBL", .3, 0), E(-80, -50, 30, 18, "tail")] },
+  seahorse: { e: "🌊", n: "Seahorse", tail: 0, prims: [E(20, -150, 36, 28, "head"), L(45, -145, 96, -140, 10, "jaw"), E(0, -60, 46, 70), L(-10, 10, -22, 80, 20, "tail"), L(-22, 80, 20, 106, 14, "tail"), L(20, 106, 32, 80, 10, "tail"), E(-42, -60, 14, 30, "fin"), E(26, -158, 6, 6, "eye", .95, 30)] },
+  jellyfish: { e: "🪼", n: "Jellyfish", tail: 0, prims: [E(0, -40, 125, 72, "head"), E(0, 10, 115, 30, "head"), ...[-90, -55, -20, 20, 55, 90].map(x => L(x, 30, x * 1.1, 112, 9, "tent", -.1, rand(-15, 15)))],
+    act: { pulse: 1, hop: 70, dur: 1300 } },
+  unicorn: { e: "🦄", n: "Unicorn", tail: -140, prims: [E(-20, 0, 125, 52), L(80, -20, 130, -95, 26, "head"), E(165, -96, 48, 26, "head"), L(176, -118, 214, -178, 6, "horn", -.3, 0), L(85, -40, 125, -112, 8, "mane", .1, 20), ...legs4(-95, 70, 40, 118, 12), L(-140, -5, -185, 60, 14, "tail"), E(172, -104, 5, 6, "eye", .95, 26)],
+    act: { sparkle: 20, text: "NEIGH!", hop: 70 } },
+  guitar: { e: "🎸", n: "Guitar", tail: 0, prims: [E(-125, 30, 92, 72), E(-30, 20, 70, 56), L(30, 10, 248, -40, 14, "neck", .15), E(270, -46, 30, 20, "neck", .15), E(-80, 25, 22, 22, "hole", .7, 60), L(-160, 30, 240, -40, 2, "string", .4, 60)],
+    act: { text: "♪ ♫ ♪", sparkle: 12, shake: 3 } },
+  umbrella: { e: "☂️", n: "Umbrella", tail: 0, prims: [E(0, -50, 200, 82, "canopy"), ...[-150, -75, 0, 75, 150].map(x => E(x, 22, 34, 18, "canopy")), L(0, 30, 0, 112, 7, "stick", .3), L(0, 112, -30, 112, 7, "stick", .3)], act: { rain: 6000, dur: 600 } },
+  balloon: { e: "🎈", n: "Hot air balloon", tail: 0, prims: [E(0, -90, 122, 140), E(0, -90, 30, 140, "stripe", .3, 120), R(-40, 95, 40, 135, "basket", .3), L(-62, 32, -36, 95, 4, "rope", .3), L(62, 32, 36, 95, 4, "rope", .3)],
+    act: { hop: 260, dur: 3200, glow: [255, 160, 70], glowAt: [0, 70] } },
+  lighthouse: { e: "🗼", n: "Lighthouse", tail: 0, prims: [T3(-70, 112, 70, 112, -45, -112), T3(70, 112, 45, -112, -45, -112), E(0, -140, 42, 30, "lamp", -.3, 40), T3(-52, -165, 52, -165, 0, -218, "roof", .25), E(0, -40, 50, 12, "stripe", .5, 60), E(0, 40, 62, 12, "stripe", .5, 60)],
+    act: { sweep: [0, -140], dur: 4500 } },
+  house: { e: "🏠", n: "House", tail: 0, prims: [R(-140, -18, 140, 112), T3(-178, -14, 178, -14, 0, -152, "roof", .1), L(92, -110, 92, -162, 20, "chimney", .15), E(0, 76, 28, 38, "door", .6, 60), E(-80, 30, 24, 20, "win", .45, 60), E(80, 30, 24, 20, "win", .45, 60)],
+    act: { steam: { x: 92, y: -175 }, dur: 2600 } },
+  robot: { e: "🤖", n: "Robot", tail: 0, prims: [R(-62, -172, 62, -80, "head"), L(0, -172, 0, -210, 5, "ant"), E(0, -216, 11, 11, "light", -.3, 30), R(-92, -70, 92, 62), L(-96, -50, -152, 32, 16, "arm"), L(96, -50, 152, 32, 16, "arm"), L(-40, 62, -40, 116, 18, "legBL"), L(40, 62, 40, 116, 18, "legFL"),
+      E(-26, -130, 12, 12, "eye", .9, 70), E(26, -130, 12, 12, "eye", .9, 70), E(0, -10, 30, 20, "panel", .35, 80)], act: { text: "BEEP BOOP!", shake: 6, jerk: 1 } },
+  skull: { e: "💀", n: "Skull", tail: 0, prims: [E(0, -40, 112, 100), R(-62, 40, 62, 96), E(-40, -30, 27, 31, "eye", .95, 90), E(40, -30, 27, 31, "eye", .95, 90), T3(-11, 22, 11, 22, 0, -6, "nose", .9, 90), ...[-36, -12, 12, 36].map(x => L(x, 52, x, 90, 3, "teeth", .7, 90))],
+    act: { spin: 1, text: "SPOOKY!", dur: 1400 } },
+  crown: { e: "👑", n: "Crown", tail: 0, prims: [R(-150, 20, 150, 92), ...[[-150, -90, -92], [-74, -50, -18], [-30, -112, 30], [18, -50, 74], [92, -90, 150]].map(([a, pk, b]) => T3(a, 22, b, 22, (a + b) / 2, pk)),
+      E(-75, 56, 13, 13, "jewel", .5, 60), E(0, 56, 15, 15, "jewel", .5, 60), E(75, 56, 13, 13, "jewel", .5, 60)], act: { sparkle: 22, pulse: 1, dur: 1200 } },
+  anchor: { e: "⚓", n: "Anchor", tail: 0, prims: [L(0, -150, 0, 92, 16), D(0, -178, 34, 0, -178, 14, "ring"), L(-72, -110, 72, -110, 12), L(0, 92, -102, 42, 15), L(0, 92, 102, 42, 15), T3(-102, 42, -128, 8, -78, 22), T3(102, 42, 128, 8, 78, 22)] },
+  sword: { e: "🗡️", n: "Sword", tail: 0, prims: [L(-80, 0, 192, 0, 16, "blade", -.1), T3(192, -15, 192, 15, 245, 0, "blade", -.1), L(-80, -58, -80, 58, 14, "guard", .2), L(-80, 0, -152, 0, 12, "grip", .4), E(-168, 0, 19, 19, "guard", .2)],
+    act: { spin: 1, sparkle: 14, dur: 1200 } },
+  trophy: { e: "🏆", n: "Trophy", tail: 0, prims: [E(0, -120, 100, 40, "cup"), T3(-100, -120, 100, -120, 0, 0, "cup"), E(-115, -95, 26, 38, "handle"), E(115, -95, 26, 38, "handle"), L(0, 0, 0, 70, 16), R(-72, 72, 72, 112, "base", .15)], act: { text: "WINNER!", sparkle: 22 } },
+  cupcake: { e: "🧁", n: "Cupcake", tail: 0, prims: [T3(-110, 0, 110, 0, 75, 112, "wrap", .2), T3(-110, 0, 75, 112, -75, 112, "wrap", .2), E(0, -30, 122, 50), E(0, -75, 86, 40), E(0, -115, 52, 30), E(0, -152, 22, 22, "cherry", .45, 40)] },
+  icecream: { e: "🍦", n: "Ice cream", tail: 0, prims: [T3(-72, -20, 72, -20, 0, 118, "cone", .2), E(0, -52, 82, 56), E(0, -122, 66, 50), E(10, -175, 30, 28)] },
+  pizza: { e: "🍕", n: "Pizza", tail: 0, prims: [T3(-152, -80, 152, -80, 0, 112), L(-152, -88, 152, -88, 22, "crust", .15), E(-52, -40, 20, 20, "pep", .5, 40), E(32, -30, 20, 20, "pep", .5, 40), E(-5, 30, 18, 18, "pep", .5, 40)] },
+  apple: { e: "🍎", n: "Apple", tail: 0, prims: [E(-42, 0, 86, 96), E(42, 0, 86, 96), L(0, -90, 10, -132, 7, "stem", .45), E(42, -126, 30, 14, "leaf", .1)] },
+  bell: { e: "🔔", n: "Bell", tail: 0, prims: [E(0, -50, 86, 92), T3(-86, -40, 86, -40, 0, 0), L(-132, 80, 132, 80, 22), T3(-100, -20, -132, 80, 0, 80), T3(100, -20, 132, 80, 0, 80), E(0, 106, 20, 20, "clap", .3, 0)], act: { text: "DING!", shake: 12, dur: 1100 } },
+  kite: { e: "🪁", n: "Kite", tail: 0, prims: [T3(0, -182, -112, -30, 112, -30), T3(-112, -30, 112, -30, 0, 112), L(0, -182, 0, 112, 3, "spar", .35, 40), L(-112, -30, 112, -30, 3, "spar", .35, 40), L(0, 112, 60, 112, 5, "tail", .1)] },
+  submarine: { e: "🫧", n: "Submarine", tail: 0, prims: [L(-200, 20, 200, 20, 56), R(-40, -80, 60, -22, "tower"), L(30, -80, 30, -132, 7, "scope", .2), L(30, -132, 62, -132, 7, "scope", .2), L(-262, -15, -262, 55, 9, "trotor"), ...[-80, 0, 80, 150].map(x => E(x, 20, 13, 13, "win", .5, 60))],
+    act: { puffs: { x: 0, y: -40, a: -90, spread: 60, n: 26, sp: [2, 6], r: [6, 14], rise: true }, text: "bloop" } },
+  bicycle: { e: "🚲", n: "Bicycle", tail: 0, prims: [D(-130, 60, 58, -130, 60, 40, "wheel", .2), D(130, 60, 58, 130, 60, 40, "wheel", .2), L(-130, 60, -20, -20, 8), L(-20, -20, 110, -20, 8), L(110, -20, 130, 60, 8), L(-20, -20, 0, 60, 8), L(-130, 60, 0, 60, 8), L(-44, -40, 2, -40, 10, "seat", .3), L(110, -20, 100, -62, 7), L(88, -62, 122, -62, 7)],
+    act: { text: "DING DING!", hop: 30 } },
+  gamepad: { e: "🎮", n: "Controller", tail: 0, prims: [E(0, 0, 160, 72), E(-120, 50, 56, 62), E(120, 50, 56, 62), L(-112, -10, -60, -10, 10, "btn", .55, 80), L(-86, -36, -86, 16, 10, "btn", .55, 80), ...[[80, -28], [106, -4], [80, 20], [54, -4]].map(([x, y]) => E(x, y, 12, 12, "btn", .55, 80))],
+    act: { text: "GG!", sparkle: 16, shake: 4 } },
+});
+
+
+/* ================= cloud effects =================
+   Each effect is a pattern the cloud's puffs fly out into: f(i, N, u, C) says where puff i (of N) should be u seconds
+   in, as [x, y, radius, brightness]. C has the cloud's spot (cx, cy), your voice level (lv) and any precomputed points.
+   The puffs fly out of the cloud into the pattern, the pattern plays, then they fly back and the cloud forms again. */
+const FW = 2560, FH = 1440, TAU = Math.PI * 2;
+const rectPt = (s, m) => { const w = FW - 2 * m, h = FH - 2 * m, P = 2 * (w + h); let d = ((s % 1) + 1) % 1 * P;
+  if (d < w) return [m + d, m]; d -= w; if (d < h) return [FW - m, m + d]; d -= h; if (d < w) return [FW - m - d, FH - m]; d -= w; return [m, FH - m - d]; };
+const rot3 = (x, y, z, ax, ay) => { let c = Math.cos(ay), s = Math.sin(ay); [x, z] = [x * c + z * s, -x * s + z * c]; c = Math.cos(ax); s = Math.sin(ax); [y, z] = [y * c - z * s, y * s + z * c]; return [x, y, z]; };
+const proj = (x, y, z, r, cx = 1280, cy = 720) => { const f = 900 / (900 + z); return [cx + x * f, cy + y * f, r * f, .55 + .45 * Math.min(1, f)]; };
+const hsh = i => { const v = Math.sin(i * 127.1 + 311.7) * 43758.5453; return v - Math.floor(v); };
+const FX = {
+  wrap: { e: "🖼", n: "Wrap the screen", N: 230, f: (i, N, u) => { const [x, y] = rectPt(i / N + u * .025, 60); return [x, y, 46 + 8 * Math.sin(u * 2 + i * .7), 1]; } },
+  marquee: { e: "💡", n: "Chase lights", N: 200, f: (i, N, u) => { const [x, y] = rectPt(i / N, 55), k = .5 + .5 * Math.sin(i / N * TAU * 8 - u * 6); return [x, y, 26 + 26 * k, .4 + .6 * k]; } },
+  comet: { e: "☄️", n: "Comet laps", N: 160, f: (i, N, u) => { const [x, y] = rectPt(u * .12 - i * .0016, 90); return [x, y, 58 * (1 - i / N) + 8, 1 - i / N * .7]; } },
+  halo: { e: "⭕", n: "Halo ring", N: 160, f: (i, N, u) => { const a = i / N * TAU + u * .5, r = 430 + 25 * Math.sin(u * 2 + i * .3); return [1280 + Math.cos(a) * r, 720 + Math.sin(a) * r * .9, 40, 1]; } },
+  galaxy: { e: "🌌", n: "Galaxy", N: 240, f: (i, N, u) => { const arm = i % 2, k = i / N, a = k * 9 + arm * Math.PI + u * .6, r = 40 + k * 640; return [1280 + Math.cos(a) * r, 720 + Math.sin(a) * r * .55, 14 + k * 34, 1 - k * .3]; } },
+  tornado: { e: "🌪", n: "Tornado", N: 220, f: (i, N, u) => { const k = i / N, y = 1400 - k * 1250, r = 40 + Math.pow(k, 1.6) * 520, a = i * 2.4 + u * (6 - k * 3); return [1280 + Math.cos(a) * r + Math.sin(u * .8 + k * 3) * 80, y + Math.sin(a) * r * .15, 18 + k * 42, .7 + .3 * Math.sin(a)]; } },
+  sine: { e: "〰️", n: "Sky wave", N: 180, f: (i, N, u) => { const x = -60 + i / N * (FW + 120); return [x, 720 + Math.sin(x / 260 - u * 2.4) * 300, 44, 1]; } },
+  helix: { e: "🧬", n: "DNA helix", N: 220, f: (i, N, u) => { const s = Math.floor(i / 2), side = i % 2, x = -60 + s / (N / 2) * (FW + 120), a = x / 200 - u * 2 + side * Math.PI, z = Math.cos(a);
+    return [x, 720 + Math.sin(a) * 260, 30 + 16 * z, .6 + .4 * z]; } },
+  heart: { e: "💗", n: "Giant heart", N: 200, f: (i, N, u) => { const t = i / N * TAU, b = 1 + .08 * Math.pow(Math.abs(Math.sin(u * 3)), 6); return [1280 + 16 * Math.pow(Math.sin(t), 3) * 30 * b, 680 - (13 * Math.cos(t) - 5 * Math.cos(2 * t) - 2 * Math.cos(3 * t) - Math.cos(4 * t)) * 30 * b, 38, 1]; } },
+  infinity: { e: "♾", n: "Infinity loop", N: 200, f: (i, N, u) => { const t = i / N * TAU + u * .9, d = 1 + Math.sin(t) ** 2; return [1280 + 900 * Math.cos(t) / d, 720 + 520 * Math.sin(t) * Math.cos(t) / d, 40, 1]; } },
+  atom: { e: "⚛️", n: "Atom", N: 210, f: (i, N, u) => { const o = i % 3, k = Math.floor(i / 3) / (N / 3), a = k * TAU + u * (1.4 + o * .3); const ex = Math.cos(a) * 560, ey = Math.sin(a) * 170, ang = o * Math.PI / 3;
+    return i < 24 ? [1280 + Math.cos(i) * 40, 720 + Math.sin(i * 1.3) * 40, 50, 1] : [1280 + ex * Math.cos(ang) - ey * Math.sin(ang), 720 + ex * Math.sin(ang) + ey * Math.cos(ang), 30, 1]; } },
+  shock: { e: "💥", n: "Shockwaves", N: 240, f: (i, N, u) => { const ring = i % 4, k = Math.floor(i / 4) / (N / 4), ph = (u * .45 + ring / 4) % 1, a = k * TAU, r = ph * 1500; return [1280 + Math.cos(a) * r, 720 + Math.sin(a) * r * .62, 30 + ph * 30, 1 - ph]; } },
+  fountain: { e: "⛲", n: "Fountain", N: 200, f: (i, N, u) => { const ph = (u * .5 + hsh(i)) % 1, vx = (hsh(i + 9) - .5) * 1100, vy = -1500 - hsh(i + 3) * 500; const t = ph * 2;
+    return [1280 + vx * t * .55, 1420 + vy * t + 1500 * t * t * .9, 22 + ph * 30, 1 - ph * .6]; } },
+  snake: { e: "🐍", n: "Sky snake", N: 150, f: (i, N, u) => { const t = u * .8 - i * .03; return [1280 + Math.sin(t * 1.1) * 1050, 720 + Math.sin(t * 1.7 + 1) * 520, 52 - i / N * 34, 1]; } },
+  warp: { e: "🚀", n: "Warp speed", N: 220, f: (i, N, u) => { const ph = (u * .55 + hsh(i)) % 1, a = hsh(i + 4) * TAU, r = Math.pow(ph, 2.2) * 1700; return [1280 + Math.cos(a) * r, 720 + Math.sin(a) * r * .6, 6 + ph * 44, ph]; } },
+  whirl: { e: "🌀", n: "Whirlpool", N: 230, f: (i, N, u) => { const ph = (hsh(i) - u * .12 % 1 + 1) % 1, a = ph * 14 + hsh(i + 7) * TAU + u * 1.4, r = ph * 760; return [1280 + Math.cos(a) * r, 720 + Math.sin(a) * r * .6, 12 + ph * 40, .5 + ph * .5]; } },
+  bounce: { e: "🏀", n: "Bouncing balls", N: 210, f: (i, N, u) => { const b = i % 6, a = Math.floor(i / 6) * 2.4, rr = 30 + (Math.floor(i / 6) % 6) * 14;
+    const tx = (hsh(b) * 2000 + u * (380 + b * 70)) % 4600, bx = 260 + (tx < 2300 ? tx : 4600 - tx) * .87, ty = (u * (1.1 + b * .17) + hsh(b + 5)) % 1, by = 1260 - Math.abs(Math.sin(ty * Math.PI)) * (700 + b * 60);
+    return [bx + Math.cos(a) * rr, by + Math.sin(a) * rr, 30, 1]; } },
+  ocean: { e: "🌊", n: "Ocean waves", N: 230, f: (i, N, u) => { const row = i % 3, x = -80 + Math.floor(i / 3) / (N / 3) * (FW + 160); return [x, 1300 - row * 110 + Math.sin(x / 210 - u * 2.2 + row) * (70 - row * 15), 48 - row * 8, 1 - row * .2]; } },
+  bars: { e: "🎬", n: "Cinema bars", N: 240, f: (i, N, u) => { const top = i % 2, x = ((Math.floor(i / 2) / (N / 2)) * (FW + 200) + u * (top ? 60 : -60) + FW * 4) % (FW + 200) - 100; return [x, top ? 70 + Math.sin(x / 90 + u) * 22 : FH - 70 + Math.sin(x / 90 - u) * 22, 60, 1]; } },
+  sunburst: { e: "☀️", n: "Sunburst", N: 240, f: (i, N, u) => { const ray = i % 12, k = Math.floor(i / 12) / (N / 12), a = ray / 12 * TAU + u * .35, r = 150 + k * 820; return [1280 + Math.cos(a) * r, 720 + Math.sin(a) * r * .62, 44 - k * 26, 1 - k * .4]; } },
+  flower: { e: "🌸", n: "Flower", N: 230, f: (i, N, u) => { const t = i / N * TAU, r = 560 * Math.cos(4 * t + u * .3) * (.9 + .1 * Math.sin(u * 2)); return [1280 + Math.cos(t + u * .25) * r, 720 + Math.sin(t + u * .25) * r * .85, 32, 1]; } },
+  liss: { e: "➰", n: "Lissajous", N: 220, f: (i, N, u) => { const t = i / N * TAU; return [1280 + Math.sin(3 * t + u * .7) * 1000, 720 + Math.sin(4 * t) * 560, 34, 1]; } },
+  flag: { e: "🏳️", n: "Waving flag", N: 240, f: (i, N, u) => { const c = i % 20, r = Math.floor(i / 20), x = 480 + c * 84, y = 300 + r * 75 + Math.sin(c * .5 - u * 3) * 40 * (c / 20); return [x + Math.cos(c * .5 - u * 3) * 10, y, 44, .75 + .25 * Math.sin(c * .5 - u * 3)]; } },
+  name: { e: "✍️", n: "KRUUUUZE", N: 560, dur: 10000, text: "KRUUUUZE", tsize: 380, f: (i, N, u, C) => { const p = C.pts[i % C.pts.length]; return [p[0] + Math.sin(u * 2 + i) * 3, p[1] + Math.cos(u * 1.7 + i) * 3, 19, 1]; } },
+  hype: { e: "🔥", n: "HYPE!", N: 460, dur: 9000, text: "HYPE!", tsize: 560, f: (i, N, u, C) => { const p = C.pts[i % C.pts.length], b = 1 + .06 * Math.abs(Math.sin(u * 5)); return [1280 + (p[0] - 1280) * b, 720 + (p[1] - 720) * b, 22, 1]; } },
+  gg: { e: "🏆", n: "GG", N: 420, dur: 9000, text: "GG", tsize: 760, f: (i, N, u, C) => { const p = C.pts[i % C.pts.length]; return [p[0], p[1] + Math.sin(u * 3 + p[0] / 120) * 14, 24, 1]; } },
+  cube: { e: "🧊", n: "3D cube", N: 216, f: (i, N, u) => { const e = Math.floor(i / 18), k = (i % 18) / 17 * 2 - 1, E12 = [[0, 1, 1], [0, 1, -1], [0, -1, 1], [0, -1, -1], [1, 0, 1], [1, 0, -1], [-1, 0, 1], [-1, 0, -1], [1, 1, 0], [1, -1, 0], [-1, 1, 0], [-1, -1, 0]][e];
+    const v = E12.map(c => c === 0 ? k : c).map(c => c * 330), [x, y, z] = rot3(...v, u * .6, u * .8); return proj(x, y, z, 30); } },
+  globe: { e: "🌍", n: "3D globe", N: 240, f: (i, N, u) => { const y = 1 - (i + .5) / N * 2, r = Math.sqrt(1 - y * y), a = i * 2.39996; const [X, Y, Z] = rot3(Math.cos(a) * r * 420, y * 420, Math.sin(a) * r * 420, .35, u * .7); return proj(X, Y, Z, 30); } },
+  donut: { e: "🍩", n: "3D donut", N: 240, f: (i, N, u) => { const a = (i % 20) / 20 * TAU, b = Math.floor(i / 20) / 12 * TAU, R = 360, r = 130; const [X, Y, Z] = rot3((R + r * Math.cos(a)) * Math.cos(b), r * Math.sin(a), (R + r * Math.cos(a)) * Math.sin(b), 1 + u * .3, u * .6); return proj(X, Y, Z, 30); } },
+  pyramid: { e: "🔺", n: "3D pyramid", N: 192, f: (i, N, u) => { const e = Math.floor(i / 24), k = (i % 24) / 23, V = [[-1, 1, -1], [1, 1, -1], [1, 1, 1], [-1, 1, 1], [0, -1.2, 0]], Ed = [[0, 1], [1, 2], [2, 3], [3, 0], [0, 4], [1, 4], [2, 4], [3, 4]][e];
+    const a = V[Ed[0]], b = V[Ed[1]], [x, y, z] = rot3(...a.map((c, j) => (c + (b[j] - c) * k) * 320), .25, u * .8); return proj(x, y, z, 32); } },
+  tunnel: { e: "🕳", n: "Wormhole", N: 240, f: (i, N, u) => { const ring = Math.floor(i / 20), a = (i % 20) / 20 * TAU + ring * .3 + u * .5, d = ((ring / 12 - u * .25) % 1 + 1) % 1, s = .08 + Math.pow(d, 2) * 1.6;
+    return [1280 + Math.cos(a) * 700 * s, 720 + Math.sin(a) * 420 * s, 8 + 46 * s, Math.min(1, d * 2)]; } },
+  ecg: { e: "💓", n: "Heartbeat line", N: 200, f: (i, N, u) => { const x = -40 + i / N * (FW + 80), p = ((x / 900 - u * .9) % 1 + 1) % 1; let y = 0;
+    if (p > .4 && p < .45) y = -(p - .4) / .05 * 80; else if (p >= .45 && p < .5) y = -80 + (p - .45) / .05 * 420; else if (p >= .5 && p < .55) y = 340 - (p - .5) / .05 * 560; else if (p >= .55 && p < .6) y = -220 + (p - .55) / .05 * 220;
+    return [x, 720 + y, 26, 1]; } },
+  pinwheel: { e: "🎡", n: "Pinwheel", N: 220, f: (i, N, u) => { const arm = i % 4, k = Math.floor(i / 4) / (N / 4), a = arm / 4 * TAU + u * 1.1 + k * 1.2, r = 60 + k * 600; return [1280 + Math.cos(a) * r, 720 + Math.sin(a) * r * .8, 40 - k * 14, 1]; } },
+  clock: { e: "🕰", n: "Clock", N: 220, f: (i, N, u) => { if (i < 150) { const a = i / 150 * TAU; return [1280 + Math.cos(a) * 500, 720 + Math.sin(a) * 500, i % 12.5 < 1 ? 46 : 30, 1]; }
+    const j = i - 150, hand = j < 30 ? 0 : 1, k = (hand ? j - 30 : j) / (hand ? 40 : 30), a = -Math.PI / 2 + u * (hand ? 1.6 : .2); return [1280 + Math.cos(a) * k * (hand ? 440 : 280), 720 + Math.sin(a) * k * (hand ? 440 : 280), hand ? 26 : 36, 1]; } },
+  hourglass: { e: "⏳", n: "Hourglass", N: 220, f: (i, N, u) => { if (i < 140) { const k = i / 140, s = k < .5 ? k * 2 : (k - .5) * 2, side = k < .5 ? -1 : 1, y = 720 + (s * 2 - 1) * 560, w = Math.abs(s * 2 - 1) * 420 + 30;
+      return [1280 + side * w, y, 32, 1]; } const ph = ((i - 140) / 80 + u * .4) % 1; return [1280 + (hsh(i) - .5) * 30 * ph, 740 + ph * 520, 18, 1 - ph * .4]; } },
+  fireworks: { e: "🎆", n: "Fireworks", N: 240, f: (i, N, u) => { const b = i % 5, k = Math.floor(i / 5) / (N / 5), cyc = (u * .35 + b / 5) % 1, bx = 400 + hsh(b + Math.floor(u * .35 + b / 5) * 7) * 1760, by = 300 + hsh(b * 3 + Math.floor(u * .35 + b / 5)) * 350;
+    if (cyc < .3) { const s = cyc / .3; return [bx, 1440 - (1440 - by) * (1 - (1 - s) ** 2), 18, 1]; } const s = (cyc - .3) / .7, a = k * TAU, r = (1 - (1 - s) ** 3) * 330; return [bx + Math.cos(a) * r, by + Math.sin(a) * r + s * s * 120, 30 * (1 - s) + 8, 1 - s]; } },
+  swarm: { e: "✨", n: "Firefly swarm", N: 220, f: (i, N, u) => { const ph = hsh(i) * 100; return [1280 + Math.sin(u * .5 + ph) * 900 + Math.sin(u * 1.3 + ph * 2) * 180, 720 + Math.sin(u * .7 + ph * 1.7) * 480 + Math.cos(u * 1.1 + ph) * 120, 14 + 10 * Math.sin(u * 4 + ph), .5 + .5 * Math.sin(u * 3 + ph)]; } },
+  pendulum: { e: "🎐", n: "Pendulum wave", N: 200, f: (i, N, u) => { const p = i % 20, k = Math.floor(i / 20) / 10, a = Math.sin(u * (1 + p * .06) * 2) * .7, L = 300 + p * 40; return [1280 + Math.sin(a) * L * k + (p - 9.5) * 18, 120 + Math.cos(a) * L * k, k > .95 ? 40 : 18, 1]; } },
+  eq: { e: "🎚", n: "Voice equalizer", N: 240, f: (i, N, u, C) => { const bar = i % 16, k = Math.floor(i / 16) / 15, h = 120 + (Math.abs(Math.sin(u * (3 + bar * .7) + bar)) * .5 + C.lv * 1.4) * 600; return [240 + bar * 139, 1400 - k * h, 44, .7 + .3 * k]; } },
+  curtain: { e: "🌧", n: "Cloud curtain", N: 240, f: (i, N, u) => { const col = i % 24, ph = ((Math.floor(i / 24) / 10 + u * (.25 + hsh(col) * .2)) % 1); return [60 + col * 105 + Math.sin(u + col) * 10, -60 + ph * 1560, 34, 1 - Math.abs(ph - .5)]; } },
+  twins: { e: "🌀", n: "Twin cyclones", N: 240, f: (i, N, u) => { const s = i % 2 ? 1 : -1, k = Math.floor(i / 2) / (N / 2), a = k * 18 * s + u * 2.4 * s, r = 30 + k * 380; return [1280 + s * 640 + Math.cos(a) * r, 720 + Math.sin(a) * r * .7, 14 + k * 34, 1]; } },
+};
 
 /* ================= the real cloud =================
    A cumulus cloud built from ~120 soft puffs: a flat base, a rounded main tower and smaller shoulders. Every puff
@@ -4184,7 +4371,7 @@ const RealCloud = {
           else if (p.t === "r") { const cols = Math.max(1, Math.round(Math.sqrt(n * (p.x1 - p.x0) / (p.y1 - p.y0)))), c = i % cols, rw = Math.floor(i / cols), rows = Math.ceil(n / cols);
             out.push([p.x0 + (c + .5) / cols * (p.x1 - p.x0), p.y0 + (rw + .5) / rows * (p.y1 - p.y0), r0, p.dark, zz(30), p.part]); }
           else { let x, y, g = 0; do { x = p.cx + rr(-p.r, p.r); y = p.cy + rr(-p.r, p.r); g++; } while (g < 200 && (Math.hypot(x - p.cx, y - p.cy) > p.r - 10 || Math.hypot(x - p.bx, y - p.by) < p.br + 10));
-            out.push([x, y, Math.min(r0, 34), p.dark, rr(-25, 25), p.part]); }
+            out.push([x, y, Math.min(r0, 46), p.dark, rr(-25, 25), p.part]); }
         } });
       built[key] = out;
     }
@@ -4233,6 +4420,7 @@ const RealCloud = {
       if (part === "wing") sy += Math.sin(t / 120) * 34 * cl((T[0] + 120) / 160) - 6;
       if (part === "rotor") sx *= Math.cos(t / 45);
       if (part === "trotor") sy = -22 + (sy + 22) * Math.cos(t / 40);
+      if (part === "snake") sy += Math.sin(t / 320 + T[0] / 55) * 12;
       if (part === "tent") sx += Math.sin(t / 340 + T[1] / 25 + T[0] / 40) * 14 * cl((T[1] - 25) / 80);
       if (part === "trunk" && an.trunkUp) { const k3 = Math.sin(an.trunkUp * Math.PI); sy -= k3 * (T[1] + 10) * 1.1; sx += k3 * 20; }
       const jerk = an.bark || an.jerk;
@@ -4784,6 +4972,9 @@ window.onRemote = c => {
   else if (c.cmd === "effect" && c.name === "cloudBark") Face.bark();
   else if (c.cmd === "cloudGo") Face.goTo(+c.x, +c.y);
   else if (c.cmd === "cloudDark") Face.setDark(+c.v);
+  else if (c.cmd === "cloudHue") Face.setHue(+c.v);
+  else if (c.cmd === "cloudSize") Face.setSize(+c.v);
+  else if (c.cmd === "cloudFx") Face.startFx(c.name);
   else if (c.cmd === "cloudShape") Face.setShape(c.name);
   else if (c.cmd === "faceMood") Face.setMood(c.name);
   else if (c.cmd === "faceTalk") Face.setNeutralTalk(c.name);
@@ -5379,7 +5570,7 @@ window.KZRelay = function (topic, onMessage, servers) {
 (() => {
   const qs = new URLSearchParams(location.search), key = qs.get("ctl");
   if (!key || !window.WebSocket) return;
-  const PAGE = "html3", VERSION = "7aeef8c";
+  const PAGE = "html3", VERSION = "4124350";
   let said = false;
   const relay = KZRelay("kzctl/" + key, c => {
     if (!c || c.from === "overlay" || (c.to && c.to !== "all" && c.to !== PAGE)) return;
