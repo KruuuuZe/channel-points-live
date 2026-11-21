@@ -3678,26 +3678,56 @@ const Face = {
     const on = sa.phase !== "none", k = Math.min(1, e() / X);
     return { on, puffA: sa.phase === "toBase" ? 1 - k : sa.phase === "fromBase" ? k : on ? 0 : 1, phase: sa.phase, e: e(), k };
   },
-  // draws the current frame of the shape animation into the cloud's layer
+  /* draws the current frame of the shape animation into the cloud's layer. AI animation frames don't keep the subject
+     the same size or in the same spot, so every frame is measured (where its cloud actually is) and placed by that:
+     the shape always stands on the same line at the same size, the forming animation grows smoothly from the plain
+     cloud's place to the shape's, and turning keeps the same height. */
+  bbOf(sp) { if (sp._bb) return sp._bb; const out = [], c = document.createElement("canvas"); c.width = sp.w; c.height = sp.h; const g = c.getContext("2d", { willReadFrequently: true });
+    for (let f = 0; f < (sp.frames || 1); f++) { g.clearRect(0, 0, sp.w, sp.h); g.drawImage(sp.img, f * sp.w, 0, sp.w, sp.h, 0, 0, sp.w, sp.h);
+      const d = g.getImageData(0, 0, sp.w, sp.h).data; let x0 = sp.w, y0 = sp.h, x1 = 0, y1 = 0;
+      for (let y = 0; y < sp.h; y += 2) for (let x = 0; x < sp.w; x += 2) if (d[(y * sp.w + x) * 4 + 3] > 60) { if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
+      out.push(x1 > x0 ? [x0, y0, x1, y1] : [0, 0, sp.w, sp.h]); }
+    return sp._bb = out; },
   drawShapeAnim(lg, SA, now, shade) {
-    const S = ChefArt.sprites, sa = this.sa, kd = sa.kind, ph = SA.phase, e = SA.e;
-    const frameOf = (sp, el, mode) => { const n = sp.frames, ms = sp.ms || 120; let f = Math.floor(el / ms);
-      if (mode === "pingpong") { const per = Math.max(1, 2 * (n - 1)); f %= per; return f < n ? f : per - f; }
-      if (mode === "back") return Math.max(0, n - 1 - Math.min(n - 1, f)); return Math.min(n - 1, f); };
-    const draw = (sp, f, alpha, mirror, squash = 1) => { if (!sp || alpha <= .01) return; const asp = sp.w / sp.h; let w = 640, h = w / asp; if (h > 440) { h = 440; w = h * asp; }
-      lg.save(); lg.globalAlpha = alpha; lg.filter = shade > .02 ? `brightness(${1 - .55 * shade}) saturate(${1 - .4 * shade})` : "none";
-      lg.translate(0, -28 - (this.speed > .8 ? Math.abs(Math.sin(this.walk || 0)) * 5 : 0)); lg.scale((mirror ? -1 : 1) * squash, 1);
-      lg.drawImage(sp.img, f * sp.w, 0, sp.w, sp.h, -w / 2, -h / 2, w, h); lg.restore(); };
-    const mir = sa.facing < 0, base = S.cs__base, still = S["cs_" + kd], form = S["cs_" + kd + "_form"], idle = S["cs_" + kd + "_idle"] || still, act = S["cs_" + kd + "_act"], turn = S["cs_" + kd + "_turn"];
-    const fade = 160;                                                                // short crossfades where one animation hands over to the next
-    if (ph === "toBase") draw(base, 0, SA.k, mir);
-    else if (ph === "fromBase") draw(base, 0, 1 - SA.k, mir);
-    else if (ph === "form") { const f = frameOf(form, e, "fwd"); draw(form, f, 1, mir); if (e < fade) draw(base, 0, 1 - e / fade, mir); }
-    else if (ph === "unform") { const f = frameOf(form, e, "back"), left = form.frames * (form.ms || 120) - e; draw(form, f, 1, mir); if (left < fade) draw(base, 0, 1 - left / fade, mir); if (e < fade) draw(idle, 0, 1 - e / fade, mir); }
-    else if (ph === "idle") { draw(idle, idle.frames ? frameOf(idle, e, "pingpong") : 0, 1, mir); }
-    else if (ph === "act") { draw(act, frameOf(act, e, "fwd"), 1, mir); if (e < fade) draw(idle, 0, 1 - e / fade, mir); const left = act.frames * (act.ms || 110) - e; if (left < fade) draw(idle, 0, 1 - left / fade, mir); }
-    else if (ph === "turn") { const back = sa.turnTo > 0; draw(turn, frameOf(turn, e, back ? "back" : "fwd"), 1, false); }
-    else if (ph === "flip") { const k = Math.min(1, e / 320), sq = Math.abs(Math.cos(k * Math.PI)); draw(idle, 0, 1, k < .5 ? mir : sa.turnTo < 0, Math.max(.05, sq)); }
+    const S = ChefArt.sprites, sa = this.sa, kd = sa.kind, ph = SA.phase, e = SA.e, mir = sa.facing < 0;
+    const base = S.cs__base, still = S["cs_" + kd], form = S["cs_" + kd + "_form"], act = S["cs_" + kd + "_act"], turn = S["cs_" + kd + "_turn"];
+    const frameOf = (sp, el, mode) => { const n = sp.frames, ms = sp.ms || 120; let f = Math.floor(el / ms); if (mode === "back") return Math.max(0, n - 1 - Math.min(n - 1, f)); return Math.min(n - 1, f); };
+    const filt = shade > .02 ? `brightness(${1 - .55 * shade}) saturate(${1 - .4 * shade})` : "none";
+    // the shape's resting size: its picture scaled to the shape's width
+    const sb = this.bbOf(still)[0], shapeScale = 640 / (sb[2] - sb[0]), shapeH = (sb[3] - sb[1]) * shapeScale;
+    const bb0 = base ? this.bbOf(base)[0] : sb, baseScale = 600 / (bb0[2] - bb0[0]), baseH = (bb0[3] - bb0[1]) * baseScale;
+    // draw frame f of sp so its measured cloud is `w` wide (or `h` tall), centred at x = 0, standing on y = 105; or use a fixed
+    // transform (scale, from frame 0) so the animation's own movement inside the frame is kept
+    const put = (sp, f, alpha, mirror, how) => { if (!sp || alpha <= .01) return; const b = this.bbOf(sp)[how.ref != null ? how.ref : f];
+      const sc = how.h ? how.h / (b[3] - b[1]) : how.w / (b[2] - b[0]), cx = (b[0] + b[2]) / 2, by = b[3];
+      lg.save(); lg.globalAlpha = alpha; lg.filter = filt; lg.scale(mirror ? -1 : 1, 1); lg.translate(0, 105); lg.scale(sc, sc);
+      lg.drawImage(sp.img, f * sp.w, 0, sp.w, sp.h, -cx, -by, sp.w, sp.h); lg.restore(); };
+    const fade = 160;
+    // the shape sitting still: its own picture, with the cloud slowly drifting and billowing in a perfect 8-second loop
+    const idle = (alpha) => { if (alpha <= .01) return; const G = 12, GH = 8, T = 8000, ph2 = (now % T) / T * Math.PI * 2, b = sb, sc = shapeScale, cx = (b[0] + b[2]) / 2, by = b[3];
+      const P = []; for (let j = 0; j <= GH; j++) for (let i = 0; i <= G; i++) { const u = i / G, v = j / GH, X = (u * still.w - cx) * sc, Y = (v * still.h - by) * sc;
+        const edge = Math.min(1, v * 1.4) * (1 - Math.max(0, v - .85) * 5);                                 // the top moves more, the base stays put
+        P.push([X + (Math.sin(ph2 + u * 5.1 + v * 2.3) * 4 + Math.sin(2 * ph2 + u * 9 + 1) * 1.5) * edge, Y + (Math.cos(ph2 + u * 4.3 + v * 3.7) * 3.5 + Math.sin(2 * ph2 + v * 7) * 1.2) * edge]); }
+      lg.save(); lg.globalAlpha = alpha; lg.filter = filt; lg.scale(mir ? -1 : 1, 1); lg.translate(0, 105);
+      const sw = still.w / G, sh2 = still.h / GH;
+      for (let j = 0; j < GH; j++) for (let i = 0; i < G; i++) { const a = j * (G + 1) + i, bq = a + 1, d = a + G + 1, e2 = d + 1, s0 = [i * sw, j * sh2], s1 = [(i + 1) * sw, j * sh2], s2 = [i * sw, (j + 1) * sh2], s3 = [(i + 1) * sw, (j + 1) * sh2];
+        RealCloud.tri(lg, still.img, s0, s1, s2, P[a], P[bq], P[d]); RealCloud.tri(lg, still.img, s1, s3, s2, P[bq], P[e2], P[d]); }
+      lg.restore(); };
+    if (ph === "toBase") put(base, 0, SA.k, mir, { w: 600 });
+    else if (ph === "fromBase") put(base, 0, 1 - SA.k, mir, { w: 600 });
+    else if (ph === "form" || ph === "unform") { const n = form.frames, f = frameOf(form, e, ph === "form" ? "fwd" : "back"), k = n > 1 ? f / (n - 1) : 1;
+      put(form, f, 1, mir, { h: baseH + (shapeH - baseH) * k });                    // grows from the plain cloud's height to the shape's
+      const left = n * (form.ms || 120) - e;
+      if (ph === "form" && e < fade) put(base, 0, 1 - e / fade, mir, { w: 600 });
+      if (ph === "form" && left < fade) idle(1 - left / fade);
+      if (ph === "unform" && e < fade) idle(1 - e / fade);
+      if (ph === "unform" && left < fade) put(base, 0, 1 - left / fade, mir, { w: 600 }); }
+    else if (ph === "idle") idle(1);
+    else if (ph === "act") { const f = frameOf(act, e, "fwd"), left = act.frames * (act.ms || 110) - e;
+      put(act, f, 1, mir, { h: shapeH, ref: 0 });                                    // frame 0 (resting pose) sets the size; the recoil and smoke inside it are kept
+      if (e < fade) idle(1 - e / fade); if (left < fade) idle(1 - left / fade); }
+    else if (ph === "turn") { const back = sa.turnTo > 0; put(turn, frameOf(turn, e, back ? "back" : "fwd"), 1, false, { h: shapeH }); }
+    else if (ph === "flip") { const k = Math.min(1, e / 320), sq = Math.max(.05, Math.abs(Math.cos(k * Math.PI))); lg.save(); lg.scale(sq, 1); idle(1); lg.restore(); }
   },
   toggleDog() { this.shapeToggle("dog"); },
   barkAt: -1e9,
@@ -3912,7 +3942,7 @@ const Face = {
         if (act.wobble) A.x = Math.sin(ak * 30) * 6;
         if (act.blast) A.y = ak < .45 ? -Math.pow(ak / .45, 2) * (py + 400) : ak < .55 ? -(py + 400) : -(1 - (1 - Math.pow(1 - (ak - .55) / .45, 3))) * (py + 400);
       } else if (act) this.actDef = null;
-      const bob = 1 - this.tankM * .75, sq = 1, x = px + Math.sin(t / 2300) * 18 * bob - this.recoil * Math.cos(this.ang) + (A.x || 0), y = py + (Math.sin(t / 900) * 12 + Math.sin(t / 2700) * 9) * bob + (A.y || 0);
+      const bob = 1 - this.tankM, sq = 1, x = px + Math.sin(t / 2300) * 18 * bob - this.recoil * Math.cos(this.ang) + (A.x || 0), y = py + (Math.sin(t / 900) * 12 + Math.sin(t / 2700) * 9) * bob + (A.y || 0);
       // ---- FIRE: a plume of cloud bursts out of the end of the gun, the tank kicks back, and a cloud cannonball flies
       // straight ahead the way the gun points until it leaves the screen
       if (this.wantFire) { this.wantFire = false; const ts0 = SC * (1 + .3 * this.tankM), d = Math.cos(this.ang) < 0 ? -1 : 1, mx = x + 350 * Math.cos(this.ang) * ts0, my = y - 30 * ts0;
@@ -5685,7 +5715,7 @@ window.KZRelay = function (topic, onMessage, servers) {
 (() => {
   const qs = new URLSearchParams(location.search), key = qs.get("ctl");
   if (!key || !window.WebSocket) return;
-  const PAGE = "html3", VERSION = "7d5a732";
+  const PAGE = "html3", VERSION = "82012cd";
   let said = false;
   const relay = KZRelay("kzctl/" + key, c => {
     if (!c || c.from === "overlay" || (c.to && c.to !== "all" && c.to !== PAGE)) return;
