@@ -367,6 +367,7 @@ body.fit #stage{background:radial-gradient(1200px 700px at 30% 20%,#1a103322,tra
 #smokelapcv{position:absolute;inset:0;width:2560px;height:1440px;pointer-events:none;z-index:9}
 #scrapcv{position:absolute;inset:0;width:2560px;height:1440px;pointer-events:none;z-index:9}
 #vtcv{position:absolute;inset:0;width:2560px;height:1440px;pointer-events:none;z-index:9}
+#gemcv{position:absolute;inset:0;width:2560px;height:1440px;pointer-events:none;z-index:8}
 /* ---------- Kazul123: artillery from every side ---------- */
 #kazcv{position:absolute;inset:0;width:2560px;height:1440px;pointer-events:none;z-index:7}
 /* ---------- Silverhand (canvas + a red shade over the whole screen) ---------- */
@@ -460,6 +461,7 @@ body.fit #stage{background:radial-gradient(1200px 700px at 30% 20%,#1a103322,tra
   <canvas id="smokelapcv" width="2560" height="1440"></canvas>
   <canvas id="scrapcv" width="2560" height="1440"></canvas>
   <canvas id="vtcv" width="2560" height="1440"></canvas>
+  <canvas id="gemcv" width="2560" height="1440"></canvas>
   <canvas id="tankcv" width="2560" height="1440"></canvas>
   <div id="pane"></div>
   <canvas id="holes" width="2560" height="1440"></canvas>
@@ -5603,6 +5605,82 @@ const VTerrible = {
     g.stroke(); g.restore(); }
 };
 
+/* ================= bit gems: a keepsake for everyone who cheers this stream =================
+   After the bits alert plays, a clear faceted gem in that cheer's bit colour drops in with a sparkle trail, bounces and
+   rolls along the bottom of the screen, with the cheerer's name set into it with a soft glow. Every so often each gem
+   rolls a little way (tipping over its flat faces) and settles again. The same person cheering again makes their gem
+   bigger. The gems stay until you tap 💎 Reset bit gems in the app (for the next stream); OBS reloads keep them. */
+const BitGems = {
+  KEY: "kzBitGems", list: [], fx: [], running: false, W: 2560, H: 1440, FLOOR: 1440 - 6, SIDES: 8,
+  load() { try { this.list = (JSON.parse(localStorage.getItem(this.KEY)) || []).map(g => this.make(g)); } catch (e) { this.list = []; } if (this.list.length) this.start(); },
+  save() { try { localStorage.setItem(this.KEY, JSON.stringify(this.list.map(g => ({ name: g.name, bits: g.bits, x: Math.round(g.x) })))); } catch (e) {} },
+  r(bits) { return Math.round(40 + Math.min(70, Math.log10(Math.max(1, bits)) * 16)); },    // 1 bit ≈ 40 px, 10k bits ≈ 104 px
+  make(o) { const r = this.r(o.bits); return { name: o.name, bits: o.bits, r, x: o.x || rand(200, this.W - 200), y: this.FLOOR - r, vx: 0, vy: 0, ang: 0, air: false,
+    next: performance.now() + rand(3000, 15000), roll: null, pulse: 0, born: performance.now() }; },
+  reset() { this.list = []; this.fx = []; this.save(); },
+  add(name, bits, color) {
+    const old = this.list.find(g => g.name.toLowerCase() === String(name).toLowerCase());
+    if (old) { old.bits += bits; old.r = this.r(old.bits); old.pulse = 1; old.vy = -14; old.air = true; this.sparkle(old.x, old.y, 30, bitColor(old.bits)); }
+    else { const g = this.make({ name, bits, x: this.freeSpot(this.r(bits)) }); g.y = -g.r * 2; g.air = true; g.vy = 6; g.vx = rand(-3, 3); g.ang = rand(0, 6.28); g.trail = true; this.list.push(g); }
+    this.save(); this.start();
+  },
+  freeSpot(r) { let best = rand(220, this.W - 220), bestD = -1;            // somewhere along the bottom with room around it
+    for (let i = 0; i < 24; i++) { const x = rand(200, this.W - 200), d = Math.min(...this.list.map(g => Math.abs(g.x - x) - g.r - r), 9999); if (d > bestD) { bestD = d; best = x; } } return best; },
+  sparkle(x, y, n, col) { for (let i = 0; i < n; i++) { const a = rand(0, 6.283), v = rand(1, 7); this.fx.push({ x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v - 2, life: 1, col, s: rand(2, 5) }); } },
+  // the gem picture: a faceted, see-through stone in its colour, with highlights and the name glowing inside
+  draw(g, c, t) {
+    const col = bitColor(c.bits), n = this.SIDES, R = c.r * (1 + c.pulse * .15);
+    const pt = (k, rr) => [Math.cos(c.ang + k / n * 6.2832) * rr, Math.sin(c.ang + k / n * 6.2832) * rr];
+    g.save(); g.translate(c.x, c.y);
+    g.shadowColor = col; g.shadowBlur = 26 + 10 * Math.sin(t / 700 + c.born);
+    g.beginPath(); for (let k = 0; k < n; k++) { const [x, y] = pt(k, R); k ? g.lineTo(x, y) : g.moveTo(x, y); } g.closePath();
+    const body = g.createRadialGradient(-R * .3, -R * .35, R * .1, 0, 0, R * 1.1); body.addColorStop(0, "rgba(255,255,255,.55)"); body.addColorStop(.35, col + "b0"); body.addColorStop(1, col + "55");
+    g.fillStyle = body; g.fill(); g.shadowBlur = 0;
+    // facets: a smaller table in the middle, joined to each corner, each facet a little lighter or darker
+    for (let k = 0; k < n; k++) { const [x1, y1] = pt(k, R), [x2, y2] = pt(k + 1, R), [x3, y3] = pt(k + 1, R * .58), [x4, y4] = pt(k, R * .58);
+      const lit = Math.cos(c.ang + (k + .5) / n * 6.2832 + 2.3); g.beginPath(); g.moveTo(x1, y1); g.lineTo(x2, y2); g.lineTo(x3, y3); g.lineTo(x4, y4); g.closePath();
+      g.fillStyle = lit > 0 ? `rgba(255,255,255,${.06 + lit * .22})` : `rgba(0,0,20,${-lit * .22})`; g.fill(); }
+    g.beginPath(); for (let k = 0; k < n; k++) { const [x, y] = pt(k, R * .58); k ? g.lineTo(x, y) : g.moveTo(x, y); } g.closePath();
+    g.fillStyle = "rgba(255,255,255,.08)"; g.fill();
+    g.strokeStyle = "rgba(255,255,255,.55)"; g.lineWidth = 2; g.beginPath(); for (let k = 0; k < n; k++) { const [x, y] = pt(k, R); k ? g.lineTo(x, y) : g.moveTo(x, y); } g.closePath(); g.stroke();
+    g.strokeStyle = "rgba(255,255,255,.22)"; g.lineWidth = 1.2; for (let k = 0; k < n; k++) { const [x1, y1] = pt(k, R), [x2, y2] = pt(k, R * .58); g.beginPath(); g.moveTo(x1, y1); g.lineTo(x2, y2); g.stroke(); }
+    // a moving glint across the stone
+    const gl = ((t / 2600 + c.born / 997) % 1) * 2 - .5, gr = g.createLinearGradient(-R, -R, R, R); const cl = v => Math.max(0, Math.min(1, v)); gr.addColorStop(cl(gl - .08), "rgba(255,255,255,0)"); gr.addColorStop(cl(gl), "rgba(255,255,255,.35)"); gr.addColorStop(cl(gl + .08), "rgba(255,255,255,0)");
+    g.save(); g.beginPath(); for (let k = 0; k < n; k++) { const [x, y] = pt(k, R); k ? g.lineTo(x, y) : g.moveTo(x, y); } g.closePath(); g.clip(); g.fillStyle = gr; g.fillRect(-R, -R, R * 2, R * 2); g.restore();
+    // the name, set into the stone (stays upright as the gem rolls) with a soft glow
+    let fs = Math.max(11, R * .42); g.font = `900 ${fs}px ${FONT}`; const w = g.measureText(c.name).width, maxW = R * 1.55; if (w > maxW) { fs *= maxW / w; g.font = `900 ${fs}px ${FONT}`; }
+    g.textAlign = "center"; g.textBaseline = "middle"; g.shadowColor = "#fff"; g.shadowBlur = 12; g.fillStyle = "rgba(255,255,255,.95)"; g.fillText(c.name, 0, 1);
+    g.shadowBlur = 0; g.lineWidth = Math.max(1, fs * .06); g.strokeStyle = "rgba(0,0,0,.35)"; g.strokeText(c.name, 0, 1); g.fillStyle = "rgba(255,255,255,.95)"; g.fillText(c.name, 0, 1);
+    g.restore(); },
+  start() { if (this.running) return; this.running = true; let last = performance.now();
+    const cv = $("#gemcv"), g = cv.getContext("2d"), step = Math.PI * 2 / this.SIDES;
+    const frame = now => { const dt = Math.min(50, now - last) / 16; last = now; g.clearRect(0, 0, this.W, this.H);
+      for (const c of this.list) {
+        c.pulse = Math.max(0, c.pulse - .02 * dt);
+        if (c.air) { c.vy += .55 * dt; c.x += c.vx * dt; c.y += c.vy * dt; c.ang += c.vx * .02 * dt;
+          if (c.trail && Math.random() < .8) this.fx.push({ x: c.x + rand(-c.r * .5, c.r * .5), y: c.y - c.r * .4, vx: rand(-.6, .6), vy: rand(-1, .2), life: 1, col: bitColor(c.bits), s: rand(2, 4) });
+          const floor = this.FLOOR - c.r * Math.cos(step / 2);
+          if (c.y >= floor) { c.y = floor; if (c.vy > 3) { c.vy *= -.42; this.sparkle(c.x, this.FLOOR - 4, 14, "#ffffff"); if (Sound.ctx) Sound.burst(Sound.ctx.currentTime, .12, .03, "highpass", 3200, 1200); }
+            else { c.vy = 0; c.air = false; c.trail = false; c.roll = { to: Math.max(c.r + 20, Math.min(this.W - c.r - 20, c.x + rand(-260, 260))), v: 0 }; c.next = now + rand(6000, 18000); this.save(); } } }
+        else {
+          if (!c.roll && now > c.next) { const dist = rand(90, 420) * (Math.random() < .5 ? -1 : 1); c.roll = { to: Math.max(c.r + 20, Math.min(this.W - c.r - 20, c.x + dist)), v: 0 }; c.next = now + rand(8000, 24000); }
+          if (c.roll) { const d = c.roll.to - c.x; c.roll.v += Math.sign(d) * .09 * dt; c.roll.v *= Math.pow(.96, dt); c.roll.v = Math.max(-4.5, Math.min(4.5, c.roll.v));
+            if (Math.abs(d) < 6 && Math.abs(c.roll.v) < .6) c.roll = null; else { c.x += c.roll.v * dt; c.ang += c.roll.v / c.r * dt; } }
+          else { const k = Math.round(c.ang / step - .5) + .5, want = k * step; c.ang += (want - c.ang) * .08 * dt; }      // settles onto a flat face
+          // rolling over corners lifts it a little, like a real faceted stone
+          const ph = ((c.ang / step) % 1 + 1) % 1 - .5, lift = c.r * (Math.cos(ph * step) - Math.cos(step / 2));
+          c.y = this.FLOOR - c.r * Math.cos(step / 2) - lift; }
+      }
+      // gems don't sit inside each other: they nudge apart
+      for (let i = 0; i < this.list.length; i++) for (let j = i + 1; j < this.list.length; j++) { const a = this.list[i], b = this.list[j], dx = b.x - a.x, need = a.r + b.r + 6;
+        if (Math.abs(dx) < need && !a.air && !b.air) { const p = (need - Math.abs(dx)) / 2 * Math.sign(dx || 1); a.x -= p * .5; b.x += p * .5; } }
+      this.list.forEach(c => { c.x = Math.max(c.r + 10, Math.min(this.W - c.r - 10, c.x)); this.draw(g, c, now); });
+      for (let i = this.fx.length - 1; i >= 0; i--) { const p = this.fx[i]; p.x += p.vx * dt; p.y += p.vy * dt; p.vy += .08 * dt; p.life -= .025 * dt; if (p.life <= 0) { this.fx.splice(i, 1); continue; }
+        g.globalAlpha = p.life; g.fillStyle = p.col; g.save(); g.translate(p.x, p.y); g.rotate(.785); g.fillRect(-p.s / 2, -p.s * 1.6, p.s, p.s * 3.2); g.fillRect(-p.s * 1.6, -p.s / 2, p.s * 3.2, p.s); g.restore(); g.globalAlpha = 1; }
+      if (this.list.length || this.fx.length) requestAnimationFrame(frame); else { g.clearRect(0, 0, this.W, this.H); this.running = false; } };
+    requestAnimationFrame(frame); }
+};
+
 /* ================= smoke lap =================
    Two soft ribbons of smoke, one lime green and one purple (the logo's colours), twisting around each other like a
    spiral, run a lap of the screen the same way the lightning lap does: from the bottom left corner up the left side,
@@ -5663,6 +5741,7 @@ window.onRemote = c => {
   else if (c.cmd === "sound") SoundIn.receive(c);
   else if (c.cmd === "soundList") { const list = Object.assign({}, MySounds.names); Object.keys(BUNDLED_SOUNDS).forEach(k => list[k] = "built in"); if (window.remoteSend) window.remoteSend({ cmd: "sounds", list }); }
   else if (c.cmd === "soundTest") { if (!MySounds.urls[c.type] && !BUNDLED_SOUNDS[c.type]) MySounds.report(c.type, "no sound saved for this in OBS"); else { const cur = MySounds.playing[c.type]; if (cur) cur.pause(); MySounds.play(c.type); } }
+  else if (c.cmd === "bitGemsReset") { BitGems.reset(); toast("💎 Bit gems cleared for the next stream", false, 4000); }
   else if (c.cmd === "chatCfg") { ChatBox.cfg(c); if (c.show != null) ChatBox.show(c.show); ChatBox.tell(); }
   else if (c.cmd === "chatShow") { ChatBox.show(!!c.on); ChatBox.tell(); }
   else if (c.cmd === "chatBg") { ChatBox.bg(!!c.on); ChatBox.tell(); }
@@ -5759,7 +5838,8 @@ const Queue = {
 const Alerts = {
   sub: (name, color) => Queue.push(() => { MySounds.play("sub"); edgeGlow("#22c55e80", "#4ade80a0"); return doSub(name, color); }),
   follow: (name, color) => Queue.push(() => { MySounds.play("follow"); edgeGlow("#a855f799", "#c084fccc"); return doFollow(name, color); }),
-  bits: (name, amount, color) => Queue.push(() => { MySounds.play("bits"); return doBits(name, amount, color); }),
+  bits: (name, amount, color) => Queue.push(() => { MySounds.play("bits"); const ms = doBits(name, amount, color);
+    setTimeout(() => BitGems.add(name, amount, color), Math.max(0, ms - 600)); return ms; }),     // then their gem drops in and stays all stream
   streak: (name, value, login, color) => Queue.push(() => { MySounds.play("streak"); return doStreak(name, value, login, color); }),
   raid: name => Queue.push(() => { MySounds.play("raid"); return doRaidCustom(name); })
 };
@@ -6425,6 +6505,7 @@ const ChatBox = {
   cfg(c) { this.put({ twitch: c.twitch || "", kickRoom: c.kickRoom || "", kickKey: c.kickKey || "", kickCluster: c.kickCluster || "" }); if (c.bg != null) this.bg(c.bg); if (c.show != null && this.get().show == null) this.show(c.show); this.connect(); }
 };
 ChatBox.init();
+BitGems.load();
 if (LIVE) Live.init();
 </script>
 <script>
@@ -6515,7 +6596,7 @@ window.KZRelay = function (topic, onMessage, servers) {
 (() => {
   const qs = new URLSearchParams(location.search), key = qs.get("ctl");
   if (!key || !window.WebSocket) return;
-  const PAGE = "html3", VERSION = "7790cb8";
+  const PAGE = "html3", VERSION = "54c5591";
   let said = false;
   const relay = KZRelay("kzctl/" + key, c => {
     if (!c || c.from === "overlay" || (c.to && c.to !== "all" && c.to !== PAGE)) return;
