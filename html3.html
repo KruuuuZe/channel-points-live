@@ -22,7 +22,8 @@ body.fit{background:#06050c}
 #chatbox.off{display:none}
 /* background off: just the words, badges and emotes, with a dark outline so they stay readable on anything */
 #chatbox.clear{background:none;border-color:transparent;box-shadow:none}
-#chatbox.clear .ln{text-shadow:0 0 4px #000,0 0 4px #000,0 2px 3px #000,2px 0 2px #000,-2px 0 2px #000}
+#chatbox.clear,#chatbox.clear:hover{background:none!important;border-color:transparent!important;box-shadow:none!important}
+#chatbox.clear .ln{font-weight:800;text-shadow:0 0 3px #000,0 0 3px #000,0 0 6px #000,2px 2px 0 #000,-2px 2px 0 #000,2px -2px 0 #000,-2px -2px 0 #000}
 #chatbox .cf-bd{height:1.05em;vertical-align:-.12em;margin-right:.2em;border-radius:3px} #chatbox .cf-kb{display:inline-block;font-size:.6em;font-weight:900;line-height:1.6em;height:1.6em;padding:0 .3em;color:#000;vertical-align:.15em}
 #chatbox .lines{position:absolute;left:18px;right:18px;bottom:12px;display:flex;flex-direction:column;justify-content:flex-end}
 #chatbox .ln{line-height:1.35;word-wrap:break-word;animation:cfIn .35s ease-out;text-shadow:0 2px 4px #000c}
@@ -5661,7 +5662,7 @@ window.onRemote = c => {
   else if (c.cmd === "chatCfg") ChatBox.cfg(c);
   else if (c.cmd === "chatShow") ChatBox.show(!!c.on);
   else if (c.cmd === "chatBg") ChatBox.bg(!!c.on);
-  else if (c.cmd === "chatBadges") ChatFeed.loadBadges(c.token, c.cid, c.bid);
+  else if (c.cmd === "chatBadges") { ChatFeed.loadBadges(c.token, c.cid, c.bid); ChatFeed.loadExtra(c.bid); }
   else if (c.cmd === "chatReset") ChatBox.reset();
   else if (c.cmd === "firstsReset") { AutoFx.reset(); toast("First-chat effects reset: each viewer's next chat plays theirs again", false, 5000); }
   else if (c.cmd === "effect" && c.name === "bolt") Bolt.run();
@@ -5906,6 +5907,7 @@ const Live = {
       Chat.connect(this.login);
       ChatBox.connect();                                              // the on-stream chat box follows this channel unless the app set one
       ChatFeed.loadBadges(TOKEN, this.cid, this.uid);                  // Twitch badge pictures for the chat box
+      ChatFeed.loadExtra(this.uid);                                    // 7TV / BTTV / FFZ emotes (animated ones too)
       setInterval(() => this.revalidate(), 3600 * 1000);
     } catch (e) { toast("Can't reach Twitch. Retrying in 15s…", true, 14000); setTimeout(() => this.init(), 15000); }
   },
@@ -6337,6 +6339,22 @@ const ChatFeed = {
     const add = list => list.forEach(s => (s.versions || []).forEach(v => { this.BADGES[s.set_id + "/" + v.id] = v.image_url_2x || v.image_url_1x; }));
     add(await get("chat/badges/global")); if (broadcasterId) add(await get("chat/badges?broadcaster_id=" + broadcasterId));
   },
+  // 7TV, BetterTTV and FrankerFaceZ emotes (many are animated GIFs) used in Twitch chat: word → picture
+  EXTRA: {}, extraFor: null,
+  async loadExtra(twitchId) {
+    if (!twitchId || this.extraFor === twitchId) return; this.extraFor = twitchId;
+    const j = async u => { try { const r = await fetch(u); return r.ok ? await r.json() : null; } catch (e) { return null; } };
+    const put = (name, url) => { if (name && url && !this.EXTRA[name]) this.EXTRA[name] = url; };
+    const [s7, g7, bt, gbt, ff, gff] = await Promise.all([j("https://7tv.io/v3/users/twitch/" + twitchId), j("https://7tv.io/v3/emote-sets/global"),
+      j("https://api.betterttv.net/3/cached/users/twitch/" + twitchId), j("https://api.betterttv.net/3/cached/emotes/global"),
+      j("https://api.frankerfacez.com/v1/room/id/" + twitchId), j("https://api.frankerfacez.com/v1/set/global")]);
+    const sevenTv = set => ((set && set.emotes) || []).forEach(e => { const h = e.data && e.data.host; if (h) put(e.name, "https:" + h.url + "/2x.webp"); });
+    sevenTv(s7 && s7.emote_set); sevenTv(g7);
+    const bttv = list => (list || []).forEach(e => put(e.code, "https://cdn.betterttv.net/emote/" + e.id + "/2x"));
+    if (bt) { bttv(bt.channelEmotes); bttv(bt.sharedEmotes); } bttv(gbt);
+    const ffz = o => Object.values((o && o.sets) || {}).forEach(st => (st.emoticons || []).forEach(e => { const u = (e.animated && (e.animated[2] || e.animated[1])) || (e.urls && (e.urls[2] || e.urls[1])); if (u) put(e.name, u.startsWith("http") ? u : "https:" + u); }));
+    ffz(ff); ffz(gff);
+  },
   KICKBADGE: { broadcaster: ["#53fc18", "🎥"], moderator: ["#00c7ff", "⚔"], vip: ["#ffbf00", "♦"], og: ["#ff7a00", "OG"], founder: ["#ff4fd8", "F"], verified: ["#53fc18", "✓"], subscriber: ["#a970ff", "★"], sub_gifter: ["#ff4fd8", "🎁"], staff: ["#ff2d2d", "K"] },
   badgeEls(m) { const out = [];
     (m.badges || []).forEach(b => {
@@ -6347,7 +6365,9 @@ const ChatFeed = {
     const ic = document.createElement("span"); ic.className = "cf-ic"; ic.innerHTML = this.ICONS[m.src] || "";
     const nm = document.createElement("span"); nm.className = "cf-nm"; nm.textContent = m.name; nm.style.color = m.color || (m.src === "kick" ? "#53fc18" : "#c9a7ff");
     const tx = document.createElement("span"); tx.className = "cf-tx";
-    m.parts.forEach(p => { if (p.img) { const i = document.createElement("img"); i.className = "cf-em"; i.src = p.img; i.alt = p.alt || ""; i.onerror = () => i.replaceWith(document.createTextNode(p.alt || "")); tx.append(i); }
+    const parts = []; m.parts.forEach(p => { if (p.img || !Object.keys(this.EXTRA).length) return parts.push(p);    // words that are 7TV/BTTV/FFZ emotes become pictures
+      p.text.split(/(\s+)/).forEach(w => { if (this.EXTRA[w]) parts.push({ img: this.EXTRA[w], alt: w }); else if (w) parts.push({ text: w }); }); });
+    parts.forEach(p => { if (p.img) { const i = document.createElement("img"); i.className = "cf-em"; i.src = p.img; i.alt = p.alt || ""; i.onerror = () => i.replaceWith(document.createTextNode(p.alt || "")); tx.append(i); }
       else tx.append(document.createTextNode(p.text)); });
     el.append(ic, ...this.badgeEls(m), nm, document.createTextNode(" "), tx); return el;
   }
@@ -6361,7 +6381,7 @@ const ChatBox = {
   KEY: "kzChatBox", el: null,
   get() { let v = {}; try { v = JSON.parse(localStorage.getItem(this.KEY)) || {}; } catch (e) {} return v; },
   put(o) { const v = Object.assign(this.get(), o); try { localStorage.setItem(this.KEY, JSON.stringify(v)); } catch (e) {} return v; },
-  DEF: { x: 2560 - 640 - 30, y: 30, w: 640, h: 196 },
+  DEF: { x: 2560 - 1280 - 30, y: 30, w: 1280, h: 196 },
   init() {
     const el = this.el = $("#chatbox"), lines = el.querySelector(".lines"); this.lines = lines; this.layout();
     el.querySelector(".x").onclick = e => { e.stopPropagation(); this.show(false); if (window.remoteSend) window.remoteSend({ cmd: "chatShown", on: false }); };
@@ -6372,7 +6392,10 @@ const ChatBox = {
       const up = () => { removeEventListener("pointermove", mv); removeEventListener("pointerup", up); el.classList.remove("drag"); this.put(this.cur); };
       addEventListener("pointermove", mv); addEventListener("pointerup", up); };
     el.querySelector(".bar").onpointerdown = e => drag(e, "move"); el.querySelector(".grip").onpointerdown = e => drag(e, "size");
-    const c = this.get(); this.show(c.show !== false); this.bg(c.bg !== false); this.connect();
+    let c = this.get();
+    if (!c.wide2 && c.w) { const w = Math.min(2400, c.w * 2), x = Math.max(0, (c.x != null ? c.x + c.w : 2530) - w); c = this.put({ w, x, wide2: 1 }); this.cur = null; this.layout(); }   // twice as wide as before
+    else if (!c.wide2) this.put({ wide2: 1 });
+    this.show(c.show !== false); this.bg(c.bg !== false); this.connect();
   },
   box(o, live) { const c = Object.assign({}, this.DEF, this.get(), this.cur || {}, o || {}); if (o) { this.cur = c; this.layout(c); } return c; },
   layout(c) { c = c || Object.assign({}, this.DEF, this.get()); this.cur = c; const el = this.el;
@@ -6476,7 +6499,7 @@ window.KZRelay = function (topic, onMessage, servers) {
 (() => {
   const qs = new URLSearchParams(location.search), key = qs.get("ctl");
   if (!key || !window.WebSocket) return;
-  const PAGE = "html3", VERSION = "1dc10ad";
+  const PAGE = "html3", VERSION = "8617230";
   let said = false;
   const relay = KZRelay("kzctl/" + key, c => {
     if (!c || c.from === "overlay" || (c.to && c.to !== "all" && c.to !== PAGE)) return;
