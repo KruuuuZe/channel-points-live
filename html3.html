@@ -5621,10 +5621,10 @@ const BitGems = {
   corners(c) { const d = this.dims(c); return [[0, 0], [-d.W / 2, -d.PAV], [d.W / 2, -d.PAV], [-d.tw / 2, -d.H], [d.tw / 2, -d.H]]; },
   // how far below its point the lowest corner reaches at this tilt (so it always rests on the floor)
   drop(c, tilt) { const ca = Math.cos(tilt), sa = Math.sin(tilt); return Math.max(...this.corners(c).map(([x, y]) => x * sa + y * ca)); },
-  // lying on its side: resting on the edge between a girdle corner and a table corner (the heavy top down, the point up at an angle)
-  lieAngle(c, side) { const d = this.dims(c), ex = side * (d.tw / 2 - d.W / 2), ey = -d.CR, a = Math.atan2(ey, ex);
+  // leaning over onto its side: the sharp point stays on the ground, and it rests on the long edge from the point up to the widest corner
+  lieAngle(c, side) { const d = this.dims(c), ex = side * d.W / 2, ey = -d.PAV, a = Math.atan2(ey, ex);
     let best = 0, bestScore = -1e9; for (const cand of [-a, Math.PI - a, -a - Math.PI]) { const ca = Math.cos(cand), sa = Math.sin(cand), ys = this.corners(c).map(([x, y]) => x * sa + y * ca),
-      e1 = ys[side > 0 ? 2 : 1], e2 = ys[side > 0 ? 4 : 3], mx = Math.max(...ys); const score = -(Math.abs(e1 - mx) + Math.abs(e2 - mx)); if (score > bestScore) { bestScore = score; best = cand; } }
+      e1 = ys[0], e2 = ys[side > 0 ? 2 : 1], mx = Math.max(...ys); const score = -(Math.abs(e1 - mx) + Math.abs(e2 - mx)); if (score > bestScore) { bestScore = score; best = cand; } }
     return best; },
   lo(c) { return c.w / 2 + 20; }, hi(c) { return this.RIGHT - c.w / 2; },
   make(o) { const w = this.Wd(o.bits); const c = { name: o.name, bits: o.bits, w, x: o.x || rand(200, this.RIGHT - 200), y: this.FLOOR, vy: 0, vx: 0, tilt: 0, tv: 0, air: false,
@@ -5656,7 +5656,9 @@ const BitGems = {
   // ---- a classic brilliant-cut diamond seen from the side, standing on its point; (0,0) is the point
   draw(g, c, t) {
     const col = bitColor(c.bits), { W, H, PAV, CR, tw } = this.dims(c), top = -H, gird = -PAV, art = this.artFrame(c, t);
-    const roll = c.roll || 0, sq = .78 + .22 * Math.abs(Math.cos(roll));        // rolling around its own long axis (3D): it narrows and widens as it turns
+    // turning around its own long axis (3D): while rolling on its side, or the art's "turning on its point" animation
+    let roll = c.roll || 0; if (art && art[0] === ChefArt.sprites.gem_turn) roll = art[1] / (art[0].frames || 1) * Math.PI * 2;
+    const sq = .78 + .22 * Math.abs(Math.cos(roll));                              // the stone narrows and widens as it turns
     g.save(); g.translate(c.x, c.y); g.rotate(c.tilt); g.save(); g.scale(sq, 1);
     if (art) { const [sp, f] = art, b = Pirate.figOf(sp), k = W / (b.x1 - b.x0);
       g.shadowColor = col; g.shadowBlur = 20; g.drawImage(this.tinted(sp, col), f * sp.w, 0, sp.w, sp.h, -(b.x0 + b.x1) / 2 * k, -b.y1 * k, sp.w * k, sp.h * k); g.shadowBlur = 0; }
@@ -5682,8 +5684,10 @@ const BitGems = {
       g.fillStyle = hg; g.beginPath(); crown.forEach(([x, y], i) => i ? g.lineTo(x, y) : g.moveTo(x, y)); g.closePath(); g.fill();
     }
     g.restore();
-    // the name on the wide top part (kept upright even when it's lying down): big, white, thick dark outline, soft glow in the gem's colour
-    const ny0 = top + CR * .55, ca = Math.cos(c.tilt), sa = Math.sin(c.tilt); g.rotate(-c.tilt); g.translate(-ny0 * sa, ny0 * ca); const ny = 0; let fs = CR * .62; g.font = `900 ${fs}px ${FONT}`; const w = g.measureText(c.name).width, maxW = W * .9; if (w > maxW) fs = Math.max(20, fs * maxW / w); g.font = `900 ${fs}px ${FONT}`;
+    // the name is engraved on the wide top part: it tilts with the gem, and turns with it (squeezing to the side and
+    // round the back, where it shows faintly through the stone)
+    const face = Math.cos(roll); g.scale(Math.sign(face || 1) * Math.max(.04, Math.abs(face)), 1); g.globalAlpha = face >= 0 ? 1 : .28;
+    const ny = top + CR * .55; let fs = CR * .62; g.font = `900 ${fs}px ${FONT}`; const w = g.measureText(c.name).width, maxW = W * .9; if (w > maxW) fs = Math.max(20, fs * maxW / w); g.font = `900 ${fs}px ${FONT}`;
     g.textAlign = "center"; g.textBaseline = "middle"; g.lineJoin = "round";
     g.lineWidth = fs * .26; g.strokeStyle = "rgba(10,6,24,.9)"; g.strokeText(c.name, 0, ny);
     g.shadowColor = this.shade(col, .3); g.shadowBlur = fs * .5; g.fillStyle = "#fff"; g.fillText(c.name, 0, ny); g.shadowBlur = 0; g.fillText(c.name, 0, ny);
@@ -6650,7 +6654,7 @@ window.KZRelay = function (topic, onMessage, servers) {
 (() => {
   const qs = new URLSearchParams(location.search), key = qs.get("ctl");
   if (!key || !window.WebSocket) return;
-  const PAGE = "html3", VERSION = "723ab7d";
+  const PAGE = "html3", VERSION = "2fef937";
   let said = false;
   const relay = KZRelay("kzctl/" + key, c => {
     if (!c || c.from === "overlay" || (c.to && c.to !== "all" && c.to !== PAGE)) return;
