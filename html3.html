@@ -5615,7 +5615,17 @@ const BitGems = {
   RIGHT: 2560 - 800,                     // gems never go into the 800 px next to the right side of the screen
   load() { try { this.list = (JSON.parse(localStorage.getItem(this.KEY)) || []).map(g => this.make(g)); } catch (e) { this.list = []; } if (this.list.length) this.start(); },
   save() { try { localStorage.setItem(this.KEY, JSON.stringify(this.list.map(g => ({ name: g.name, bits: g.bits, x: Math.round(g.x) })))); } catch (e) {} },
-  Wd(bits) { return Math.round((150 + Math.min(150, Math.log10(Math.max(1, bits)) * 36)) * .7); },     // width of the diamond: 1 bit ≈ 105 px, 10k bits ≈ 206 px
+  Wd(bits) { return Math.round((150 + Math.min(150, Math.log10(Math.max(1, bits)) * 36)) * .56); },     // width of the diamond: 1 bit ≈ 84 px, 10k bits ≈ 165 px
+  // the diamond's outline points (point at 0,0, standing up): point, girdle corners, table corners
+  dims(c) { const W = c.w * (1 + c.pulse * .1), H = W * .64, PAV = H * .62; return { W, H, PAV, CR: H - PAV, tw: W * .56 }; },
+  corners(c) { const d = this.dims(c); return [[0, 0], [-d.W / 2, -d.PAV], [d.W / 2, -d.PAV], [-d.tw / 2, -d.H], [d.tw / 2, -d.H]]; },
+  // how far below its point the lowest corner reaches at this tilt (so it always rests on the floor)
+  drop(c, tilt) { const ca = Math.cos(tilt), sa = Math.sin(tilt); return Math.max(...this.corners(c).map(([x, y]) => x * sa + y * ca)); },
+  // lying on its side: resting on the edge between a girdle corner and a table corner (the heavy top down, the point up at an angle)
+  lieAngle(c, side) { const d = this.dims(c), ex = side * (d.tw / 2 - d.W / 2), ey = -d.CR, a = Math.atan2(ey, ex);
+    let best = 0, bestScore = -1e9; for (const cand of [-a, Math.PI - a, -a - Math.PI]) { const ca = Math.cos(cand), sa = Math.sin(cand), ys = this.corners(c).map(([x, y]) => x * sa + y * ca),
+      e1 = ys[side > 0 ? 2 : 1], e2 = ys[side > 0 ? 4 : 3], mx = Math.max(...ys); const score = -(Math.abs(e1 - mx) + Math.abs(e2 - mx)); if (score > bestScore) { bestScore = score; best = cand; } }
+    return best; },
   lo(c) { return c.w / 2 + 20; }, hi(c) { return this.RIGHT - c.w / 2; },
   make(o) { const w = this.Wd(o.bits); const c = { name: o.name, bits: o.bits, w, x: o.x || rand(200, this.RIGHT - 200), y: this.FLOOR, vy: 0, vx: 0, tilt: 0, tv: 0, air: false,
     next: performance.now() + rand(4000, 14000), walk: null, pulse: 0, born: performance.now() }; c.x = Math.max(this.lo(c), Math.min(this.hi(c), c.x)); return c; },
@@ -5645,8 +5655,9 @@ const BitGems = {
     return `rgb(${f(r)},${f(g)},${f(b)})`; },
   // ---- a classic brilliant-cut diamond seen from the side, standing on its point; (0,0) is the point
   draw(g, c, t) {
-    const col = bitColor(c.bits), W = c.w * (1 + c.pulse * .1), H = W * .64, PAV = H * .62, CR = H - PAV, top = -H, gird = -PAV, tw = W * .56, art = this.artFrame(c, t);
-    g.save(); g.translate(c.x, c.y); g.rotate(c.tilt);
+    const col = bitColor(c.bits), { W, H, PAV, CR, tw } = this.dims(c), top = -H, gird = -PAV, art = this.artFrame(c, t);
+    const roll = c.roll || 0, sq = .78 + .22 * Math.abs(Math.cos(roll));        // rolling around its own long axis (3D): it narrows and widens as it turns
+    g.save(); g.translate(c.x, c.y); g.rotate(c.tilt); g.save(); g.scale(sq, 1);
     if (art) { const [sp, f] = art, b = Pirate.figOf(sp), k = W / (b.x1 - b.x0);
       g.shadowColor = col; g.shadowBlur = 20; g.drawImage(this.tinted(sp, col), f * sp.w, 0, sp.w, sp.h, -(b.x0 + b.x1) / 2 * k, -b.y1 * k, sp.w * k, sp.h * k); g.shadowBlur = 0; }
     else {
@@ -5654,13 +5665,13 @@ const BitGems = {
       // pavilion: long facets from the girdle down to the point
       g.shadowColor = col; g.shadowBlur = 20;
       g.fillStyle = this.shade(col, -.25); g.beginPath(); g.moveTo(-hw, gird); g.lineTo(hw, gird); g.lineTo(0, 0); g.closePath(); g.fill(); g.shadowBlur = 0;
-      for (let i = 0; i < N; i++) { const x0 = -hw + W * i / N, x1 = -hw + W * (i + 1) / N, lit = Math.cos((i + .5) / N * Math.PI * 2.2 + 1);
+      for (let i = 0; i < N; i++) { const x0 = -hw + W * i / N, x1 = -hw + W * (i + 1) / N, lit = Math.cos((i + .5) / N * Math.PI * 2.2 + 1 + roll);
         g.fillStyle = this.shade(col, lit * .32 - .1); g.beginPath(); g.moveTo(x0, gird); g.lineTo(x1, gird); g.lineTo(0, 0); g.closePath(); g.fill(); }
       for (let i = 0; i < N; i++) { const xm = -hw + W * (i + .5) / N; g.fillStyle = `rgba(255,255,255,${i % 2 ? .05 : .12})`; g.beginPath(); g.moveTo(xm - W / N * .5, gird); g.lineTo(xm, gird + PAV * .35); g.lineTo(xm + W / N * .5, gird); g.closePath(); g.fill(); }
       // crown: the wide top with a flat table and triangular facets
       const crown = [[-hw, gird], [-tw / 2, top], [tw / 2, top], [hw, gird]];
       g.fillStyle = this.shade(col, .1); g.beginPath(); crown.forEach(([x, y], i) => i ? g.lineTo(x, y) : g.moveTo(x, y)); g.closePath(); g.fill();
-      const M = 6; for (let i = 0; i < M; i++) { const a0 = -hw + W * i / M, a1 = -hw + W * (i + 1) / M, b0 = -tw / 2 + tw * i / M, b1 = -tw / 2 + tw * (i + 1) / M, lit = Math.cos((i + .5) / M * Math.PI * 2 + .8);
+      const M = 6; for (let i = 0; i < M; i++) { const a0 = -hw + W * i / M, a1 = -hw + W * (i + 1) / M, b0 = -tw / 2 + tw * i / M, b1 = -tw / 2 + tw * (i + 1) / M, lit = Math.cos((i + .5) / M * Math.PI * 2 + .8 + roll);
         g.fillStyle = this.shade(col, .1 + lit * .3); g.beginPath(); g.moveTo(a0, gird); g.lineTo(a1, gird); g.lineTo(b1, top); g.lineTo(b0, top); g.closePath(); g.fill();
         g.fillStyle = `rgba(255,255,255,${.08 + (i % 2) * .1})`; g.beginPath(); g.moveTo(a0, gird); g.lineTo((b0 + b1) / 2, top); g.lineTo(a1, gird); g.closePath(); g.fill(); }
       // the girdle edge, outline and a soft still highlight
@@ -5670,8 +5681,9 @@ const BitGems = {
       const hg = g.createRadialGradient(-W * .16, top + CR * .4, 0, -W * .16, top + CR * .4, W * .3); hg.addColorStop(0, "rgba(255,255,255,.35)"); hg.addColorStop(1, "rgba(255,255,255,0)");
       g.fillStyle = hg; g.beginPath(); crown.forEach(([x, y], i) => i ? g.lineTo(x, y) : g.moveTo(x, y)); g.closePath(); g.fill();
     }
-    // the name on the wide top part: big, white, thick dark outline, soft glow in the gem's colour
-    const ny = top + CR * .55; let fs = CR * .62; g.font = `900 ${fs}px ${FONT}`; const w = g.measureText(c.name).width, maxW = W * .9; if (w > maxW) fs = Math.max(20, fs * maxW / w); g.font = `900 ${fs}px ${FONT}`;
+    g.restore();
+    // the name on the wide top part (kept upright even when it's lying down): big, white, thick dark outline, soft glow in the gem's colour
+    const ny0 = top + CR * .55, ca = Math.cos(c.tilt), sa = Math.sin(c.tilt); g.rotate(-c.tilt); g.translate(-ny0 * sa, ny0 * ca); const ny = 0; let fs = CR * .62; g.font = `900 ${fs}px ${FONT}`; const w = g.measureText(c.name).width, maxW = W * .9; if (w > maxW) fs = Math.max(20, fs * maxW / w); g.font = `900 ${fs}px ${FONT}`;
     g.textAlign = "center"; g.textBaseline = "middle"; g.lineJoin = "round";
     g.lineWidth = fs * .26; g.strokeStyle = "rgba(10,6,24,.9)"; g.strokeText(c.name, 0, ny);
     g.shadowColor = this.shade(col, .3); g.shadowBlur = fs * .5; g.fillStyle = "#fff"; g.fillText(c.name, 0, ny); g.shadowBlur = 0; g.fillText(c.name, 0, ny);
@@ -5690,19 +5702,30 @@ const BitGems = {
         else if (c.walk) {    // waddling: rocking from side to side on its point as it shuffles along
           const k = Math.min(1, (now - c.walk.at) / c.walk.ms), e = k < .5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2;
           c.x = c.walk.x0 + (c.walk.to - c.walk.x0) * e; c.tilt = Math.sin(k * Math.PI * c.walk.steps) * .22 * Math.sin(k * Math.PI) + c.walk.lean * Math.sin(k * Math.PI);
-          c.y = this.FLOOR - Math.abs(Math.sin(k * Math.PI * c.walk.steps)) * 10;
+          c.y = this.FLOOR - this.drop(c, c.tilt) - Math.abs(Math.sin(k * Math.PI * c.walk.steps)) * 10;
           if (k >= 1) { c.walk = null; c.wob = c.tilt + .12 * Math.sign(c.tilt || 1); c.y = this.FLOOR; c.next = now + rand(7000, 20000); this.save(); } }
+        else if (c.lie) {     // tipping over, lying on its side rolling a little in 3D, or getting back up
+          const L = c.lie, k = Math.min(1, (now - L.at) / L.ms), e = k < .5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2;
+          if (L.phase === "down") { c.tilt = L.from + (L.to - L.from) * e; if (k >= 1) { c.lie = { phase: "rest", at: now, ms: rand(2500, 6000), base: L.to, side: L.side, x0: c.x, dist: rand(40, 160) * (Math.random() < .5 ? -1 : 1) }; if (Sound.ctx) Sound.burst(Sound.ctx.currentTime, .09, .02, "bandpass", 2400, 900); } }
+          else if (L.phase === "rest") {       // rolling around a little on its side: turning about its own axis, rocking, drifting
+            c.roll = Math.sin(k * Math.PI * 2) * 1.4 * Math.sin(k * Math.PI); c.tilt = L.base + Math.sin(k * Math.PI * 3) * .08 * Math.sin(k * Math.PI);
+            c.x = L.x0 + L.dist * (k < .5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2);
+            if (k >= 1) { c.roll = 0; c.lie = { phase: "up", at: now, ms: 700, from: c.tilt, to: 0 }; } }
+          else { c.tilt = L.from + (L.to - L.from) * e; c.hop = Math.sin(k * Math.PI) * 26; if (k >= 1) { c.lie = null; c.hop = 0; c.wob = .18 * Math.sign(L.from || 1); c.next = now + rand(7000, 18000); this.save(); } }
+          c.y = this.FLOOR - this.drop(c, c.tilt) - (c.hop || 0); }
         else {
           if (!c.anim && now > (c.fxAt || 0)) { c.fxAt = now + rand(5000, 12000); if (c.fxAt0) this.play(c, ["gem_sparkle", "gem_pulse", "gem_fire", "gem_glint", "gem_turn"][Math.floor(Math.random() * 5)]); c.fxAt0 = 1; }
           // resting: a settling wobble that dies away, then a gentle rock
           c.wob = (c.wob || 0) * Math.pow(.97, dt); c.tilt = c.wob * Math.cos((now - c.born) / 130) + Math.sin(now / 1400 + c.born) * .025;
-          if (now > c.next) { const dist = rand(120, 380) * (Math.random() < .5 ? -1 : 1), to = Math.max(this.lo(c), Math.min(this.hi(c), c.x + dist));
+          c.y = this.FLOOR - this.drop(c, c.tilt);
+          if (now > c.next && Math.random() < .5) { const side = Math.random() < .5 ? -1 : 1, to = this.lieAngle(c, side); c.lie = { phase: "down", at: now, ms: 650, from: c.tilt, to, side }; c.next = now + 99999; }   // topples over onto its side
+          else if (now > c.next) { const dist = rand(120, 380) * (Math.random() < .5 ? -1 : 1), to = Math.max(this.lo(c), Math.min(this.hi(c), c.x + dist));
             if (Math.abs(to - c.x) > 40) c.walk = { x0: c.x, to, at: now, ms: Math.abs(to - c.x) * 7 + 600, steps: Math.max(2, Math.round(Math.abs(to - c.x) / 55)), lean: Math.sign(to - c.x) * .06 };
             else c.next = now + rand(5000, 12000); } }
       }
       // gems don't sit inside each other
       for (let i = 0; i < this.list.length; i++) for (let j = i + 1; j < this.list.length; j++) { const a = this.list[i], b = this.list[j], dx = b.x - a.x, need = (a.w + b.w) / 2 + 10;
-        if (Math.abs(dx) < need && !a.air && !b.air && !a.walk && !b.walk) { const p = (need - Math.abs(dx)) / 2 * Math.sign(dx || 1); a.x -= p * .2; b.x += p * .2; } }
+        if (Math.abs(dx) < need && !a.air && !b.air && !a.walk && !b.walk && !a.lie && !b.lie) { const p = (need - Math.abs(dx)) / 2 * Math.sign(dx || 1); a.x -= p * .2; b.x += p * .2; } }
       this.list.forEach(c => { c.x = Math.max(this.lo(c), Math.min(this.hi(c), c.x)); this.draw(g, c, now); });
       for (let i = this.fx.length - 1; i >= 0; i--) { const p = this.fx[i]; p.x += p.vx * dt; p.y += p.vy * dt; p.vy += .08 * dt; p.life -= .025 * dt; if (p.life <= 0) { this.fx.splice(i, 1); continue; }
         g.globalAlpha = p.life * .8; g.fillStyle = p.col; g.beginPath(); g.arc(p.x, p.y, p.s, 0, 6.283); g.fill(); g.globalAlpha = 1; }
@@ -6627,7 +6650,7 @@ window.KZRelay = function (topic, onMessage, servers) {
 (() => {
   const qs = new URLSearchParams(location.search), key = qs.get("ctl");
   if (!key || !window.WebSocket) return;
-  const PAGE = "html3", VERSION = "4e90117";
+  const PAGE = "html3", VERSION = "723ab7d";
   let said = false;
   const relay = KZRelay("kzctl/" + key, c => {
     if (!c || c.from === "overlay" || (c.to && c.to !== "all" && c.to !== PAGE)) return;
