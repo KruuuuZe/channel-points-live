@@ -26,7 +26,10 @@ body.fit{background:#06050c}
 #chatbox.clear .ln{font-weight:800;text-shadow:0 0 3px #000,0 0 3px #000,0 0 6px #000,2px 2px 0 #000,-2px 2px 0 #000,2px -2px 0 #000,-2px -2px 0 #000}
 #chatbox .cf-bd{height:1.05em;vertical-align:-.12em;margin-right:.2em;border-radius:3px} #chatbox .cf-kb{display:inline-block;font-size:.6em;font-weight:900;line-height:1.6em;height:1.6em;padding:0 .3em;color:#000;vertical-align:.15em}
 #chatbox .lines{position:absolute;left:18px;right:18px;bottom:12px;display:flex;flex-direction:column;justify-content:flex-end}
-#chatbox .ln{line-height:1.35;word-wrap:break-word;animation:cfIn .35s ease-out;text-shadow:0 2px 4px #000c}
+#chatbox .ln{line-height:1.35;word-wrap:break-word;animation:cfIn .35s ease-out;text-shadow:0 2px 4px #000c;transition:opacity 1s}
+#chatbox .ln.gone{opacity:0}
+/* each message shows for 5 s then fades; with nothing left showing, the whole box (background too) fades away */
+#chatbox{transition:opacity .8s} #chatbox.idle{opacity:0} #chatbox.idle:hover{opacity:1}
 @keyframes cfIn{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
 #chatbox .cf-ic{display:inline-block;vertical-align:-.12em;margin-right:.3em} #chatbox .cf-nm{font-weight:900} #chatbox .cf-nm::after{content:":";color:#d8d0f0}
 #chatbox .cf-em{height:1.35em;vertical-align:middle;margin:0 .05em}
@@ -5659,9 +5662,9 @@ window.onRemote = c => {
   else if (c.cmd === "sound") SoundIn.receive(c);
   else if (c.cmd === "soundList") { const list = Object.assign({}, MySounds.names); Object.keys(BUNDLED_SOUNDS).forEach(k => list[k] = "built in"); if (window.remoteSend) window.remoteSend({ cmd: "sounds", list }); }
   else if (c.cmd === "soundTest") { if (!MySounds.urls[c.type] && !BUNDLED_SOUNDS[c.type]) MySounds.report(c.type, "no sound saved for this in OBS"); else { const cur = MySounds.playing[c.type]; if (cur) cur.pause(); MySounds.play(c.type); } }
-  else if (c.cmd === "chatCfg") ChatBox.cfg(c);
-  else if (c.cmd === "chatShow") ChatBox.show(!!c.on);
-  else if (c.cmd === "chatBg") ChatBox.bg(!!c.on);
+  else if (c.cmd === "chatCfg") { ChatBox.cfg(c); if (c.show != null) ChatBox.show(c.show); ChatBox.tell(); }
+  else if (c.cmd === "chatShow") { ChatBox.show(!!c.on); ChatBox.tell(); }
+  else if (c.cmd === "chatBg") { ChatBox.bg(!!c.on); ChatBox.tell(); }
   else if (c.cmd === "chatBadges") { ChatFeed.loadBadges(c.token, c.cid, c.bid); ChatFeed.loadExtra(c.bid); }
   else if (c.cmd === "chatReset") ChatBox.reset();
   else if (c.cmd === "firstsReset") { AutoFx.reset(); toast("First-chat effects reset: each viewer's next chat plays theirs again", false, 5000); }
@@ -6395,7 +6398,7 @@ const ChatBox = {
     let c = this.get();
     if (!c.wide2 && c.w) { const w = Math.min(2400, c.w * 2), x = Math.max(0, (c.x != null ? c.x + c.w : 2530) - w); c = this.put({ w, x, wide2: 1 }); this.cur = null; this.layout(); }   // twice as wide as before
     else if (!c.wide2) this.put({ wide2: 1 });
-    this.show(c.show !== false); this.bg(c.bg !== false); this.connect();
+    this.show(c.show !== false); this.bg(c.bg !== false); this.el.classList.add("idle"); this.connect();
   },
   box(o, live) { const c = Object.assign({}, this.DEF, this.get(), this.cur || {}, o || {}); if (o) { this.cur = c; this.layout(c); } return c; },
   layout(c) { c = c || Object.assign({}, this.DEF, this.get()); this.cur = c; const el = this.el;
@@ -6405,7 +6408,11 @@ const ChatBox = {
   bg(on) { this.put({ bg: !!on }); this.el.classList.toggle("clear", !on); },
   reset() { this.put({ x: this.DEF.x, y: this.DEF.y, w: this.DEF.w, h: this.DEF.h }); this.cur = null; this.layout(); this.show(true); },
   connect() { const c = this.get(); ChatFeed.start({ twitch: c.twitch || (Live && Live.login) || "", kickRoom: c.kickRoom || "", kickKey: c.kickKey || "", kickCluster: c.kickCluster || "" }, m => this.add(m)); },
-  add(m) { const d = document.createElement("div"); d.className = "ln"; ChatFeed.render(m, d); this.lines.append(d); while (this.lines.children.length > 12) this.lines.firstChild.remove(); },
+  add(m) { const d = document.createElement("div"); d.className = "ln"; ChatFeed.render(m, d); this.lines.append(d); while (this.lines.children.length > 12) this.lines.firstChild.remove();
+    this.el.classList.remove("idle"); this.live = (this.live || 0) + 1;
+    setTimeout(() => { d.classList.add("gone"); setTimeout(() => { d.remove(); if (--this.live <= 0) { this.live = 0; this.el.classList.add("idle"); } }, 1000); }, 5000); },
+  // tells the app what the chat box is doing now (so the app can confirm a switch really happened in OBS)
+  tell() { if (window.remoteSend) { const c = this.get(); window.remoteSend({ cmd: "chatState", show: c.show !== false, bg: c.bg !== false }); } },
   cfg(c) { this.put({ twitch: c.twitch || "", kickRoom: c.kickRoom || "", kickKey: c.kickKey || "", kickCluster: c.kickCluster || "" }); if (c.bg != null) this.bg(c.bg); if (c.show != null && this.get().show == null) this.show(c.show); this.connect(); }
 };
 ChatBox.init();
@@ -6499,7 +6506,7 @@ window.KZRelay = function (topic, onMessage, servers) {
 (() => {
   const qs = new URLSearchParams(location.search), key = qs.get("ctl");
   if (!key || !window.WebSocket) return;
-  const PAGE = "html3", VERSION = "8617230";
+  const PAGE = "html3", VERSION = "eb066bd";
   let said = false;
   const relay = KZRelay("kzctl/" + key, c => {
     if (!c || c.from === "overlay" || (c.to && c.to !== "all" && c.to !== PAGE)) return;
