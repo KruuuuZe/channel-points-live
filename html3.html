@@ -5238,7 +5238,7 @@ const AutoFx = {
     half();
   }
 };
-AutoFx.hourly();
+if (!MIRROR) AutoFx.hourly();                 // (the touchpad copy gets these from OBS as they start)
 
 const Bolt = {
   W: 2560, H: 1440, M: 18, SPEED: 2300, TAIL: 900,
@@ -5656,7 +5656,7 @@ const BitGems = {
   report(force) { const now = performance.now(); if (!window.remoteSend || (!force && (now > this.watchUntil || now - this.lastRep < 90))) return; this.lastRep = now;
     window.remoteSend({ cmd: "gems", g: this.list.map(c => [c.name, +(c.x / this.W).toFixed(4), +(c.y / this.H).toFixed(4), +c.tilt.toFixed(3), bitColor(c.bits), +(c.w / this.W).toFixed(4), c.held ? 1 : 0]),
       d: Dice.report(), m: Mirror.snap(), dr: [+(Dice.lo() / this.W).toFixed(4), +(Dice.hi() / this.W).toFixed(4)] }); },
-  add(name, bits) {
+  add(name, bits) { if (MIRROR) return;            // the copy gets its gems from OBS
     const old = this.list.find(g => g.name.toLowerCase() === String(name).toLowerCase());
     if (old) { old.bits += bits; old.w = this.Wd(old.bits); old.pulse = 1; old.vy = -15; old.air = true; old.walk = null; this.sparkle(old.x, old.y - old.w * .4, 30, bitColor(old.bits)); this.play(old, "gem_power", true); }
     else { const g = this.make({ name, bits, x: this.freeSpot(this.Wd(bits)) }); g.y = -g.w; g.air = true; g.vy = 6; g.tv = rand(-.02, .02); g.trail = true; this.list.push(g); }
@@ -5976,6 +5976,11 @@ const Mirror = {
   cmd(c) { if (!MIRROR || !c) return; if (/^(bitGems|chat|sound|art)/.test(c.cmd)) return;
     if (c.cmd === "cloudGo") this.touchAt = performance.now();
     try { window.onRemote(c); } catch (e) {} },
+  // ---- everything else OBS plays (alerts, effects, chat-triggered things) is sent to the copy as it starts, and the
+  // copy plays the very same thing with the very same code
+  fwd(k, a) { if (MIRROR || !window.remoteSend || performance.now() > BitGems.watchUntil) return; try { window.remoteSend({ cmd: "mfx", k, a: JSON.parse(JSON.stringify(a || [])) }); } catch (e) {} },
+  run(k, a) { if (!MIRROR) return; a = a || []; const m = /^(\w+)\.run$/.exec(k);
+    try { if (m && FxLine.orig[m[1]]) FxLine.orig[m[1]](...a); else if (this.MFX[k]) { const [o, f] = this.MFX[k]; o[f](...a); } } catch (e) { console.error(e); } },
   // where everything you can grab is in the copy right now (0..1 across the screen), for the touchpad's finger
   items() { const L = [];
     Dice.on && Dice.list.forEach(c => L.push({ id: c.id, x: c.x / 2560, y: c.y / 1440, r: Dice.S * .9 / 2560, die: 1 }));
@@ -6148,8 +6153,10 @@ const FxLine = {
       setTimeout(wait, 300); };
     go(); }
 };
+FxLine.orig = {};
 for (const [name, ms] of Object.entries(FxLine.MODS)) { const m = { VTerrible, ScrapHaul, SmokeLap, Mango, Banana, Fishy, Chef, Tank, Kazul, Jinx, Pirate, Turkey, Penguin, Eagle, Bolt }[name], orig = m.run.bind(m);
-  m.run = (...a) => FxLine.push(() => { if (ms) FxLine.until = performance.now() + ms; orig(...a); }); }
+  FxLine.orig[name] = orig;
+  m.run = (...a) => FxLine.push(() => { if (ms) FxLine.until = performance.now() + ms; Mirror.fwd(name + ".run", a); orig(...a); }); }   // the touchpad copy plays it the moment OBS does
 
 /* one alert at a time, in order */
 const Queue = {
@@ -6828,6 +6835,12 @@ const ChatBox = {
   tell() { if (window.remoteSend) { const c = this.get(); window.remoteSend({ cmd: "chatState", show: c.show !== false, bg: c.bg !== false }); } },
   cfg(c) { this.put({ twitch: c.twitch || "", kickRoom: c.kickRoom || "", kickKey: c.kickKey || "", kickCluster: c.kickCluster || "" }); if (c.bg != null) this.bg(c.bg); if (c.show != null && this.get().show == null) this.show(c.show); this.connect(); }
 };
+// the things that happen on stream because of Twitch (alerts, gifts, !scroop, lurkers, stars, chat snow/rain): OBS
+// tells the touchpad copy each time one starts
+Mirror.MFX = { "Alerts.sub": [Alerts, "sub"], "Alerts.follow": [Alerts, "follow"], "Alerts.bits": [Alerts, "bits"], "Alerts.streak": [Alerts, "streak"], "Alerts.raid": [Alerts, "raid"],
+  "Gifts.gift": [Gifts, "gift"], "Gifts.recipient": [Gifts, "recipient"], "Scrap.dig": [Scrap, "dig"], "Scrap.showBoard": [Scrap, "showBoard"],
+  "Lurk.join": [Lurk, "join"], "Lurk.leave": [Lurk, "leave"], "Wanted.set": [Wanted, "set"], "Face.chatSnow": [Face, "chatSnow"], "Face.chatRain": [Face, "chatRain"] };
+if (!MIRROR) for (const [k, [o, f]] of Object.entries(Mirror.MFX)) { const orig = o[f].bind(o); o[f] = (...a) => { Mirror.fwd(k, a); return orig(...a); }; }
 ChatBox.init();
 BitGems.load();
 Dice.load();
@@ -6923,7 +6936,7 @@ window.KZRelay = function (topic, onMessage, servers) {
 (() => {
   const qs = new URLSearchParams(location.search), key = qs.get("ctl");
   if (!key || !window.WebSocket) return;
-  const PAGE = "html3", VERSION = "7d7128d";
+  const PAGE = "html3", VERSION = "d0252ae";
   let said = false;
   const relay = KZRelay("kzctl/" + key, c => {
     if (!c || c.from === "overlay" || (c.to && c.to !== "all" && c.to !== PAGE)) return;
