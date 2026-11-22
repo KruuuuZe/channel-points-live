@@ -110,6 +110,79 @@ window.KZRelay = function (topic, onMessage, servers) {
   return api;
 };
 
+/* ================= KZDirect: a direct link between the app and an overlay page =================
+   The relay above goes out to the internet and back. When the phone and the PC can reach each other directly (they
+   are on the same Wi-Fi), this opens a direct connection between the two pages (WebRTC data channels, the same thing
+   video calls use), set up by passing two short messages through the relay. Messages then take a few milliseconds.
+   If it can't connect, or drops, nothing is lost: everything simply keeps going through the relay, and the app tries
+   again now and then.
+   Two channels: "sure" (everything arrives, in order) and "fast" (for things sent many times a second where only the
+   newest matters: if one is lost it is simply skipped, so they can never pile up).
+     opt.role      "app" (asks for the link) or "overlay" (answers)
+     opt.signal    o => send a set-up message to the other side through the relay
+     opt.onMessage o => a message arrived over the direct link
+     opt.onState   (up, why) => the link came up or went down
+     opt.ips       () => this device's own network addresses, if the app knows them (see withIps) */
+window.KZDirect = function (opt) {
+  const RTC = window.RTCPeerConnection, app = opt.role === "app", me = Math.random().toString(36).slice(2, 10);   // (me: which open copy of the app this is)
+  const api = { up: false, ok: !!RTC, tries: 0, lastWhy: "", since: 0 };
+  let pc = null, sure = null, fast = null, sid = "", timer = 0, retry = 0, busy = false, lastIn = 0, beat = 0, peer = "";
+  const say = (up, why) => { if (up === api.up && !why) return; api.up = up; api.lastWhy = why || ""; api.since = Date.now(); try { opt.onState && opt.onState(up, why || ""); } catch (e) {} };
+  const close = () => { clearTimeout(timer); clearInterval(beat); const p = pc; pc = sure = fast = null; sid = "";
+    if (p) { try { p.onconnectionstatechange = p.ondatachannel = null; p.close(); } catch (e) {} } };
+  const fail = why => { const was = api.up; close(); say(false, why);
+    // try again: straight away if it had been working, otherwise after 8 s, 16 s, 32 s, then once a minute, and after a few of those every 5 minutes
+    if (app) { clearTimeout(retry); const wait = was ? 1500 : api.tries > 6 ? 300000 : Math.min(60000, 4000 * Math.pow(2, Math.min(4, api.tries))); retry = setTimeout(() => api.start(), wait); } };
+  const gathered = (p, ms) => new Promise(ok => { if (p.iceGatheringState === "complete") return ok(); const t = setTimeout(ok, ms);
+    p.addEventListener("icegatheringstatechange", () => { if (p.iceGatheringState === "complete") { clearTimeout(t); ok(); } }); });
+  // Browsers hide the device's own network address behind a made-up name (xxxx.local) that the other side often can't
+  // look up. Where the app knows the phone's real address, it is added alongside, so the PC can find the phone.
+  const withIps = sdp => { let ips = []; try { ips = (opt.ips && opt.ips()) || []; } catch (e) {} if (!ips.length) return sdp; let n = 0;
+    return sdp.split("\r\n").map(l => { const m = /^a=candidate:\S+ (\d) udp (\d+) (\S+\.local) (\d+) typ host(.*)$/i.exec(l); if (!m) return l;
+      return [l].concat(ips.filter(ip => /^\d+\.\d+\.\d+\.\d+$/.test(ip)).map(ip => "a=candidate:" + (9000 + (++n)) + " " + m[1] + " udp " + m[2] + " " + ip + " " + m[4] + " typ host" + m[5])).join("\r\n"); }).join("\r\n"); };
+  const wire = (p, mySid) => {
+    const check = () => { if (sid !== mySid || api.up || !sure || !fast || sure.readyState !== "open" || fast.readyState !== "open") return;
+      clearTimeout(timer); api.tries = 0; lastIn = Date.now(); say(true);
+      // the overlay side hangs up if the app has gone quiet (the app sends a little "are you there" every 2 seconds)
+      clearInterval(beat); if (!app) beat = setInterval(() => { if (api.up && Date.now() - lastIn > 12000) fail("the app went quiet"); }, 3000); };
+    const on = ch => { ch.onopen = check; ch.onclose = () => { if (sid === mySid && api.up) fail("closed"); };
+      ch.onmessage = e => { if (sid !== mySid) return; lastIn = Date.now(); let o; try { o = JSON.parse(e.data); } catch (x) { return; } try { opt.onMessage(o); } catch (x) { console.error(x); } }; if (ch.readyState === "open") check(); };
+    p.onconnectionstatechange = () => { if (sid !== mySid) return; const st = p.connectionState; if (st === "failed" || st === "closed") fail(st); };
+    if (sure) on(sure); if (fast) on(fast);
+    p.ondatachannel = e => { if (sid !== mySid) return; if (e.channel.label === "sure") sure = e.channel; else if (e.channel.label === "fast") fast = e.channel; else return; on(e.channel); };
+  };
+  // the app: ask the overlay for a direct link
+  api.start = async () => { if (!RTC || !app || busy) return; clearTimeout(retry); close(); busy = true; api.tries++; const mine = sid = Math.random().toString(36).slice(2, 10);
+    try { const p = pc = new RTC({ iceServers: [] });
+      sure = p.createDataChannel("sure"); fast = p.createDataChannel("fast", { ordered: false, maxRetransmits: 0 }); wire(p, mine);
+      await p.setLocalDescription(await p.createOffer()); await gathered(p, 1200); if (sid !== mine) return;
+      opt.signal({ rtc: "offer", sid: mine, cid: me, sdp: withIps(p.localDescription.sdp) });
+      timer = setTimeout(() => { if (sid === mine && !api.up) fail("no direct path"); }, 9000);
+    } catch (e) { if (sid === mine) fail("couldn't start: " + (e && e.message || e)); } finally { busy = false; } };
+  // a set-up message from the other side
+  api.signal = async m => { if (!RTC || !m) return;
+    try {
+      if (m.rtc === "answer" && app) { if (m.sid !== sid || !pc || pc.signalingState !== "have-local-offer") return; await pc.setRemoteDescription({ type: "answer", sdp: m.sdp }); }
+      else if (m.rtc === "busy" && app) { if (m.sid === sid) { api.tries = Math.max(api.tries, 4); fail("another phone or tab has the direct link"); } }
+      else if (m.rtc === "offer" && !app) {
+        // one direct link at a time: if another open copy of the app is using it right now, this one keeps to the relay
+        if (api.up && peer && m.cid && m.cid !== peer && Date.now() - lastIn < 6000) { opt.signal({ rtc: "busy", sid: m.sid }); return; }
+        close(); if (api.up) say(false, "new link"); peer = m.cid || ""; const mine = sid = m.sid, p = pc = new RTC({ iceServers: [] }); wire(p, mine);
+        await p.setRemoteDescription({ type: "offer", sdp: m.sdp }); await p.setLocalDescription(await p.createAnswer()); await gathered(p, 1200); if (sid !== mine) return;
+        opt.signal({ rtc: "answer", sid: mine, sdp: p.localDescription.sdp });
+        timer = setTimeout(() => { if (sid === mine && !api.up) { close(); say(false, "no direct path"); } }, 12000); }
+    } catch (e) { if (app) fail("set-up failed: " + (e && e.message || e)); else { close(); say(false, "set-up failed"); } } };
+  // send one message; false if the link isn't up (the caller then uses the relay)
+  api.send = (o, quick) => { const ch = quick ? fast : sure; if (!api.up || !ch || ch.readyState !== "open") return false;
+    try { if (quick && ch.bufferedAmount > 65536) return true;        // the fast channel never queues up: skip this one
+      ch.send(JSON.stringify(o)); return true; } catch (e) { return false; } };
+  api.heard = () => { lastIn = Date.now(); };
+  api.quiet = () => Date.now() - lastIn;                      // how long since anything arrived
+  api.drop = why => { if (pc) fail(why || "dropped"); };
+  api.stop = () => { clearTimeout(retry); close(); say(false, "stopped"); };
+  return api;
+};
+
 const $ = s => document.querySelector(s), key = new URLSearchParams(location.search).get("ctl");
 if (!key) { $("#st").innerHTML = '<span class="bad">This link is missing your pairing key. Copy the link from the app\'s Control screen.</span>'; $("#go").disabled = true; }
 const relay = key ? KZRelay("kzctl/" + key, () => {}) : null;

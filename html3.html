@@ -595,9 +595,76 @@ const $ = s => document.querySelector(s);
 const qs = new URLSearchParams(location.search);
 const hs = new URLSearchParams(location.hash.replace(/^#/, ""));
 // ?mirror=1: the copy of this overlay inside the app's touchpad. It shows exactly what OBS shows (OBS sends where
-// everything is), makes no sound, and doesn't listen to Twitch or the relay itself.
+// everything is, and every effect as it starts), makes no sound, and doesn't listen to Twitch or the relay itself.
+// See "the touchpad copy" (Mirror) further down.
 const MIRROR = qs.has("mirror");
-if (MIRROR) document.head.insertAdjacentHTML("beforeend", "<style>#testbar,#tapzone{display:none!important}html,body,#view{background:transparent!important}</style>");
+const Low = { k: 1 };                                    // how much smaller the copy's canvases are than the stream's (1 = the same size)
+const Raf = { paused: false, eco: false, frames: 0, due: 0, slow: 0, ms: 0 };   // the copy's animation clock: pictures drawn, pictures it meant to draw, late ones, time spent drawing
+if (MIRROR) {
+  document.head.insertAdjacentHTML("beforeend", "<style>#testbar,#tapzone{display:none!important}html,body,#view{background:transparent!important}</style>");
+  // (1) The copy never reads or changes anything the app has saved: its "storage" is just memory, and starts empty.
+  //     (Everything it shows comes from OBS.)
+  { const mem = new Map(), st = { getItem: k => mem.has(String(k)) ? mem.get(String(k)) : null, setItem: (k, v) => { mem.set(String(k), String(v)); }, removeItem: k => { mem.delete(String(k)); },
+      clear: () => mem.clear(), key: i => [...mem.keys()][i] ?? null, get length() { return mem.size; } };
+    try { Object.defineProperty(window, "localStorage", { configurable: true, get: () => st }); } catch (e) {}
+    let ok = false; try { ok = window.localStorage === st; } catch (e) {}
+    if (!ok) { const P = Storage.prototype; P.getItem = function (k) { return st.getItem(k); }; P.setItem = function (k, v) { st.setItem(k, v); }; P.removeItem = function (k) { st.removeItem(k); }; P.clear = function () { st.clear(); }; } }
+  // (2) One shared animation clock for everything in the copy.
+  //     - It can be paused: while the touchpad is off screen the copy does no work at all.
+  //     - It draws at most 60 pictures a second, like the stream, even on a phone whose screen refreshes 90 or 120
+  //       times a second (which would otherwise double the work for nothing).
+  //     - When nothing on screen is really moving (a resting cloud, gems and dice only breathe and twinkle) it draws
+  //       30 a second, which looks the same and halves the work. The moment anything moves, or you touch the
+  //       touchpad, it is back to 60. (See Mirror.calm.)
+  //     - It counts what it drew and what it meant to draw, so the app can show how the touchpad is keeping up.
+  { const real = window.requestAnimationFrame.bind(window); let q = [], on = false, last = 0, lastReal = 0, ri = 16.67;
+    const arm = () => { if (!on && q.length && !Raf.paused) { on = true; real(tick); } };
+    const tick = t => { on = false;
+      if (lastReal) { const dr = t - lastReal; if (dr > 3) ri = Math.min(17, ri * 1.01, dr); } lastReal = t;      // how often this phone's screen refreshes (16.7 ms at 60 a second, 8.3 at 120)
+      const gap = Raf.eco ? 31 : 12.5;
+      if (last && t - last < gap) return arm();                     // too soon (a fast screen, or the calm pace): wait for the next refresh
+      const run = q; q = []; const a = performance.now();
+      if (last) { const want = Math.ceil((gap - .5) / ri) * ri, d = Math.min(250, t - last); Raf.due += d / want; if (d > want * 1.7) Raf.slow++; } else Raf.due++;
+      last = t;
+      for (let i = 0; i < run.length; i++) { try { run[i](t); } catch (e) { console.error(e); } }
+      Raf.frames++; Raf.ms += performance.now() - a;
+      const M = window.Mirror; Raf.eco = !!(M && M.calm && M.calm(a, run.length));
+      if (q.length && !Raf.paused) arm(); else last = lastReal = 0; };
+    window.requestAnimationFrame = cb => { q.push(cb); arm(); return 0; };
+    Raf.pause = p => { Raf.paused = !!p; last = lastReal = 0; arm(); }; }
+  // (3) The copy's full-screen canvases are drawn at the touchpad's own size in real screen pixels instead of
+  //     2560x1440: the phone's screen can't show more than that anyway, and it is several times less work every frame.
+  //     Everything that draws still uses the full-size numbers: each small canvas reports the full size, its drawing is
+  //     scaled down to fit, and the few things canvases measure in real pixels (glows, shadow offsets, blurs) are
+  //     scaled by the same amount, so the picture is the same.
+  //     (q: the app can ask for a lighter picture, a fraction of that size, if the phone can't keep up; see Pad in control.html.)
+  { const want = (+qs.get("pw") || innerWidth || 360) * Math.min(3, devicePixelRatio || 1) * Math.max(.3, Math.min(1, +qs.get("q") || 1));
+    const k = Low.k = +qs.get("k") || Math.max(320, Math.min(2560, Math.ceil(want / 16) * 16)) / 2560;
+    if (k < .999) {
+      const CP = CanvasRenderingContext2D.prototype, EP = HTMLCanvasElement.prototype, wd = Object.getOwnPropertyDescriptor(EP, "width"), hd = Object.getOwnPropertyDescriptor(EP, "height");
+      const setT = CP.setTransform, getT = CP.getTransform, getC = EP.getContext;
+      const base = cv => { if (cv._x) setT.call(cv._x, k, 0, 0, k, 0, 0); };
+      Low.shrink = (cv, W, H) => { W = W || wd.get.call(cv); H = H || hd.get.call(cv);
+        if (cv.isConnected) { const cs = getComputedStyle(cv), px = (v, d) => /px$/.test(v) && parseFloat(v) > 0 ? v : d + "px"; cv.style.width = px(cs.width, W); cv.style.height = px(cs.height, H); }      // it keeps its place and size on the page
+        cv._k = k; cv._W = W; cv._H = H; wd.set.call(cv, Math.round(W * k)); hd.set.call(cv, Math.round(H * k));
+        Object.defineProperty(cv, "width", { configurable: true, get: () => cv._W, set(v) { cv._W = +v; wd.set.call(cv, Math.round(v * k)); base(cv); } });
+        Object.defineProperty(cv, "height", { configurable: true, get: () => cv._H, set(v) { cv._H = +v; hd.set.call(cv, Math.round(v * k)); base(cv); } });
+        base(cv); return cv; };
+      EP.getContext = function (type, opt) { const x = getC.call(this, type, opt); if (x && this._k && type === "2d" && !x._k) { x._k = this._k; this._x = x; setT.call(x, k, 0, 0, k, 0, 0); } return x; };
+      CP.setTransform = function (a, b, c, d, e, f) { const z = this._k; if (!z) return setT.apply(this, arguments);
+        if (a && typeof a === "object") return setT.call(this, a.a * z, a.b * z, a.c * z, a.d * z, a.e * z, a.f * z);
+        if (arguments.length < 6) return setT.call(this, z, 0, 0, z, 0, 0);
+        return setT.call(this, a * z, b * z, c * z, d * z, e * z, f * z); };
+      CP.resetTransform = function () { this.setTransform(1, 0, 0, 1, 0, 0); };
+      CP.getTransform = function () { const m = getT.call(this), z = this._k; return z ? new DOMMatrix([m.a / z, m.b / z, m.c / z, m.d / z, m.e / z, m.f / z]) : m; };
+      for (const name of ["shadowBlur", "shadowOffsetX", "shadowOffsetY"]) { const d = Object.getOwnPropertyDescriptor(CP, name);
+        Object.defineProperty(CP, name, { configurable: true, enumerable: true, get() { const v = d.get.call(this); return this._k ? v / this._k : v; }, set(v) { d.set.call(this, this._k ? v * this._k : v); } }); }
+      { const d = Object.getOwnPropertyDescriptor(CP, "filter"), memo = new Map();
+        const fix = v => { let r = memo.get(v); if (r === undefined) { r = String(v).replace(/(-?\d*\.?\d+)px/g, (m, n) => +(n * k).toFixed(3) + "px"); if (memo.size < 500) memo.set(v, r); } return r; };
+        if (d && d.set) Object.defineProperty(CP, "filter", { configurable: true, enumerable: true, get() { return d.get.call(this); }, set(v) { d.set.call(this, this._k && v && v !== "none" ? fix(v) : v); } }); }
+      document.querySelectorAll("canvas").forEach(cv => { if (wd.get.call(cv) === 2560 && hd.get.call(cv) === 1440) Low.shrink(cv, 2560, 1440); });
+    } }
+}
 const TOKEN = qs.get("token") || hs.get("token") || "";
 const LIVE = !!TOKEN;
 const FONT = '"Segoe UI",system-ui,-apple-system,Roboto,"Helvetica Neue",Arial,sans-serif';
@@ -1236,7 +1303,7 @@ const Sound = {
   init() {
     if (!this.ctx) {
       const AC = window.AudioContext || window.webkitAudioContext; if (!AC) return null;
-      this.ctx = new AC(); this.out = this.ctx.createGain(); this.out.gain.value = MIRROR ? 0 : .8; this.out.connect(this.ctx.destination);
+      this.ctx = new AC(); this.out = this.ctx.createGain(); this.out.gain.value = .8; this.out.connect(this.ctx.destination);
       const len = this.ctx.sampleRate, buf = this.ctx.createBuffer(1, len, this.ctx.sampleRate), d = buf.getChannelData(0);
       for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
       this.noise = buf;
@@ -1368,7 +1435,12 @@ const Sound = {
     for (let i = 0; i < 16; i++) this.tone(t + rand(0, .9), rand(.06, .22), rand(.03, .09) * vol * 2, rand(2600, 7200), rand(2400, 7000), "triangle");
   }
 };
-document.addEventListener("pointerdown", () => Sound.init(), { once: true });
+// the touchpad copy is silent: it has no sound machinery at all (every sound call lands in a do-nothing stand-in,
+// so the effects' code runs unchanged)
+if (MIRROR) { const hole = new Proxy(function () {}, { get: (t, k) => k === "currentTime" ? performance.now() / 1000 : k === "then" ? undefined : k === Symbol.toPrimitive ? () => 0 : hole, set: () => true, apply: () => hole, construct: () => hole });
+  for (const k of Object.keys(Sound)) if (typeof Sound[k] === "function") Sound[k] = () => hole;
+  Sound.ctx = Sound.out = Sound.noise = hole; }
+else document.addEventListener("pointerdown", () => Sound.init(), { once: true });
 
 /* ================= bullet holes ================= */
 const holeSprites = [];
@@ -1980,7 +2052,7 @@ const MySounds = {
   mark() { document.querySelectorAll("#testbar .snd").forEach(b => { const has = !!this.urls[b.dataset.snd];
     b.classList.toggle("has", has); b.textContent = (b.dataset.label || "🔊") + (has ? "♪" : "+"); b.title = has ? "Sound: " + this.names[b.dataset.snd] : b.dataset.snd === "chest" ? "Add a sound for chests opening" : "Add a sound for this alert"; }); }
 };
-MySounds.load();
+if (!MIRROR) MySounds.load();
 function edgeGlow(c1, c2) { const e = el("div", "edge"); e.style.setProperty("--ec", c1); e.style.setProperty("--ec2", c2); $("#stage").append(e); setTimeout(() => e.remove(), 5400); }
 
 /* ================= !scroop: scrap salvage (Foxhole) =================
@@ -2142,19 +2214,25 @@ const Scrap = {
     b.append(cols);
   },
   /* !scroopleaderboard: show the board for 20 seconds */
-  showBoard() { this.build(); this.board(); const b = $("#scrapboard"); b.classList.add("on");
+  showBoard(html) { this.build(); const b = $("#scrapboard"); if (html != null) b.innerHTML = html; else this.board(); b.classList.add("on");   // (the touchpad copy shows OBS's board)
+    Mirror.fwd("Scrap.board", [b.innerHTML]);
     clearTimeout(this.boardT); this.boardT = setTimeout(() => b.classList.remove("on"), 20000); },
-  start() { this.build(); this.schedule(this.FIRST); this.listenSA(); },
+  start() { this.build(); if (MIRROR) return; this.schedule(this.FIRST); this.listenSA(); },       // (the touchpad copy gets its piles and digs from OBS)
   busy() { return this.piles.filter(p => p.state !== "none").length; },
   schedule(ms) { clearTimeout(this.timer); this.timer = setTimeout(() => { this.timer = 0; this.spawn(); }, ms); },
-  next() { if (!this.timer && this.busy() < this.MAX) this.schedule(rand(this.GAP[0], this.GAP[1])); },
-  spawn() {
+  next() { if (!MIRROR && !this.timer && this.busy() < this.MAX) this.schedule(rand(this.GAP[0], this.GAP[1])); },
+  // the touchpad copy: the same piles as OBS ([waiting?, x] for each)
+  sync(sp) { this.build(); sp.forEach(([st, x], i) => { const p = this.piles[i]; if (!p) return;
+    if (st === 1 && p.state === "none") this.spawn(x);
+    else if (st === 0 && p.state === "up") { p.state = "none"; p.el.classList.remove("up", "hit"); p.el.classList.add("gone"); } }); },
+  spawn(atX) {
     this.build();
     const free = this.piles.filter(p => p.state === "none");
     if (!free.length) return null;
     const p = free[Math.floor(Math.random() * free.length)];
     p.state = "up"; p.at = Date.now(); const h = p.el;
-    p.x = Math.round(2560 - 190 - rand(25, 100)); h.style.left = p.x + "px";      // the pile is 190px wide
+    p.x = atX != null ? atX : Math.round(2560 - 190 - rand(25, 100)); h.style.left = p.x + "px";      // the pile is 190px wide
+    Mirror.fwd("Scrap.spawn", [p.x]);
     h.innerHTML = heapSVG();      // a new look every time
     h.classList.remove("gone", "up", "hit"); void h.offsetWidth; h.classList.add("up");     // silent: no sound when a pile appears
     for (let j = 0; j < 18; j++) P.push({ type: "spark", x: p.x + rand(10, 180), y: 1426, vx: rand(-2.5, 2.5), vy: rand(-3, -.5), life: 0, max: rand(500, 900),
@@ -2232,12 +2310,16 @@ const Scrap = {
     open();
   },
   run(p, job) {
+    // how many hits it takes and what's inside are decided here, up front, so the touchpad copy shows the very same dig
+    if (!job.hits) job.hits = 10 + Math.floor(Math.random() * 6);                       // 10 to 15 hits to break a pile
+    if (!job.roll) { const r = this.roll(); job.roll = [SCRAP_LOOT.indexOf(r.l), r.n]; }
+    Mirror.fwd("Scrap.run", [this.piles.indexOf(p), p.x, job]);
     Sound.init(); MySounds.play("scroop");
     const box = $("#scrap"), uc = css(bright(job.color)), X = p.x - 67;      // the soldier stands just left of the pile, facing it (toward the right edge)
     const w = el("div", "scroop" + (job.team ? " " + job.team : "")); w.style.left = X + "px"; w.style.setProperty("--uc", uc); w.dataset.k = job.k; w._job = job;
     w.innerHTML = SOLDIER_SVG; w.append(el("div", "tag", job.name)); box.append(w);
     requestAnimationFrame(() => w.classList.add("on"));
-    const arm = w.querySelector(".arm"), SW = 760, HITS = 10 + Math.floor(Math.random() * 6);   // 10 to 15 hits to break a pile
+    const arm = w.querySelector(".arm"), SW = 760, HITS = job.hits;
     // raised behind the helmet (-60deg), then down onto the pile (100deg: handle level, head face-down on the scrap)
     arm.animate([{ transform: "rotate(-60deg)", offset: 0, easing: "ease-in-out" }, { transform: "rotate(-60deg)", offset: .42, easing: "cubic-bezier(.55,0,.9,.6)" },
       { transform: "rotate(100deg)", offset: .6, easing: "ease-out" }, { transform: "rotate(94deg)", offset: .72 }, { transform: "rotate(-60deg)", offset: 1 }],
@@ -2271,7 +2353,7 @@ const Scrap = {
     for (let j = 0; j < 22; j++) P.push({ type: "spark", x: ox + rand(20, 170), y: 1440 - rand(8, 60), vx: rand(-2, 2), vy: rand(-3, -.5), life: 0, max: rand(600, 1100),
       c: [105, 110, 120], s: rand(4, 7), drag: .95, g: .04 });
     kick();
-    const { l, n } = this.roll();
+    const l = SCRAP_LOOT[job.roll[0]] || LOOT[0], n = job.roll[1];
     for (const book of [this.data.users, this.all.users]) {
       const u = book[job.k] || (book[job.k] = { name: job.name, color: job.color, pts: 0, salv: 0, comp: 0, sulf: 0, rare: 0 });
       u.name = job.name; u.color = job.color; u[l.k] = (u[l.k] || 0) + n; u.pts += n * l.pts;
@@ -2294,6 +2376,7 @@ const Scrap = {
     setTimeout(() => { p.state = "none"; this.next(); }, 3000);
   }
 };
+const SCRAP_LOOT = [...LOOT, GOLD_BANANA, GOLD_MANGO];
 Scrap.start();
 
 /* ================= wanted level (GTA-style stars) =================
@@ -2913,9 +2996,15 @@ const ChefArt = {
   db: null,
   open() { return this.db || (this.db = new Promise((ok, no) => { const r = indexedDB.open("kzArt", 1); r.onupgradeneeded = () => r.result.createObjectStore("a"); r.onsuccess = () => ok(r.result); r.onerror = () => no(r.error); })); },
   use(name, a) { const img = new Image(); img.onload = () => { this.sprites[name] = Object.assign({ img }, a); if (name === "tower" && Lurk.up) Lurk.paint(); }; img.src = a.url; },
+  NAMES: ["pirate_ship", "pirate_wave", "pirate_fall", "pirate_slide", "pirate_waving", "scrap_truck", "scrap_truck_empty", "scrap_truck_dump", "scrap_pile", "scrap_guy", "scrap_guy_pop", "scrap_guy_cheer", "scrap_guy_run", "scrap_harvester", "scrap_harvester_go", "vt_L_v", "vt_L_UT", "vt_L_e", "vt_L_r", "vt_L_i", "vt_L_b", "vt_L_l", "vt_boma", "vt_soldier", "vt_soldier_cheer", "vt_soldier_throw", "vt_soldier_salute", "vt_soldier_flip", "gem_base", "gem_sparkle", "gem_pulse", "gem_fire", "gem_glint", "gem_turn", "gem_power", "gem_topspin", "gem_dizzy", "gem_bounce", "gem_twirl", "gem_sway", "gem_shiver", "gem_heart", "gem_bubbles", "gem_orbit", "gem_snow", "gem_galaxy", "gem_jelly", "dice_1", "dice_2", "dice_3", "dice_4", "dice_5", "dice_6", "dice_tumble", "dice_shake", "cs__base", "cs_tank", "cs_tank_form", "cs_tank_idle", "cs_tank_act", "cs_tank_turn", "cs_dog", "cs_dog_form", "cs_dog_idle", "cs_dog_act", "cs_dog_turn", "cs_cat", "cs_cat_form", "cs_cat_idle", "cs_cat_act", "cs_cat_turn", "cs_fish", "cs_fish_form", "cs_fish_idle", "cs_fish_act", "cs_fish_turn", "cs_whale", "cs_whale_form", "cs_whale_idle", "cs_whale_act", "cs_whale_turn", "cs_bunny", "cs_bunny_form", "cs_bunny_idle", "cs_bunny_act", "cs_bunny_turn", "cs_turtle", "cs_turtle_form", "cs_turtle_idle", "cs_turtle_act", "cs_turtle_turn", "cs_duck", "cs_duck_form", "cs_duck_idle", "cs_duck_act", "cs_duck_turn", "cs_elephant", "cs_elephant_form", "cs_elephant_idle", "cs_elephant_act", "cs_elephant_turn", "cs_dino", "cs_dino_form", "cs_dino_idle", "cs_dino_act", "cs_dino_turn", "cs_dragon", "cs_dragon_form", "cs_dragon_idle", "cs_dragon_act", "cs_dragon_turn", "cs_butterfly", "cs_butterfly_form", "cs_butterfly_idle", "cs_butterfly_act", "cs_bird", "cs_bird_form", "cs_bird_idle", "cs_bird_act", "cs_bird_turn", "cs_snail", "cs_snail_form", "cs_snail_idle", "cs_snail_turn", "cs_octopus", "cs_octopus_form", "cs_octopus_idle", "cs_octopus_act", "cs_crab", "cs_crab_form", "cs_crab_idle", "cs_crab_act", "cs_plane", "cs_plane_form", "cs_plane_idle", "cs_plane_act", "cs_plane_turn", "cs_rocket", "cs_rocket_form", "cs_rocket_idle", "cs_rocket_act", "cs_car", "cs_car_form", "cs_car_idle", "cs_car_act", "cs_car_turn", "cs_train", "cs_train_form", "cs_train_idle", "cs_train_act", "cs_train_turn", "cs_boat", "cs_boat_form", "cs_boat_idle", "cs_heli", "cs_heli_form", "cs_heli_idle", "cs_heli_turn", "cs_ufo", "cs_ufo_form", "cs_ufo_idle", "cs_ufo_act", "cs_ufo_turn", "cs_heart", "cs_heart_form", "cs_heart_idle", "cs_heart_act", "cs_star", "cs_star_form", "cs_star_idle", "cs_star_act", "cs_moon", "cs_moon_form", "cs_moon_idle", "cs_mushroom", "cs_mushroom_form", "cs_mushroom_idle", "cs_tree", "cs_tree_form", "cs_tree_idle", "cs_castle", "cs_castle_form", "cs_castle_idle", "cs_ghost", "cs_ghost_form", "cs_ghost_idle", "cs_ghost_act", "cs_pig", "cs_pig_form", "cs_pig_idle", "cs_pig_act", "cs_pig_turn", "cs_sheep", "cs_sheep_form", "cs_sheep_idle", "cs_sheep_act", "cs_sheep_turn", "cs_lion", "cs_lion_form", "cs_lion_idle", "cs_lion_act", "cs_lion_turn", "cs_giraffe", "cs_giraffe_form", "cs_giraffe_idle", "cs_giraffe_turn", "cs_horse", "cs_horse_form", "cs_horse_idle", "cs_horse_act", "cs_horse_turn", "cs_cow", "cs_cow_form", "cs_cow_idle", "cs_cow_act", "cs_cow_turn", "cs_penguin", "cs_penguin_form", "cs_penguin_idle", "cs_penguin_act", "cs_owl", "cs_owl_form", "cs_owl_idle", "cs_owl_act", "cs_frog", "cs_frog_form", "cs_frog_idle", "cs_frog_act", "cs_frog_turn", "cs_snake", "cs_snake_form", "cs_snake_idle", "cs_snake_act", "cs_snake_turn", "cs_shark", "cs_shark_form", "cs_shark_idle", "cs_shark_act", "cs_shark_turn", "cs_dolphin", "cs_dolphin_form", "cs_dolphin_idle", "cs_dolphin_act", "cs_dolphin_turn", "cs_bee", "cs_bee_form", "cs_bee_idle", "cs_bee_act", "cs_bee_turn", "cs_spider", "cs_spider_form", "cs_spider_idle", "cs_mouse", "cs_mouse_form", "cs_mouse_idle", "cs_mouse_act", "cs_mouse_turn", "cs_fox", "cs_fox_form", "cs_fox_idle", "cs_fox_act", "cs_fox_turn", "cs_bear", "cs_bear_form", "cs_bear_idle", "cs_bear_act", "cs_bear_turn", "cs_kangaroo", "cs_kangaroo_form", "cs_kangaroo_idle", "cs_kangaroo_act", "cs_kangaroo_turn", "cs_flamingo", "cs_flamingo_form", "cs_flamingo_idle", "cs_flamingo_turn", "cs_seahorse", "cs_seahorse_form", "cs_seahorse_idle", "cs_seahorse_turn", "cs_jellyfish", "cs_jellyfish_form", "cs_jellyfish_idle", "cs_jellyfish_act", "cs_unicorn", "cs_unicorn_form", "cs_unicorn_idle", "cs_unicorn_act", "cs_unicorn_turn", "cs_guitar", "cs_guitar_form", "cs_guitar_idle", "cs_guitar_act", "cs_umbrella", "cs_umbrella_form", "cs_umbrella_idle", "cs_umbrella_act", "cs_balloon", "cs_balloon_form", "cs_balloon_idle", "cs_balloon_act", "cs_lighthouse", "cs_lighthouse_form", "cs_lighthouse_idle", "cs_lighthouse_act", "cs_house", "cs_house_form", "cs_house_idle", "cs_house_act", "cs_robot", "cs_robot_form", "cs_robot_idle", "cs_robot_act", "cs_skull", "cs_skull_form", "cs_skull_idle", "cs_skull_act", "cs_crown", "cs_crown_form", "cs_crown_idle", "cs_crown_act", "cs_anchor", "cs_anchor_form", "cs_anchor_idle", "cs_sword", "cs_sword_form", "cs_sword_idle", "cs_sword_act", "cs_trophy", "cs_trophy_form", "cs_trophy_idle", "cs_trophy_act", "cs_cupcake", "cs_cupcake_form", "cs_cupcake_idle", "cs_icecream", "cs_icecream_form", "cs_icecream_idle", "cs_pizza", "cs_pizza_form", "cs_pizza_idle", "cs_pizza_turn", "cs_apple", "cs_apple_form", "cs_apple_idle", "cs_bell", "cs_bell_form", "cs_bell_idle", "cs_bell_act", "cs_kite", "cs_kite_form", "cs_kite_idle", "cs_submarine", "cs_submarine_form", "cs_submarine_idle", "cs_submarine_act", "cs_submarine_turn", "cs_bicycle", "cs_bicycle_form", "cs_bicycle_idle", "cs_bicycle_act", "cs_bicycle_turn", "cs_gamepad", "cs_gamepad_form", "cs_gamepad_idle", "cs_gamepad_act", "cf_e_none", "disco_glint", "cf_x_talk_me", "sm_hat", "sm_face", "sm_nose", "sm_arm", "sm_ball", "sm_ball_melt", "sm_puddle", "cf_ref", "cf_x_talk", "cf_x_wide", "cf_x_look_l", "cf_x_look_r", "cf_x_smile", "cf_x_grin", "cf_x_oo", "cf_x_blink", "cf_v_smile_talk", "cf_v_smile_l", "cf_v_smile_r", "cf_v_grin_talk", "cf_v_grin_l", "cf_v_grin_r", "cf_v_oo_talk", "cf_v_oo_l", "cf_v_oo_r", "cf_v_closed_talk", "cf_e_smirk", "cf_v_smirk_talk", "cf_v_smirk_l", "cf_v_smirk_r", "cf_e_wink", "cf_v_wink_talk", "cf_e_laugh", "cf_v_laugh_talk", "cf_e_shocked", "cf_v_shocked_talk", "cf_v_shocked_l", "cf_v_shocked_r", "cf_e_sleepy", "cf_v_sleepy_talk", "cf_v_sleepy_l", "cf_v_sleepy_r", "cf_e_sideeye", "cf_v_sideeye_talk", "cf_v_sideeye_l", "cf_v_sideeye_r", "cf_e_sad", "cf_v_sad_talk", "cf_v_sad_l", "cf_v_sad_r", "cf_e_tongue", "cf_v_tongue_talk", "cf_v_tongue_l", "cf_v_tongue_r", "cf_e_puffed", "cf_v_puffed_talk", "cf_v_puffed_l", "cf_v_puffed_r", "cf_e_determined", "cf_v_determined_talk", "cf_v_determined_l", "cf_v_determined_r", "cf_e_evil", "cf_v_evil_talk", "cf_v_evil_l", "cf_v_evil_r", "cf_e_smug", "cf_v_smug_talk", "cf_v_smug_l", "cf_v_smug_r", "cf_e_confused", "cf_v_confused_talk", "cf_v_confused_l", "cf_v_confused_r", "cf_e_disgusted", "cf_v_disgusted_talk", "cf_v_disgusted_l", "cf_v_disgusted_r", "cf_e_nervous", "cf_v_nervous_talk", "cf_v_nervous_l", "cf_v_nervous_r", "cf_e_kissy", "cf_v_kissy_talk", "cf_v_kissy_l", "cf_v_kissy_r", "cf_e_bored", "cf_v_bored_talk", "cf_v_bored_l", "cf_v_bored_r", "cf_e_excited", "cf_v_excited_talk", "cf_v_excited_l", "cf_v_excited_r", "cf_e_thinking", "cf_v_thinking_talk", "cf_v_thinking_l", "cf_v_thinking_r", "cf_e_scared", "cf_v_scared_talk", "cf_v_scared_l", "cf_v_scared_r", "jinx_flip", "jinx_spin", "jinx_fire", "jinx_launch", "artillery", "golden_banana", "golden_mango", "tower", "eagle_roll", "tank_drive", "soldier_run", "soldier_throw", "grenade", "explosion", "eagle_glide", "eagle_flap", "plane", "title", "chef_parachute", "chef_chop", "chef_jump", "chef_fly", "chef_truck", "cf_x_look_d", "cf_v_smile_d", "cf_v_grin_d", "cf_v_oo_d", "cf_v_smirk_d", "cf_v_shocked_d", "cf_v_sleepy_d", "cf_v_sideeye_d", "cf_v_sad_d", "cf_v_tongue_d", "cf_v_puffed_d", "cf_v_determined_d", "cf_v_evil_d", "cf_v_smug_d", "cf_v_confused_d", "cf_v_disgusted_d", "cf_v_nervous_d", "cf_v_kissy_d", "cf_v_bored_d", "cf_v_excited_d", "cf_v_thinking_d", "cf_v_scared_d"],
   async load() {
-    try { const db = await this.open();
-      ["pirate_ship", "pirate_wave", "pirate_fall", "pirate_slide", "pirate_waving", "scrap_truck", "scrap_truck_empty", "scrap_truck_dump", "scrap_pile", "scrap_guy", "scrap_guy_pop", "scrap_guy_cheer", "scrap_guy_run", "scrap_harvester", "scrap_harvester_go", "vt_L_v", "vt_L_UT", "vt_L_e", "vt_L_r", "vt_L_i", "vt_L_b", "vt_L_l", "vt_boma", "vt_soldier", "vt_soldier_cheer", "vt_soldier_throw", "vt_soldier_salute", "vt_soldier_flip", "gem_base", "gem_sparkle", "gem_pulse", "gem_fire", "gem_glint", "gem_turn", "gem_power", "gem_topspin", "gem_dizzy", "gem_bounce", "gem_twirl", "gem_sway", "gem_shiver", "gem_heart", "gem_bubbles", "gem_orbit", "gem_snow", "gem_galaxy", "gem_jelly", "dice_1", "dice_2", "dice_3", "dice_4", "dice_5", "dice_6", "dice_tumble", "dice_shake", "cs__base", "cs_tank", "cs_tank_form", "cs_tank_idle", "cs_tank_act", "cs_tank_turn", "cs_dog", "cs_dog_form", "cs_dog_idle", "cs_dog_act", "cs_dog_turn", "cs_cat", "cs_cat_form", "cs_cat_idle", "cs_cat_act", "cs_cat_turn", "cs_fish", "cs_fish_form", "cs_fish_idle", "cs_fish_act", "cs_fish_turn", "cs_whale", "cs_whale_form", "cs_whale_idle", "cs_whale_act", "cs_whale_turn", "cs_bunny", "cs_bunny_form", "cs_bunny_idle", "cs_bunny_act", "cs_bunny_turn", "cs_turtle", "cs_turtle_form", "cs_turtle_idle", "cs_turtle_act", "cs_turtle_turn", "cs_duck", "cs_duck_form", "cs_duck_idle", "cs_duck_act", "cs_duck_turn", "cs_elephant", "cs_elephant_form", "cs_elephant_idle", "cs_elephant_act", "cs_elephant_turn", "cs_dino", "cs_dino_form", "cs_dino_idle", "cs_dino_act", "cs_dino_turn", "cs_dragon", "cs_dragon_form", "cs_dragon_idle", "cs_dragon_act", "cs_dragon_turn", "cs_butterfly", "cs_butterfly_form", "cs_butterfly_idle", "cs_butterfly_act", "cs_bird", "cs_bird_form", "cs_bird_idle", "cs_bird_act", "cs_bird_turn", "cs_snail", "cs_snail_form", "cs_snail_idle", "cs_snail_turn", "cs_octopus", "cs_octopus_form", "cs_octopus_idle", "cs_octopus_act", "cs_crab", "cs_crab_form", "cs_crab_idle", "cs_crab_act", "cs_plane", "cs_plane_form", "cs_plane_idle", "cs_plane_act", "cs_plane_turn", "cs_rocket", "cs_rocket_form", "cs_rocket_idle", "cs_rocket_act", "cs_car", "cs_car_form", "cs_car_idle", "cs_car_act", "cs_car_turn", "cs_train", "cs_train_form", "cs_train_idle", "cs_train_act", "cs_train_turn", "cs_boat", "cs_boat_form", "cs_boat_idle", "cs_heli", "cs_heli_form", "cs_heli_idle", "cs_heli_turn", "cs_ufo", "cs_ufo_form", "cs_ufo_idle", "cs_ufo_act", "cs_ufo_turn", "cs_heart", "cs_heart_form", "cs_heart_idle", "cs_heart_act", "cs_star", "cs_star_form", "cs_star_idle", "cs_star_act", "cs_moon", "cs_moon_form", "cs_moon_idle", "cs_mushroom", "cs_mushroom_form", "cs_mushroom_idle", "cs_tree", "cs_tree_form", "cs_tree_idle", "cs_castle", "cs_castle_form", "cs_castle_idle", "cs_ghost", "cs_ghost_form", "cs_ghost_idle", "cs_ghost_act", "cs_pig", "cs_pig_form", "cs_pig_idle", "cs_pig_act", "cs_pig_turn", "cs_sheep", "cs_sheep_form", "cs_sheep_idle", "cs_sheep_act", "cs_sheep_turn", "cs_lion", "cs_lion_form", "cs_lion_idle", "cs_lion_act", "cs_lion_turn", "cs_giraffe", "cs_giraffe_form", "cs_giraffe_idle", "cs_giraffe_turn", "cs_horse", "cs_horse_form", "cs_horse_idle", "cs_horse_act", "cs_horse_turn", "cs_cow", "cs_cow_form", "cs_cow_idle", "cs_cow_act", "cs_cow_turn", "cs_penguin", "cs_penguin_form", "cs_penguin_idle", "cs_penguin_act", "cs_owl", "cs_owl_form", "cs_owl_idle", "cs_owl_act", "cs_frog", "cs_frog_form", "cs_frog_idle", "cs_frog_act", "cs_frog_turn", "cs_snake", "cs_snake_form", "cs_snake_idle", "cs_snake_act", "cs_snake_turn", "cs_shark", "cs_shark_form", "cs_shark_idle", "cs_shark_act", "cs_shark_turn", "cs_dolphin", "cs_dolphin_form", "cs_dolphin_idle", "cs_dolphin_act", "cs_dolphin_turn", "cs_bee", "cs_bee_form", "cs_bee_idle", "cs_bee_act", "cs_bee_turn", "cs_spider", "cs_spider_form", "cs_spider_idle", "cs_mouse", "cs_mouse_form", "cs_mouse_idle", "cs_mouse_act", "cs_mouse_turn", "cs_fox", "cs_fox_form", "cs_fox_idle", "cs_fox_act", "cs_fox_turn", "cs_bear", "cs_bear_form", "cs_bear_idle", "cs_bear_act", "cs_bear_turn", "cs_kangaroo", "cs_kangaroo_form", "cs_kangaroo_idle", "cs_kangaroo_act", "cs_kangaroo_turn", "cs_flamingo", "cs_flamingo_form", "cs_flamingo_idle", "cs_flamingo_turn", "cs_seahorse", "cs_seahorse_form", "cs_seahorse_idle", "cs_seahorse_turn", "cs_jellyfish", "cs_jellyfish_form", "cs_jellyfish_idle", "cs_jellyfish_act", "cs_unicorn", "cs_unicorn_form", "cs_unicorn_idle", "cs_unicorn_act", "cs_unicorn_turn", "cs_guitar", "cs_guitar_form", "cs_guitar_idle", "cs_guitar_act", "cs_umbrella", "cs_umbrella_form", "cs_umbrella_idle", "cs_umbrella_act", "cs_balloon", "cs_balloon_form", "cs_balloon_idle", "cs_balloon_act", "cs_lighthouse", "cs_lighthouse_form", "cs_lighthouse_idle", "cs_lighthouse_act", "cs_house", "cs_house_form", "cs_house_idle", "cs_house_act", "cs_robot", "cs_robot_form", "cs_robot_idle", "cs_robot_act", "cs_skull", "cs_skull_form", "cs_skull_idle", "cs_skull_act", "cs_crown", "cs_crown_form", "cs_crown_idle", "cs_crown_act", "cs_anchor", "cs_anchor_form", "cs_anchor_idle", "cs_sword", "cs_sword_form", "cs_sword_idle", "cs_sword_act", "cs_trophy", "cs_trophy_form", "cs_trophy_idle", "cs_trophy_act", "cs_cupcake", "cs_cupcake_form", "cs_cupcake_idle", "cs_icecream", "cs_icecream_form", "cs_icecream_idle", "cs_pizza", "cs_pizza_form", "cs_pizza_idle", "cs_pizza_turn", "cs_apple", "cs_apple_form", "cs_apple_idle", "cs_bell", "cs_bell_form", "cs_bell_idle", "cs_bell_act", "cs_kite", "cs_kite_form", "cs_kite_idle", "cs_submarine", "cs_submarine_form", "cs_submarine_idle", "cs_submarine_act", "cs_submarine_turn", "cs_bicycle", "cs_bicycle_form", "cs_bicycle_idle", "cs_bicycle_act", "cs_bicycle_turn", "cs_gamepad", "cs_gamepad_form", "cs_gamepad_idle", "cs_gamepad_act", "cf_e_none", "disco_glint", "cf_x_talk_me", "sm_hat", "sm_face", "sm_nose", "sm_arm", "sm_ball", "sm_ball_melt", "sm_puddle", "cf_ref", "cf_x_talk", "cf_x_wide", "cf_x_look_l", "cf_x_look_r", "cf_x_smile", "cf_x_grin", "cf_x_oo", "cf_x_blink", "cf_v_smile_talk", "cf_v_smile_l", "cf_v_smile_r", "cf_v_grin_talk", "cf_v_grin_l", "cf_v_grin_r", "cf_v_oo_talk", "cf_v_oo_l", "cf_v_oo_r", "cf_v_closed_talk", "cf_e_smirk", "cf_v_smirk_talk", "cf_v_smirk_l", "cf_v_smirk_r", "cf_e_wink", "cf_v_wink_talk", "cf_e_laugh", "cf_v_laugh_talk", "cf_e_shocked", "cf_v_shocked_talk", "cf_v_shocked_l", "cf_v_shocked_r", "cf_e_sleepy", "cf_v_sleepy_talk", "cf_v_sleepy_l", "cf_v_sleepy_r", "cf_e_sideeye", "cf_v_sideeye_talk", "cf_v_sideeye_l", "cf_v_sideeye_r", "cf_e_sad", "cf_v_sad_talk", "cf_v_sad_l", "cf_v_sad_r", "cf_e_tongue", "cf_v_tongue_talk", "cf_v_tongue_l", "cf_v_tongue_r", "cf_e_puffed", "cf_v_puffed_talk", "cf_v_puffed_l", "cf_v_puffed_r", "cf_e_determined", "cf_v_determined_talk", "cf_v_determined_l", "cf_v_determined_r", "cf_e_evil", "cf_v_evil_talk", "cf_v_evil_l", "cf_v_evil_r", "cf_e_smug", "cf_v_smug_talk", "cf_v_smug_l", "cf_v_smug_r", "cf_e_confused", "cf_v_confused_talk", "cf_v_confused_l", "cf_v_confused_r", "cf_e_disgusted", "cf_v_disgusted_talk", "cf_v_disgusted_l", "cf_v_disgusted_r", "cf_e_nervous", "cf_v_nervous_talk", "cf_v_nervous_l", "cf_v_nervous_r", "cf_e_kissy", "cf_v_kissy_talk", "cf_v_kissy_l", "cf_v_kissy_r", "cf_e_bored", "cf_v_bored_talk", "cf_v_bored_l", "cf_v_bored_r", "cf_e_excited", "cf_v_excited_talk", "cf_v_excited_l", "cf_v_excited_r", "cf_e_thinking", "cf_v_thinking_talk", "cf_v_thinking_l", "cf_v_thinking_r", "cf_e_scared", "cf_v_scared_talk", "cf_v_scared_l", "cf_v_scared_r", "jinx_flip", "jinx_spin", "jinx_fire", "jinx_launch", "artillery", "golden_banana", "golden_mango", "tower", "eagle_roll", "tank_drive", "soldier_run", "soldier_throw", "grenade", "explosion", "eagle_glide", "eagle_flap", "plane", "title", "chef_parachute", "chef_chop", "chef_jump", "chef_fly", "chef_truck", "cf_x_look_d", "cf_v_smile_d", "cf_v_grin_d", "cf_v_oo_d", "cf_v_smirk_d", "cf_v_shocked_d", "cf_v_sleepy_d", "cf_v_sideeye_d", "cf_v_sad_d", "cf_v_tongue_d", "cf_v_puffed_d", "cf_v_determined_d", "cf_v_evil_d", "cf_v_smug_d", "cf_v_confused_d", "cf_v_disgusted_d", "cf_v_nervous_d", "cf_v_kissy_d", "cf_v_bored_d", "cf_v_excited_d", "cf_v_thinking_d", "cf_v_scared_d"].forEach(n => { const r = db.transaction("a").objectStore("a").get(n); r.onsuccess = () => { if (r.result) this.use(n, r.result); }; });
+    try { const db = await this.open(), get = n => { const r = db.transaction("a").objectStore("a").get(n); r.onsuccess = () => { if (r.result) this.use(n, r.result); }; };
+      if (!MIRROR) { this.NAMES.forEach(get); return; }
+      // the touchpad copy: only the pictures the app really has, the ones that are on screen all the time first (cloud,
+      // gems, dice), then the rest a few at a time, so opening the touchpad never makes the app stutter
+      const keys = await new Promise(ok => { const r = db.transaction("a").objectStore("a").getAllKeys(); r.onsuccess = () => ok(new Set(r.result)); r.onerror = () => ok(null); });
+      const first = n => /^(gem_|dice_|cf_ref|cf_x_|cf_e_none|cs__base|sm_)/.test(n) ? 0 : 1, todo = this.NAMES.filter(n => !keys || keys.has(n)).sort((a, b) => first(a) - first(b));
+      const step = () => { todo.splice(0, first(todo[0] || "") ? 6 : 40).forEach(get); if (todo.length) setTimeout(step, 60); }; step();
     } catch (e) {}
   },
   // a piece of art arriving from the app (sent in parts)
@@ -3465,7 +3554,7 @@ const Smoke = {
     // everything is drawn into its own layer first: the lightning only shows inside the smoke, and a blur melts
     // the puffs together so the edges look like smoke instead of circles
     const LW = SW + 520, LH = S + 640, OX = W - LW + 60, OY = H - LH + 60;   // the layer reaches a little past the screen edges
-    const layer = document.createElement("canvas"); layer.width = LW; layer.height = LH; const main = g;
+    const layer = document.createElement("canvas"); layer.width = LW; layer.height = LH; if (Low.shrink) Low.shrink(layer); const main = g;
     const flashes = []; let nextFlash = 2500;
     const bolt = (x, y) => { const pts = [[x, y]]; let px = x, py = y; for (let i = 0; i < 6; i++) { px += rand(-40, 40); py += rand(25, 55); pts.push([px, py]); } return pts; };
     const frame = now => {
@@ -3501,7 +3590,7 @@ const Smoke = {
           g.beginPath(); f.bolt.forEach(([x, y], j) => j ? g.lineTo(x, y) : g.moveTo(x, y)); g.stroke(); g.shadowBlur = 0; }
       }
       g.globalCompositeOperation = "source-over";
-      main.save(); main.filter = "blur(12px)"; main.drawImage(layer, OX, OY); main.restore();
+      main.save(); main.filter = "blur(12px)"; main.drawImage(layer, OX, OY, LW, LH); main.restore();
       if (fade > 0) requestAnimationFrame(frame); else { main.clearRect(0, 0, W, H); this.on = false; this.offAt = null; }
     };
     requestAnimationFrame(frame);
@@ -3795,7 +3884,8 @@ const Face = {
     Sound.burst(t0, .1, .06, "bandpass", 1200); },
   fire() { if (this.tank && this.kind === "tank" && this.tankM > .7 && performance.now() - this.fireAt > 450) { this.fireAt = performance.now(); this.wantFire = true; this.playAct(); } },
   goTo(nx, ny) { const p = [Math.max(0, Math.min(1, nx)) * 2560, Math.max(0, Math.min(1, ny)) * 1440];
-    if (this.tank) this.tankTo = p; else { this.steerTo = p; this.steerAt = performance.now(); } },
+    const now = performance.now(); this.steerGap = now - (this.steerAt || 0);
+    if (this.tank) this.tankTo = p; else { this.steerTo = p; this.steerAt = now; } },
   rain: false,
   toggleRain() { this.rain = !this.rain; if (this.rain && !this.on) this.toggle(); },     // rain brings the cloud out if it's away
   /* anyone in chat can type !rain: if the cloud is out, it rains for 5 to 15 seconds (more !rain while it's raining
@@ -3861,7 +3951,7 @@ const Face = {
     this.run = true; Smoke.textures(); Sound.init();
     this.xNow = this.xPrev = null; this.xAt = 0; this.glowAt = 0; this.blinkAt = 2500; this.nextLook = 0;   // the clock restarts with each run: forget the last run's timings
     const cv = $("#facecv"), g = cv.getContext("2d"), W = 2560, H = 1440, t0 = performance.now();
-    const LW = 760, LH = 660, layer = document.createElement("canvas"); layer.width = LW; layer.height = LH; const lg = layer.getContext("2d");
+    const LW = 760, LH = 660, layer = document.createElement("canvas"); layer.width = LW; layer.height = LH; if (Low.shrink) Low.shrink(layer); const lg = layer.getContext("2d");
     // it stays along the top of the screen (always fully on screen): hovers a while, then glides to a new spot.
     // Every so often it goes down to the bottom, but only down the left or right edge (never through the middle),
     // stays there a while, then goes back up the same edge.
@@ -3897,6 +3987,42 @@ const Face = {
       const ek = Math.min(1, (t - enterAt) / 1300), es = .2 + .8 * (1 - Math.pow(1 - ek, 3));   // grows out of the poof
       // ---- turned off: go back to where it came out (along the top and straight down, or along the bottom from the
       // right edge), then vanish in a poof
+      let moving = 0;
+      if (MIRROR) {
+        // the touchpad copy: the cloud is wherever OBS has it, doing whatever OBS's is doing. Only while your finger
+        // is steering it does it move by itself, straight away, the same way OBS's then follows
+        const m = Mirror.cl, s = dt / 16, nowP = performance.now();
+        if (m) {
+          if (this.on && !m.on) { if (this.a > .3) poof(px, py, t); this.on = false; this.a = 0; }        // it has gone in OBS: the same poof here
+          this.leaving = false;
+          const since = nowP - Mirror.touchAt;
+          if (!this.tank && this.steerTo && since < 3000) {                                  // right under your finger
+            const tx = Math.max(0, Math.min(W, this.steerTo[0])), ty = Math.max(0, Math.min(LOW, this.steerTo[1] + 36 * this.sizeM)), f = Math.min(1, .7 * s);
+            px += (tx - px) * f; py += (ty - py) * f;
+            if (Math.hypot(tx - px, ty - py) < 2 && since > 500) this.steerTo = null;
+          } else if (this.tank && this.tankTo && since < 9000) {                             // a shape walks or drives to where you touched, exactly as OBS's does
+            const tx = Math.max(300, Math.min(W - 300, this.tankTo[0])), ty = Math.max(170, Math.min(H - 140, this.tankTo[1]));
+            const vx = Math.max(-13, Math.min(13, (tx - px) * .05)), vy = Math.max(-10, Math.min(10, (ty - py) * .05));
+            px += vx * s; py += vy * s; if (Math.abs(vx) > .6) this.angTo = vx > 0 ? 0 : Math.PI;
+            this.speed = Math.hypot(vx, vy); this.walk = (this.walk || 0) + this.speed * .028 * s;
+            if (this.speed < .3 && since > 700) this.tankTo = null;
+          } else { this.steerTo = null; this.tankTo = null;
+            if (Mirror.jump) { px = m.x; py = m.y; Mirror.jump = false; }
+            else { const k = Math.min(1, .3 * s); if (Math.abs(m.x - px) > 6) { moving = 1; fromX = px; toX = m.x; } px += (m.x - px) * k; py += (m.y - py) * k; }
+            if (this.tank) { this.angTo = m.ang; this.speed = m.spd; this.walk = (this.walk || 0) + this.speed * .028 * s; } }
+          // snow: where and when OBS's cloud snows, with the same name on the snowman
+          if (this.snowIn) { const q = this.snowIn; this.snowIn = null; if (snowing && snowing.at > 1e14) this.snowmen = this.snowmen.filter(x => x !== snowing);
+            snowing = { x: q[0], at: 1e15, start: t, name: q[1], color: q[2] }; this.snowmen.push(snowing); }
+          if (this.snowAt) { const q = this.snowAt; this.snowAt = null; const sm = this.snowmen.find(x => x.name === q[1] && Math.abs(x.x - q[0]) < 8); if (sm) sm.at = t; }   // OBS's first flake has landed: the pile starts now here too
+          if (snowing && !m.sn && t - snowing.start > 1500) { if (snowing.at > 1e14) this.snowmen = this.snowmen.filter(x => x !== snowing); snowing = null; }
+          if (snowing && snowing.at < 1e14 && t - snowing.at > Snowman.FORMED) snowing = null;
+          // snowmen that were already standing when the touchpad opened
+          if (Mirror.snowmen) { const S = Mirror.snowmen; Mirror.snowmen = null;
+            S.list.forEach(([x, name, color, born]) => { if (!born || this.snowmen.some(q => q.name === name && Math.abs(q.x - x) < 8)) return;
+              const age = S.t - born + (nowP - S.got); this.snowmen.push({ x, name, color, at: t - age, start: t - age - 2000 }); }); }
+        }
+        route = []; moveAt = 0; hoverUntil = Infinity; goingHome = false; wasTank = this.tank;
+      } else {
       if (this.leaving && !goingHome) {
         goingHome = true; this.snowQ.length = 0; snowTo = null;
         if (snowing && snowing.at > 1e14) this.snowmen = this.snowmen.filter(m => m !== snowing);   // no snow had landed yet
@@ -3929,7 +4055,8 @@ const Face = {
       // while (20 seconds to a minute) before it starts wandering again. !snow still takes priority.
       if (this.steerTo && !this.tank && !wasTank && !this.leaving && !snowing && snowTo === null) {
         const tx = Math.max(0, Math.min(W, this.steerTo[0])), ty = Math.max(0, Math.min(LOW, this.steerTo[1] + 36 * this.sizeM)), s = dt / 16;     // goes exactly where the touchpad dot is: at the very top (or a side) half the cloud is off screen
-        const vx = Math.max(-70, Math.min(70, (tx - px) * .2)), vy = Math.max(-60, Math.min(60, (ty - py) * .2));      // keeps right under your finger
+        const f = this.steerGap < 50 ? .4 : .2;                                                    // touches arriving thick and fast (the direct link): it can keep tighter under your finger
+        const vx = Math.max(-140, Math.min(140, (tx - px) * f)), vy = Math.max(-120, Math.min(120, (ty - py) * f));
         px += vx * s; py += vy * s; route = []; moveAt = 0; hoverUntil = t + rand(20000, 60000); this.padUntil = hoverUntil;
         if (Math.hypot(tx - px, ty - py) < 2 && performance.now() - this.steerAt > 400) this.steerTo = null;
       }
@@ -3941,6 +4068,7 @@ const Face = {
       if (snowTo !== null && !route.length && moveAt <= hoverUntil && Math.abs(px - snowTo) < 2) {
         const q = this.snowQ.shift(); snowTo = null;
         snowing = { x: px, at: 1e15, start: t, name: q.name, color: q.color }; this.snowmen.push(snowing); hoverUntil = Infinity;   // `at` is set when the first flake lands
+        Mirror.fwd("snow", [Math.round(px), q.name, q.color]);
       }
       if (snowing && snowing.at < 1e14 && t - snowing.at > Snowman.FORMED) {                      // the snowman is formed: stop snowing and move on
         const from = snowing.x; snowing = null; let nx = rand(MX, W - MX); if (Math.abs(nx - from) < 600) nx = from < W / 2 ? rand(from + 600, W - MX) : rand(MX, from - 600);
@@ -3957,17 +4085,14 @@ const Face = {
         fromX = px; fromY = py; [toX, toY] = route.shift(); wasLow = toY > H / 2;
         moveAt = t; moveDur = snowTo !== null || goingHome ? Math.max(1200, Math.hypot(toX - fromX, toY - fromY) / .34) : Math.max(1800, Math.min(9000, Math.hypot(toX - fromX, toY - fromY) / .14));   // hurries when someone typed !snow
       }
-      let moving = 0;
       if (moveAt > hoverUntil) { const k = Math.min(1, (t - moveAt) / moveDur), e = k < .5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2;
         px = fromX + (toX - fromX) * e; py = fromY + (toY - fromY) * e; moving = k < 1 ? 1 : 0;
         if (k >= 1) { hoverUntil = t + (route.length ? (snowTo !== null || goingHome ? 60 : 250) : rand(20000, 60000)); moveAt = 0; } }
       // at any size, keep the whole cloud (or shape) on screen (not while it's coming out of / going back into its poof)
       if (!goingHome && t - enterAt > 2600 && !(this.steerTo || t < (this.padUntil || 0))) { const hw = 165 * this.sizeM * (1 + .5 * this.tankM), top = 180 * this.sizeM, bot = 140 * this.sizeM;
         const cx = Math.max(hw, Math.min(W - hw, px)), cy = Math.max(top, Math.min(H - bot, py)), ez = Math.abs(cx - px) + Math.abs(cy - py) > 30 ? .06 : 1; px += (cx - px) * ez; py += (cy - py) * ez; }   // drifts back on screen smoothly after hanging off it
-      if (MIRROR && Mirror.cl && Mirror.cl.on) { const m = Mirror.cl;            // the touchpad copy: sits where the cloud is in OBS (unless your finger is steering it right now)
-        if (Mirror.jump) { px = m.x; py = m.y; Mirror.jump = false; }
-        else if (performance.now() - Mirror.touchAt > 1500) { const k = Math.min(1, .25 * dt / 16); px += (m.x - px) * k; py += (m.y - py) * k; }
-        route = []; moveAt = 0; hoverUntil = t + 5000; }
+      }
+      this.snowingNow = !!snowing;
       this.px = px; this.py = py;
       if (this.fx) hoverUntil = Math.max(hoverUntil, t + 3000);                       // it stays put while an effect plays
       const dir = moving ? Math.sign(toX - fromX) : 0;
@@ -4054,14 +4179,17 @@ const Face = {
       this.snowmen = this.snowmen.filter(m => Snowman.draw(g, m, t, ChefArt.sprites, H));
       g.fillStyle = "#fff";
       this.flakes = this.flakes.filter(f => { const s = dt / 16; f.y += f.vy * s; f.x += (f.vx + Math.sin(t / f.fq + f.ph) * f.sw) * s;
-        if (f.y > Snowman.surface(f.to, f.x, t, H)) { if (f.to.at > t) f.to.at = t; return false; }     // the first flake to land starts the pile
+        if (f.y > Snowman.surface(f.to, f.x, t, H)) { if (f.to.at > t && (!MIRROR || t - (f.to.hit || (f.to.hit = t)) > 5000)) { f.to.at = t; f.to.born = Date.now(); Mirror.fwd("snow.at", [Math.round(f.to.x), f.to.name]); } return false; }     // the first flake to land starts the pile (in the touchpad copy: when OBS's does)
         g.globalAlpha = f.al;
         if (f.crystal) { f.rot += f.spin * s; const w = f.r * 4.4; g.save(); g.translate(f.x, f.y); g.rotate(f.rot); g.drawImage(Snowman.crystal(), -w / 2, -w / 2, w, w); g.restore(); }
         else { const w = f.r * 3.6; g.drawImage(Snowman.dot(), f.x - w / 2, f.y - w / 2, w, w); }
         return true; });
       g.globalAlpha = 1;
       // ---- the cloud body, with the logo's green and purple glowing inside and soft lightning flickers
-      lg.setTransform(1, 0, 0, 1, 0, 0); lg.clearRect(0, 0, LW, LH); lg.translate(LW / 2, LH / 2 + 30); lg.scale(sq, 1 / Math.sqrt(sq));
+      // (the touchpad copy: a cloud's slow billowing is redrawn 30 times a second; where it is on screen is still
+      // updated every frame. Shapes, their actions and the puff effects are redrawn every frame as in OBS.)
+      this.lgN = (this.lgN || 0) + 1; const lazy = MIRROR && !Raf.eco && this.tankM < .01 && !this.fx && !act && this.lgN % 2 === 0;
+      if (!lazy) { lg.setTransform(1, 0, 0, 1, 0, 0); lg.clearRect(0, 0, LW, LH); lg.translate(LW / 2, LH / 2 + 30); lg.scale(sq, 1 / Math.sqrt(sq)); }
       // face on: the face pictures from the Art screen ("No face" = the faceless picture). Face off (or as a tank): the
       // real, slowly rolling cloud
       const AS = ChefArt.sprites, faceMode = this.faceOn && this.tankM < .03, noFace = !faceMode || this.mood === "none";
@@ -4077,6 +4205,7 @@ const Face = {
       const shapeArt = ChefArt.sprites["cs_" + this.kind], facing = Math.abs(Math.cos(this.ang + (A.ang || 0)));
       const artWant = shapeArt && this.tank && this.kind === this.kindWant && this.tankM > .85 && facing > .5 ? 1 : 0;
       this.artK = (this.artK || 0) + (artWant - (this.artK || 0)) * (artWant ? .035 : .06);
+      if (!lazy) {
       if (artCloud) this.drawArtCloud(lg, AS, t);
       else RealCloud.draw(lg, t, SA.on ? 0 : this.tankM, shade, this.ang + (A.ang || 0), this.kind, { walk: this.speed > .8 ? this.walk : 0, jerk: A.jerk, snap: A.snap, hide: A.hide, trunkUp: A.trunkUp, bark: Math.max(0, 1 - (performance.now() - this.barkAt) / 380) * (performance.now() - this.barkAt < 380 ? 1 : 0) }, SA.on ? null : shapeArt, this.artK * Math.min(1, this.tankM) * Math.min(1, Math.max(0, (facing - .45) / .25)), SA.on ? SA.puffA : 1);
       if (SA.on && !artCloud) this.drawShapeAnim(lg, SA, performance.now(), shade);
@@ -4095,6 +4224,7 @@ const Face = {
         const gr = lg.createRadialGradient(f.x, f.y, 0, f.x, f.y, 170); gr.addColorStop(0, `rgba(${r},${gg},${b},${.55 * env})`); gr.addColorStop(1, `rgba(${r},${gg},${b},0)`);
         lg.globalAlpha = 1; lg.fillStyle = gr; lg.fillRect(f.x - 170, f.y - 170, 340, 340); return true; });
       lg.globalCompositeOperation = "source-over"; lg.globalAlpha = 1;
+      }
       // storm: realistic lightning bolts out of the bottom of the cloud (drawn behind it), with a faint flash of the screen
       if (this.on && this.storm && this.stormK > .6 && t > nextStormBolt) {
         nextStormBolt = t + rand(3500, 9000); const sx = x + rand(-120, 120) * SC, sy = y + 40 * SC, ex = sx + rand(-500, 500), ey = Math.random() < .6 ? H + 10 : rand(H * .45, H * .85);
@@ -5207,7 +5337,7 @@ const Personal = {
     const fx = AutoFx.FIRST_OF_DAY[k];
     if (fx) { fx(); return; }
     const raid = Object.keys(CUSTOM_RAIDS).find(x => x.toLowerCase() === k);
-    if (raid) { Queue.push(() => doRaidCustom(ev.user_name || ev.user_login)); return; }
+    if (raid) { Alerts.raidFx(ev.user_name || ev.user_login); return; }
   }
 };
 
@@ -5652,26 +5782,36 @@ const BitGems = {
     // a gem is heavy: a toss carries less speed than your thumb had, and it falls hard and doesn't bounce much
     c.vx = Math.max(-40, Math.min(40, (vx || 0) * 10)); c.vy = Math.max(-40, Math.min(30, (vy || 0) * 10)); c.tv = c.vx * .0015;
     if (Math.abs(c.vx) > 3) { c.topSpin = Math.max(-1.1, Math.min(1.1, c.vx * .05)); c.spinStart = Math.abs(c.topSpin); } this.save(); },
-  watchUntil: 0, lastRep: 0,
-  report(force) { const now = performance.now(); if (!window.remoteSend || (!force && (now > this.watchUntil || now - this.lastRep < 90))) return; this.lastRep = now;
-    window.remoteSend({ cmd: "gems", g: this.list.map(c => [c.name, +(c.x / this.W).toFixed(4), +(c.y / this.H).toFixed(4), +c.tilt.toFixed(3), bitColor(c.bits), +(c.w / this.W).toFixed(4), c.held ? 1 : 0]),
-      d: Dice.report(), m: Mirror.snap(), dr: [+(Dice.lo() / this.W).toFixed(4), +(Dice.hi() / this.W).toFixed(4)] }); },
+  report(force) { Mirror.send(force); },               // (the app's touchpad copy is kept up to date by Mirror)
   add(name, bits) { if (MIRROR) return;            // the copy gets its gems from OBS
     const old = this.list.find(g => g.name.toLowerCase() === String(name).toLowerCase());
-    if (old) { old.bits += bits; old.w = this.Wd(old.bits); old.pulse = 1; old.vy = -15; old.air = true; old.walk = null; this.sparkle(old.x, old.y - old.w * .4, 30, bitColor(old.bits)); this.play(old, "gem_power", true); }
+    if (old) { old.bits += bits; old.w = this.Wd(old.bits); old.pulse = 1; old.vy = -15; old.air = true; old.walk = null; this.sparkle(old.x, old.y - old.w * .4, 30, bitColor(old.bits), old.name); this.play(old, "gem_power", true); }
     else { const g = this.make({ name, bits, x: this.freeSpot(this.Wd(bits)) }); g.y = -g.w; g.air = true; g.vy = 6; g.tv = rand(-.02, .02); g.trail = true; this.list.push(g); }
     this.save(); this.start();
   },
   freeSpot(w) { let best = rand(220, this.RIGHT - 220), bestD = -1;
     for (let i = 0; i < 24; i++) { const x = rand(w / 2 + 40, this.RIGHT - w / 2 - 20), d = Math.min(...this.list.map(g => Math.abs(g.x - x) - (g.w + w) / 2), 9999); if (d > bestD) { bestD = d; best = x; } } return best; },
-  sparkle(x, y, n, col) { for (let i = 0; i < n; i++) { const a = rand(0, 6.283), v = rand(1, 6); this.fx.push({ x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v - 2, life: 1, col, s: rand(2, 4) }); } },
+  // (who: whose gem it is, so the touchpad copy can show the same sparkle)
+  dust(x, w, who) { Mirror.fwd("gem.dust", [who || "", Math.round(x), Math.round(w)]);
+    for (let i = 0; i < 8; i++) this.fx.push({ x: x + rand(-w * .5, w * .5), y: this.FLOOR - 3, vx: rand(-2.5, 2.5), vy: rand(-1.8, -.3), life: .9, col: "rgba(200,195,190,1)", s: rand(2, 4.5) }); },
+  sparkle(x, y, n, col, who) { Mirror.fwd("gem.sp", [who || "", Math.round(x), Math.round(y), n, col]); for (let i = 0; i < n; i++) { const a = rand(0, 6.283), v = rand(1, 6); this.fx.push({ x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v - 2, life: 1, col, s: rand(2, 4) }); } },
   // ---- art from the Art screen (one clear white diamond), tinted to a bit colour once
-  tints: {},
-  tinted(sp, hex) { const k = sp.img.src.length + "/" + sp.w + "/" + hex; if (this.tints[k]) return this.tints[k];
-    const cv = document.createElement("canvas"); cv.width = sp.w * (sp.frames || 1); cv.height = sp.h; const x = cv.getContext("2d");
-    x.drawImage(sp.img, 0, 0); x.globalCompositeOperation = "multiply"; x.fillStyle = hex; x.fillRect(0, 0, cv.width, cv.height);
-    x.globalCompositeOperation = "screen"; x.globalAlpha = .38; x.drawImage(sp.img, 0, 0); x.globalAlpha = 1;
-    x.globalCompositeOperation = "destination-in"; x.drawImage(sp.img, 0, 0); return this.tints[k] = cv; },
+  tints: {}, ids: 0,
+  // (the touchpad copy keeps its tinted pictures small, to fit the touchpad's size, and only makes the ones it is
+  // showing: an animation's is made in a quiet moment the first time it's needed, and the still gem shows until then)
+  TR: MIRROR ? Math.min(1, Math.max(.3, Low.k * 1.25)) : 1, lazyQ: [],
+  tinted(sp, hex, now) { const k = (sp._id || (sp._id = ++this.ids)) + "/" + hex; let T = this.tints[k];
+    if (T) { T._at = now || 0; return T; }
+    if (MIRROR && (sp.frames || 1) > 1 && now !== -1) {          // not made yet: line it up, one at a time, when the page has a moment to spare
+      if (!this.lazyQ.some(q => q[0] === sp && q[1] === hex)) { this.lazyQ.push([sp, hex]); if (this.lazyQ.length === 1) this.lazyNext(); } return null; }
+    const r = this.TR, cv = document.createElement("canvas"); cv.width = Math.max(1, Math.round(sp.w * (sp.frames || 1) * r)); cv.height = Math.max(1, Math.round(sp.h * r)); cv._r = r; const x = cv.getContext("2d");
+    x.drawImage(sp.img, 0, 0, cv.width, cv.height); x.globalCompositeOperation = "multiply"; x.fillStyle = hex; x.fillRect(0, 0, cv.width, cv.height);
+    x.globalCompositeOperation = "screen"; x.globalAlpha = .38; x.drawImage(sp.img, 0, 0, cv.width, cv.height); x.globalAlpha = 1;
+    x.globalCompositeOperation = "destination-in"; x.drawImage(sp.img, 0, 0, cv.width, cv.height); cv._at = now || 0;
+    if (MIRROR) { const ks = Object.keys(this.tints); if (ks.length > 16) { const old = ks.filter(q => this.tints[q].width > this.tints[q].height * 1.5).sort((a, b) => this.tints[a]._at - this.tints[b]._at)[0]; if (old) delete this.tints[old]; } }   // it only keeps the recent ones
+    return this.tints[k] = cv; },
+  lazyNext() { const go = () => { const q = this.lazyQ[0]; if (!q) return; this.tinted(q[0], q[1], -1); this.lazyQ.shift(); if (this.lazyQ.length) this.lazyNext(); };
+    if (window.requestIdleCallback) requestIdleCallback(() => setTimeout(go, 60), { timeout: 1500 }); else setTimeout(go, 300); },
   artFrame(c, now) { const S = ChefArt.sprites; if (!S.gem_base) return null;
     if (c.topSpin && S.gem_topspin && Math.abs(c.topSpin) > .08) { const sp = S.gem_topspin, n = sp.frames || 1;     // the spinning-top art, turning as fast as the gem spins
       return [sp, ((Math.floor((c.roll || 0) / (Math.PI * 2) * n) % n) + n) % n]; }
@@ -5679,9 +5819,10 @@ const BitGems = {
         if (c.anim.once ? f < sp.frames : a < c.anim.dur) return [sp, c.anim.once ? f : f % sp.frames]; } c.anim = null; }
     return [S.gem_base, 0]; },
   // colour every gem animation ahead of time (a little at a time), so starting one never stutters
-  warm() { if (this._warming) return; this._warming = true; const S = ChefArt.sprites, jobs = [];
-    new Set(this.list.map(c => bitColor(c.bits))).forEach(col => ["gem_base", "gem_power", "gem_topspin", "gem_dizzy", ...this.IDLE].forEach(n => { if (S[n]) jobs.push([S[n], col]); }));
-    const next = () => { const j = jobs.shift(); if (!j) { this._warming = false; return; } this.tinted(j[0], j[1]); setTimeout(next, 120); }; next(); },
+  warm() { if (MIRROR || this._warming) return; const S = ChefArt.sprites, names = ["gem_base", "gem_power", "gem_topspin", "gem_dizzy", ...this.IDLE].filter(n => S[n]);
+    const cols = [...new Set(this.list.map(c => bitColor(c.bits)))], sig = cols.join() + "/" + names.map(n => S[n]._id || n).join(); if (sig === this._warmSig) return;
+    this._warmSig = sig; this._warming = true; const jobs = []; cols.forEach(col => names.forEach(n => jobs.push([S[n], col])));
+    const next = () => { const j = jobs.shift(); if (!j) { this._warming = false; this.warm(); return; } this.tinted(j[0], j[1]); setTimeout(next, 120); }; next(); },   // (then once more, in case a new colour or picture turned up meanwhile)
   play(c, name, once) { const sp = ChefArt.sprites[name]; if (!sp) return; c.anim = { name, at: performance.now(), once, dur: once ? 0 : sp.frames * (sp.ms || 100) * 2 }; },
   shade(hex, k) { const n = parseInt(hex.slice(1), 16), r = n >> 16, g = (n >> 8) & 255, b = n & 255, f = v => Math.max(0, Math.min(255, Math.round(k > 0 ? v + (255 - v) * k : v * (1 + k))));
     return `rgb(${f(r)},${f(g)},${f(b)})`; },
@@ -5714,8 +5855,9 @@ const BitGems = {
     let roll = c.roll || 0; if (art && c.anim && this.TURNS[c.anim.name] && art[0] === ChefArt.sprites[c.anim.name]) roll = art[1] / (art[0].frames || 1) * Math.PI * 2 * this.TURNS[c.anim.name];
     const sq = .78 + .22 * Math.abs(Math.cos(roll));                              // the stone narrows and widens as it turns
     g.save(); g.translate(c.x, c.y); g.rotate(c.tilt); g.save(); g.scale(sq, 1);
-    if (art) { const [sp, f] = art, b = Pirate.figOf(sp), k = W / (b.x1 - b.x0);
-      g.shadowColor = col; g.shadowBlur = 20; g.drawImage(this.tinted(sp, col), f * sp.w, 0, sp.w, sp.h, -(b.x0 + b.x1) / 2 * k, -b.y1 * k, sp.w * k, sp.h * k); g.shadowBlur = 0; }
+    if (art) { let [sp, f] = art, T = this.tinted(sp, col, t); if (!T) { sp = ChefArt.sprites.gem_base; f = 0; T = this.tinted(sp, col, t); }
+      const b = Pirate.figOf(sp), k = W / (b.x1 - b.x0), r = T._r || 1;
+      g.shadowColor = col; g.shadowBlur = 20; g.drawImage(T, f * sp.w * r, 0, sp.w * r, sp.h * r, -(b.x0 + b.x1) / 2 * k, -b.y1 * k, sp.w * k, sp.h * k); g.shadowBlur = 0; }
     else {
       const hw = W / 2, N = 8;
       // pavilion: long facets from the girdle down to the point
@@ -5750,19 +5892,19 @@ const BitGems = {
   start() { this.warm(); if (this.running) return; this.running = true; let last = performance.now();
     const cv = $("#gemcv"), g = cv.getContext("2d");
     const frame = now => { const dt = Math.min(50, now - last) / 16; last = now; g.clearRect(0, 0, this.W, this.H);
-      if (MIRROR) Mirror.stepGems(dt);
+      if (MIRROR) Mirror.stepGems(dt, now);
       for (const c of this.list) { if (MIRROR && !Mirror.mine(c, now)) continue;
         c.pulse = Math.max(0, c.pulse - .02 * dt);
         if (c.held) {          // following your thumb on the touchpad, leaning the way it's being dragged
-          const ox = c.x; c.x += (c.tx - c.x) * Math.min(1, .3 * dt); c.y += (c.ty - c.y) * Math.min(1, .3 * dt);
+          const ox = c.x, hk = Math.min(1, (MIRROR ? .6 : .3) * dt); c.x += (c.tx - c.x) * hk; c.y += (c.ty - c.y) * hk;      // (in the touchpad copy it keeps closer under your thumb)
           c.tilt += (Math.max(-.6, Math.min(.6, (c.x - ox) * .02)) - c.tilt) * .2 * dt; }
         else if (c.air) { c.vy += (c.trail ? .55 : .85) * dt; c.y += c.vy * dt; c.tilt += c.tv * dt; c.vx = (c.vx || 0) * Math.pow(.993, dt); c.x += c.vx * dt;     // heavy: falls fast, air slows it
           if (c.x < c.w / 2) { c.x = c.w / 2; c.vx = Math.abs(c.vx || 0) * .3; } if (c.x > this.W - c.w / 2) { c.x = this.W - c.w / 2; c.vx = -Math.abs(c.vx || 0) * .3; }   // thuds off the sides
           if (c.y < -c.w * 2) { c.y = -c.w * 2; c.vy = Math.abs(c.vy) * .3; }
           if (c.trail && Math.random() < .7) this.fx.push({ x: c.x + rand(-c.w * .3, c.w * .3), y: c.y - c.w * .45, vx: rand(-.6, .6), vy: rand(-1, .2), life: 1, col: bitColor(c.bits), s: rand(2, 4) });
           if (c.y >= this.FLOOR) { c.y = this.FLOOR;
-            if (c.vy > 4) { const hit = c.vy; c.vy *= -.22; c.vx = (c.vx || 0) * .8; c.tv = (c.tv * .6 + rand(-.02, .02)); this.sparkle(c.x, this.FLOOR - 4, 10, "#ffffff");
-              for (let i = 0; i < 8; i++) this.fx.push({ x: c.x + rand(-c.w * .5, c.w * .5), y: this.FLOOR - 3, vx: rand(-2.5, 2.5), vy: rand(-1.8, -.3), life: .9, col: "rgba(200,195,190,1)", s: rand(2, 4.5) });   // a puff of dust where it lands
+            if (c.vy > 4) { const hit = c.vy; c.vy *= -.22; c.vx = (c.vx || 0) * .8; c.tv = (c.tv * .6 + rand(-.02, .02)); this.sparkle(c.x, this.FLOOR - 4, 10, "#ffffff", c.name);
+              this.dust(c.x, c.w, c.name);   // a puff of dust where it lands
               if (Sound.ctx) { const t = Sound.ctx.currentTime, k = Math.min(1, hit / 25); Sound.burst(t, .14, .05 * k + .01, "lowpass", 900, 140); Sound.burst(t, .08, .02, "highpass", 3200, 1200); } }
             else { c.vy = 0; c.air = false; c.trail = false; c.wob = c.topSpin ? 0 : (c.tilt || rand(-.25, .25)); c.tilt = c.topSpin ? 0 : c.tilt; c.tv = 0; c.next = now + rand(5000, 14000); this.save(); } } }
         else if (c.topSpin || Math.abs(c.vx || 0) > .2) {     // flicked: sliding along and/or spinning on its point like a top
@@ -5802,10 +5944,9 @@ const BitGems = {
       this.list.forEach(c => { if (!MIRROR && !c.held && !c.air && !c.topSpin && !c.vx && !c.walk && !c.lie && (c.x < this.lo(c) - 1 || c.x > this.hi(c) + 1)) {   // left outside its area: waddles back
           const to = Math.max(this.lo(c), Math.min(this.hi(c), c.x)); c.walk = { x0: c.x, to, at: now, ms: Math.abs(to - c.x) * 4 + 600, steps: Math.max(2, Math.round(Math.abs(to - c.x) / 55)), lean: Math.sign(to - c.x) * .06 }; }
         this.draw(g, c, now); });
-      this.report();
       for (let i = this.fx.length - 1; i >= 0; i--) { const p = this.fx[i]; p.x += p.vx * dt; p.y += p.vy * dt; p.vy += .08 * dt; p.life -= .025 * dt; if (p.life <= 0) { this.fx.splice(i, 1); continue; }
         g.globalAlpha = p.life * .8; g.fillStyle = p.col; g.beginPath(); g.arc(p.x, p.y, p.s, 0, 6.283); g.fill(); g.globalAlpha = 1; }
-      if (this.list.length || this.fx.length) requestAnimationFrame(frame); else { g.clearRect(0, 0, this.W, this.H); this.running = false; this.report(true); } };
+      if (this.list.length || this.fx.length) requestAnimationFrame(frame); else { g.clearRect(0, 0, this.W, this.H); this.running = false; } };
     requestAnimationFrame(frame); }
 };
 
@@ -5819,15 +5960,16 @@ const Dice = {
   PIPS: { 1: [[0, 0]], 2: [[-1, -1], [1, 1]], 3: [[-1, -1], [0, 0], [1, 1]], 4: [[-1, -1], [1, -1], [-1, 1], [1, 1]], 5: [[-1, -1], [1, -1], [0, 0], [-1, 1], [1, 1]], 6: [[-1, -1], [-1, 0], [-1, 1], [1, -1], [1, 0], [1, 1]] },
   lo() { return this.S * .6 + 20; }, hi() { return this.RIGHT - this.S * .6; },
   load() { let o = null; try { o = JSON.parse(localStorage.getItem(this.KEY)); } catch (e) {}
-    this.on = !o || o.on !== false; const d = (o && o.d) || [[1380, 5], [1520, 2]];
+    this.on = !MIRROR && (!o || o.on !== false); const d = (o && o.d) || [[1380, 5], [1520, 2]];       // (the touchpad copy shows them once OBS says where they are)
     this.list = d.map((q, i) => ({ id: "dice:" + (i + 1), x: q[0], y: this.FLOOR - this.S / 2, vx: 0, vy: 0, a: 0, va: 0, face: q[1] || 1, st: "rest", glow: 1, q: 0, k: i }));
     if (this.on) this.start(); },
   save() { try { localStorage.setItem(this.KEY, JSON.stringify({ on: this.on, d: this.list.map(c => [Math.round(c.x), c.face]) })); } catch (e) {} },
-  toggle(v) { this.on = v == null ? !this.on : !!v; this.save(); if (this.on) this.start(); BitGems.report(true); return this.on; },
+  toggle(v) { this.on = v == null ? !this.on : !!v; this.save(); if (this.on) this.start(); Mirror.send(true); return this.on; },
   find(id) { return this.list.find(c => c.id === id); },
   half(c) { return this.S / 2 * (Math.abs(Math.cos(c.a)) + Math.abs(Math.sin(c.a))); },     // how far a turned square reaches down from its middle
   // the next face when it tips over a quarter turn: one of the four next to it (never the same one or the one opposite)
-  tip(c) { const n = [1, 2, 3, 4, 5, 6].filter(f => f !== c.face && f !== 7 - c.face); c.face = n[Math.floor(Math.random() * n.length)]; },
+  tip(c) { if (MIRROR) { const m = Mirror.d && Mirror.d[1][this.list.indexOf(c)]; if (m && (m[5] === "air" || m[5] === "settle")) { c.face = m[3]; return; } }   // (the touchpad copy lands on OBS's number)
+    const n = [1, 2, 3, 4, 5, 6].filter(f => f !== c.face && f !== 7 - c.face); c.face = n[Math.floor(Math.random() * n.length)]; },
   clack(v) { if (!Sound.ctx) return; const t = Sound.ctx.currentTime, k = Math.min(1, v); Sound.burst(t, .04, .05 * k + .01, "bandpass", 3000, 1900); Sound.burst(t + .012, .05, .03 * k, "bandpass", 1500, 900); },
   // !dice from chat (or the app): shake, then throw
   roll(who) { if (!this.on) return false; const now = performance.now(); if (now < this.coolUntil || this.list.some(c => c.held || c.st === "air" || c.st === "shake" || c.st === "settle")) return false;
@@ -5841,7 +5983,12 @@ const Dice = {
   moveTo(id, x, y) { const c = this.find(id); if (!c || !c.held) return; c.tx = Math.max(this.lo(), Math.min(this.hi(), x * this.W)); c.ty = Math.min(this.FLOOR - this.S / 2, y * this.H); },
   fling(id, vx, vy) { const c = this.find(id); if (!c) return; c.local = performance.now(); c.held = false; c.st = "air";
     c.vx = Math.max(-38, Math.min(38, (vx || 0) * 12)); c.vy = Math.max(-38, Math.min(30, (vy || 0) * 12)); c.va = c.vx * .018 + rand(-.05, .05); c.q = Math.floor(c.a / (Math.PI / 2)); },
-  report() { return this.on ? this.list.map(c => [c.id, +(c.x / this.W).toFixed(4), +(c.y / this.H).toFixed(4), +c.a.toFixed(3), c.face, c.glow > .5 ? 1 : 0, +(this.S / this.W).toFixed(4), c.held ? 1 : 0]) : []; },
+  // little bursts of bits: dust where it bounces, sparks off its dots when it lands, a burst when a gem knocks it flying
+  // (the touchpad copy is told about each one, so it shows the same)
+  puff(kind, c, quiet) { if (!quiet) Mirror.fwd("dice.fx", [kind, this.list.indexOf(c), Math.round(c.x), Math.round(c.y), c.face]);
+    if (kind === "dust") for (let i = 0; i < 5; i++) this.fx.push({ x: c.x + rand(-30, 30), y: this.FLOOR - 3, vx: rand(-1.5, 1.5), vy: rand(-1.5, -.3), life: 1, col: "rgba(210,205,195,1)", s: rand(2, 4) });
+    else if (kind === "land") this.PIPS[c.face].forEach(([px, py]) => { for (let i = 0; i < 3; i++) this.fx.push({ x: c.x + px * this.S * .27, y: c.y + py * this.S * .27, vx: rand(-1, 1), vy: rand(-2, -.5), life: 1, col: "#8dffaa", s: rand(1.5, 3) }); });
+    else for (let i = 0; i < 14; i++) this.fx.push({ x: c.x, y: c.y, vx: rand(-5, 5), vy: rand(-6, 1), life: 1, col: i % 2 ? "#b06bff" : "#8dffaa", s: rand(2, 4) }); },
   // ---- drawing
   pip(g, x, y, r, glow) {
     if (glow > 0) { const gr = g.createRadialGradient(x, y, r * .6, x, y, r * 2.6);          // a soft green halo spreading round the dot
@@ -5890,9 +6037,9 @@ const Dice = {
     const cv = $("#dicecv"), g = cv.getContext("2d"), Q = Math.PI / 2;
     const frame = now => { const dt = Math.min(50, now - last) / 16; last = now; g.clearRect(0, 0, this.W, this.H);
       if (!this.on) { this.running = false; return; }
-      if (MIRROR) Mirror.stepDice(dt);
+      if (MIRROR) Mirror.stepDice(dt, now);
       for (const c of this.list) { if (MIRROR && !Mirror.mine(c, now)) continue;
-        if (c.st === "held") { const ox = c.x; c.x += (c.tx - c.x) * Math.min(1, .3 * dt); c.y += (c.ty - c.y) * Math.min(1, .3 * dt);
+        if (c.st === "held") { const ox = c.x, hk = Math.min(1, (MIRROR ? .6 : .3) * dt); c.x += (c.tx - c.x) * hk; c.y += (c.ty - c.y) * hk;
           c.a += (Math.max(-.5, Math.min(.5, (c.x - ox) * .015)) - c.a) * .2 * dt; }
         else if (c.st === "shake") { const t = now - c.at; c.x = c.ox + Math.sin(t / 23 + c.k) * 5; c.y = this.FLOOR - this.S / 2 - Math.abs(Math.sin(t / 55 + c.k * 1.3)) * 26; c.a = Math.sin(t / 37 + c.k * 2) * .35;
           if (Math.floor(t / 90) !== c.fl) { c.fl = Math.floor(t / 90); this.tip(c); }
@@ -5905,13 +6052,13 @@ const Dice = {
           const hf = this.half(c);
           if (c.y + hf >= this.FLOOR) { c.y = this.FLOOR - hf;
             if (c.vy > 2.5) { this.clack(c.vy / 12); c.vy = -c.vy * rand(.34, .46); c.vx *= .82; c.va = c.va * .45 + (c.vx / (this.S / 2)) * .55 + rand(-.06, .06);
-              for (let i = 0; i < 5; i++) this.fx.push({ x: c.x + rand(-30, 30), y: this.FLOOR - 3, vx: rand(-1.5, 1.5), vy: rand(-1.5, -.3), life: 1, col: "rgba(210,205,195,1)", s: rand(2, 4) }); }
+              this.puff("dust", c); }
             else { c.vy = 0; c.vx *= Math.pow(.9, dt); c.va += ((c.vx / (this.S / 2)) - c.va) * .3 * dt;
               if (Math.abs(c.vx) < .6) { c.st = "settle"; c.ta = Math.round(c.a / Q) * Q; } } } }
         else if (c.st === "settle") {     // rocks down flat onto the face that came up
           c.a += (c.ta - c.a) * Math.min(1, .22 * dt); c.vx *= .8; c.x += c.vx * dt; c.y = this.FLOOR - this.half(c);
           if (Math.abs(c.ta - c.a) < .01) { c.a = 0; c.st = "rest"; c.y = this.FLOOR - this.S / 2; c.restAt = now; this.clack(.25); this.save();
-            this.PIPS[c.face].forEach(([px, py]) => { for (let i = 0; i < 3; i++) this.fx.push({ x: c.x + px * this.S * .27, y: c.y + py * this.S * .27, vx: rand(-1, 1), vy: rand(-2, -.5), life: 1, col: "#8dffaa", s: rand(1.5, 3) }); }); } }
+            this.puff("land", c); } }
         else { c.y = this.FLOOR - this.S / 2; if (c.restAt != null || c.glow > 0) c.glow = Math.min(1, c.glow + .03 * dt); }
       }
       // a moving bit gem that bumps into a die sends it flying: a really hard toss all over the screen (sometimes up to the top)
@@ -5922,7 +6069,7 @@ const Dice = {
             c.st = "air"; c.glow = 0; c.restAt = null; c.kickAt = now + 900; c.q = Math.floor(c.a / Q);
             c.vx = dir * rand(22, 42) * push; c.vy = -rand(26, 50); c.va = dir * rand(.35, .7);
             this.clack(1); setTimeout(() => this.clack(.7), 40);
-            for (let i = 0; i < 14; i++) this.fx.push({ x: c.x, y: c.y, vx: rand(-5, 5), vy: rand(-6, 1), life: 1, col: i % 2 ? "#b06bff" : "#8dffaa", s: rand(2, 4) }); } } }
+            this.puff("kick", c); } } }
       // the two dice knock into each other instead of passing through
       const [a, b] = this.list; if (!MIRROR && a && b && !a.held && !b.held) { const dx = b.x - a.x, dy = b.y - a.y, d = Math.hypot(dx, dy) || 1, need = this.S * 1.02;
         if (d < need) { const nx = dx / d, ny = dy / d, p = (need - d) / 2; a.x -= nx * p; b.x += nx * p; if (a.st === "air" || b.st === "air") { a.y -= ny * p; b.y += ny * p; }
@@ -5931,77 +6078,149 @@ const Dice = {
       this.list.forEach(c => this.draw(g, c, now));
       for (let i = this.fx.length - 1; i >= 0; i--) { const p = this.fx[i]; p.x += p.vx * dt; p.y += p.vy * dt; p.vy += .05 * dt; p.life -= .025 * dt; if (p.life <= 0) { this.fx.splice(i, 1); continue; }
         g.globalAlpha = p.life * .8; g.fillStyle = p.col; g.beginPath(); g.arc(p.x, p.y, p.s, 0, 6.283); g.fill(); g.globalAlpha = 1; }
-      BitGems.report();
       requestAnimationFrame(frame); };
     requestAnimationFrame(frame); }
 };
 
 /* ================= the touchpad copy (?mirror=1) =================
-   OBS (the real overlay) sends a snapshot ~11 times a second while the app's touchpad is open: the cloud, every bit gem
-   and the dice. The copy inside the touchpad draws them with the very same code and art, gliding between snapshots.
-   Your finger moves things in the copy straight away (no waiting for OBS), and OBS follows. */
+   The app's touchpad is this same page, running inside the app in "mirror" mode. OBS (the real overlay) tells it many
+   times a second where everything is (the cloud, every bit gem, the dice), what else is on screen (stars, lurkers,
+   scrap piles, the disco ball, the smoke...), and every effect or alert at the moment it starts; the copy draws it
+   all with this very same code and art.
+   The only things the copy decides for itself are the ones under your finger: the cloud while you steer it, and a gem
+   or die from the moment you grab it until it has landed (OBS does the same a moment later, and once both have come
+   to rest the copy settles onto OBS's). It makes no sound, keeps nothing, never listens to Twitch, and draws its
+   canvases at the touchpad's own pixel size (see the set-up at the top of this script). */
 const Mirror = {
-  cl: null, jump: false, touchAt: 0, held: null, g: [], d: null, cbAt: 0,
-  // ---- in OBS: the snapshot
-  snap() { const F = Face, now = performance.now(), r3 = v => Math.round((v || 0) * 1000) / 1000;
-    const o = { cl: { on: !!(F.on && !F.leaving), x: Math.round(F.px || 0), y: Math.round(F.py || 0), tank: !!F.tank, kind: F.kindWant || "", face: !!F.faceOn, storm: !!F.storm, rain: !!F.rain,
-        hue: r3(F.hue), size: r3(F.sizeTo == null ? 1 : F.sizeTo), dark: r3(F.darkTo || 0), mood: F.mood || "" },
-      g: BitGems.list.map(c => ({ n: c.name, b: c.bits, x: Math.round(c.x), y: Math.round(c.y), t: r3(c.tilt), r: r3(c.roll), ts: r3(c.topSpin), p: r3(c.pulse),
-        mv: c.held || c.air || c.topSpin || Math.abs(c.vx || 0) > .2 ? 1 : 0, an: c.anim ? c.anim.name : "", aa: c.anim ? Math.round(now - c.anim.at) : 0, ao: c.anim && c.anim.once ? 1 : 0 })),
-      d: { on: Dice.on, l: Dice.list.map(c => [Math.round(c.x), Math.round(c.y), r3(c.a), c.face, Math.round(c.glow * 100) / 100, c.st, Math.round(c.roll || 0)]) } };
-    if (now - this.cbAt > 2000) { this.cbAt = now; o.cb = ChatBox.get(); }
-    return o; },
-  // ---- in the copy: take a snapshot
-  state(s) { if (!MIRROR || !s) return; const now = performance.now();
-    if (s.cl) { const F = Face, c = s.cl; this.cl = c;
-      if (c.on && !F.on) { F.toggle(); F.a = 1; this.jump = true; } else if (c.on && F.leaving) F.leaving = false; else if (!c.on && F.on && !F.leaving) F.toggle();
-      F.tank = c.tank; if (c.kind) F.kindWant = c.kind; F.faceOn = c.face; F.storm = c.storm; F.rain = c.rain;
-      if (F.hue !== c.hue) F.setHue(c.hue); F.sizeTo = c.size; F.darkTo = c.dark; if (c.mood && F.mood !== c.mood) F.setMood(c.mood); }
-    if (s.g) { const keep = s.g.map(m => { let c = BitGems.find(m.n); if (!c) { c = BitGems.make({ name: m.n, bits: m.b, x: m.x }); c.y = m.y; c.tilt = m.t; c.roll = m.r; }
-        if (c.bits !== m.b) { c.bits = m.b; c.w = BitGems.Wd(m.b); } c.m = m;
-        if (m.an) { if (!c.anim || c.anim.name !== m.an) c.anim = { name: m.an, once: !!m.ao, dur: 1e9 }; c.anim.at = now - m.aa; } else c.anim = null;
-        return c; });
-      BitGems.list = keep; if (keep.length) BitGems.start(); }
-    if (s.d) { this.d = s.d; if (Dice.on !== s.d.on) { Dice.on = s.d.on; } if (Dice.on) Dice.start(); }
-    if (s.cb && s.cb.twitch && !this.cbOn) { this.cbOn = true; ChatBox.put(s.cb); ChatBox.layout(); ChatBox.show(s.cb.show !== false); ChatBox.bg(s.cb.bg !== false); ChatBox.connect(); }
-    else if (s.cb) { const b = s.cb; ChatBox.put(b); ChatBox.cur = null; ChatBox.layout(); ChatBox.el.classList.toggle("off", b.show === false); ChatBox.el.classList.toggle("clear", b.bg === false); } },
-  // a command the app just sent to OBS, played in the copy too (so taps show up instantly)
-  // something you grabbed or tossed on the touchpad moves by itself right here (instantly, the same way OBS moves
-  // it), until it has come to rest; then it goes back to following OBS
-  mine(c, now) { if (!c.local) return false; if (c.held) return true;
-    if (c.st ? c.st !== "rest" : (c.air || c.topSpin || Math.abs(c.vx || 0) > .2)) return true;
-    // stopped here: wait (still) until it has stopped in OBS too, then glide over to exactly where OBS has it
-    const i = Dice.list.indexOf(c), o = i >= 0 ? (this.d && this.d.l[i]) : c.m, still = !o || (i >= 0 ? o[5] === "rest" : !o.mv);
-    if (still && now - c.local > 600) c.local = 0; return false; },
-  cmd(c) { if (!MIRROR || !c) return; if (/^(bitGems|chat|sound|art)/.test(c.cmd)) return;
-    if (c.cmd === "cloudGo") this.touchAt = performance.now();
-    try { window.onRemote(c); } catch (e) {} },
-  // ---- everything else OBS plays (alerts, effects, chat-triggered things) is sent to the copy as it starts, and the
-  // copy plays the very same thing with the very same code
-  fwd(k, a) { if (MIRROR || !window.remoteSend || performance.now() > BitGems.watchUntil) return; try { window.remoteSend({ cmd: "mfx", k, a: JSON.parse(JSON.stringify(a || [])) }); } catch (e) {} },
-  run(k, a) { if (!MIRROR) return; a = a || []; const m = /^(\w+)\.run$/.exec(k);
-    try { if (m && FxLine.orig[m[1]]) FxLine.orig[m[1]](...a); else if (this.MFX[k]) { const [o, f] = this.MFX[k]; o[f](...a); } } catch (e) { console.error(e); } },
-  // where everything you can grab is in the copy right now (0..1 across the screen), for the touchpad's finger
+  V: 2, inst: Math.random().toString(36).slice(2, 8),
+  // ---------------- in OBS: what it sends ----------------
+  watchUntil: 0, lastRep: 0, q: 0, qn: 0, slowStr: "", slowAt: 0,
+  // the app says "the touchpad is open" every 15 seconds while it is; nothing is sent when nobody is looking
+  watch(on) { if (MIRROR) return; this.watchUntil = on ? performance.now() + 45000 : 0; if (on) this.send(true); },
+  watched() { return !MIRROR && !!window.remoteSend && performance.now() < this.watchUntil; },
+  direct() { return !!(window.remoteDirect && window.remoteDirect()); },          // linked straight to the phone (not through the internet)?
+  // where everything that moves is, right now (short lists of numbers, to keep it small)
+  snap() { const F = Face, now = performance.now(), r3 = v => Math.round((v || 0) * 1000) / 1000, r1 = v => Math.round((v || 0) * 10) / 10;
+    return { c: [F.on ? 1 : 0, F.leaving ? 1 : 0, Math.round(F.px || 0), Math.round(F.py || 0), F.tank ? 1 : 0, F.kindWant || "", F.faceOn ? 1 : 0, F.storm ? 1 : 0, F.rain || now < F.rainTill ? 1 : 0,
+        r3(F.hue), r3(F.sizeTo == null ? 1 : F.sizeTo), r3(F.darkTo), F.mood || "", r3(F.angTo), r1(F.speed), F.snowingNow ? 1 : 0, F.fx && now < F.fx.endAt ? F.fx.key : ""],
+      g: BitGems.list.map(c => [c.name, c.bits, Math.round(c.x), Math.round(c.y), r3(c.tilt), r3(c.roll), r3(c.topSpin), r3(c.pulse), c.held ? 2 : c.air || c.topSpin || Math.abs(c.vx || 0) > .2 ? 1 : 0,
+        c.anim ? c.anim.name : "", c.anim ? Math.round(now - c.anim.at) : 0, c.anim && c.anim.once ? 1 : 0, c.air ? r1(c.vx) : 0, c.air ? r1(c.vy) : 0, c.air && c.trail ? 1 : 0]),
+      d: [Dice.on ? 1 : 0, Dice.list.map(c => { const air = c.st === "air"; return [Math.round(c.x), Math.round(c.y), r3(c.a), c.face, Math.round(c.glow * 100) / 100, c.st, Math.round(c.roll || 0), air ? r1(c.vx) : 0, air ? r1(c.vy) : 0, air ? r3(c.va) : 0]; })] }; },
+  // the things that only change now and then
+  slow() { const F = Face;
+    return { cb: ChatBox.get(), wl: Wanted.level, lk: Lurk.list.map(x => [x.k, x.name, x.color]), mt: Mountain.list.map(x => [x.k, x.name, x.color, x.value]),
+      sp: Scrap.piles.map(p => [p.state === "up" ? 1 : p.state === "none" ? 0 : 2, p.x]), dz: Disco.on ? 1 : 0, sm: Smoke.on && Smoke.offAt == null ? 1 : 0,
+      sw: F.snowmen.map(m => [Math.round(m.x), m.name, m.color, m.born || 0]), nt: F.neutralTalk || "" }; },
+  // called very often; sends at most 33 times a second over the direct link, 10 through the internet relay
+  send(force) { if (!this.watched()) return; const now = performance.now();
+    if (!force && now - this.lastRep < (this.direct() ? 30 : 95)) return; this.lastRep = now;
+    if (force || now - this.slowAt > 700) { this.slowAt = now; const st = this.slow(), str = JSON.stringify(st);
+      if (force || str !== this.slowStr) { this.slowStr = str; window.remoteSend({ cmd: "mirs", v: this.V, t: Date.now(), s: st }); } }
+    window.remoteSend(Object.assign({ cmd: "mir", v: this.V, i: this.inst, q: ++this.q }, this.snap())); },
+  // something starting right now (an effect, an alert, a sparkle...): the copy plays the same thing
+  fwd(k, a, i) { if (!this.watched()) return; try { window.remoteSend({ cmd: "mfx", k, a: JSON.parse(JSON.stringify(a || [])), i: i || undefined }); } catch (e) {} },
+  // makes one of this page's actions also happen in the copy (lined: it waits its turn in the alert line)
+  hook(o, f, k, lined) { if (MIRROR) return; const orig = o[f].bind(o);
+    o[f] = (...a) => { let id; if (lined) id = Queue.nextId = this.inst + (++this.qn); this.fwd(k, a, id); try { return orig(...a); } finally { if (lined) Queue.nextId = null; } }; },
+
+  // ---------------- in the copy: what it does with it ----------------
+  cl: null, d: null, at: 0, lastQ: 0, from: "", first: true, jump: true, touchAt: 0, later: null, snowmen: null, ON: {},
+  lag: 100,                                              // how long OBS's news takes to get here, in ms (the app measures it and keeps this up to date)
+  evAt: 0,
+  // Is nothing on screen really moving? (A resting cloud only bobs, resting gems and dice only breathe and twinkle.)
+  // The copy then draws 30 pictures a second instead of 60: it looks the same and is half the work.
+  calm(now, loops) { if (now - this.touchAt < 2000 || now - this.evAt < 1500) return false;
+    if (loops > (Face.run ? 1 : 0) + (BitGems.running ? 1 : 0) + (Dice.running ? 1 : 0)) return false;       // an effect is drawing
+    const c = this.cl, F = Face;
+    if (c && (c.on || F.a > .02) && (F.tank || F.fx || c.rain || c.storm || c.sn || F.puffs.length || F.flakes.length || F.drops.length || Math.abs(c.x - (F.px || 0)) + Math.abs(c.y - (F.py || 0)) > 4)) return false;
+    if (BitGems.fx.length || Dice.fx.length) return false;
+    for (const g of BitGems.list) if (g.local || (g.m && g.m[8])) return false;
+    const d = this.d; if (d) for (let i = 0; i < Dice.list.length; i++) { const m = d[1][i]; if (Dice.list[i].local || (m && m[5] !== "rest")) return false; }
+    return true; },
+  state(o) { if (!MIRROR || !o || o.v !== this.V || !o.c) return;
+    if (o.i === this.from && o.q <= this.lastQ) return; this.from = o.i; this.lastQ = o.q;         // an older one that arrived late
+    const now = this.at = performance.now(), c = o.c, F = Face;
+    const cl = this.cl = { on: !!c[0], lv: !!c[1], x: c[2], y: c[3], tank: !!c[4], kind: c[5], face: !!c[6], storm: !!c[7], rain: !!c[8], hue: c[9], size: c[10], dark: c[11], mood: c[12], ang: c[13], spd: c[14], sn: !!c[15], fx: c[16] || "" };
+    if (cl.on && !F.on) { F.on = true; F.leaving = false; if (this.first) { F.a = 1; this.jump = true; } if (!F.run) F.start(); }   // (the first time: it's simply there; after that it comes out in its poof, as in OBS)
+    F.tank = cl.tank; if (cl.kind) F.kindWant = cl.kind; F.faceOn = cl.face; F.storm = cl.storm; F.rain = cl.rain; F.rainTill = 0;
+    if (F.hue !== cl.hue) F.setHue(cl.hue); F.sizeTo = cl.size; F.darkTo = cl.dark; if (cl.mood && F.mood !== cl.mood) F.setMood(cl.mood);
+    const fxNow = F.fx && now < F.fx.endAt ? F.fx.key : ""; if (fxNow !== cl.fx && F.on) { if (cl.fx) { F.fx = null; F.startFx(cl.fx); } else if (F.fx) F.fx.endAt = now; }
+    // the bit gems: the same ones, in OBS's order
+    BitGems.list = (o.g || []).map(m => { let g = BitGems.find(m[0]); if (!g) { g = BitGems.make({ name: m[0], bits: m[1], x: m[2] }); g.x = m[2]; g.y = m[3]; g.tilt = m[4]; g.roll = m[5]; }
+      if (g.bits !== m[1]) { g.bits = m[1]; g.w = BitGems.Wd(m[1]); } g.m = m;
+      if (!g.local) { if (m[9]) { if (!g.anim || g.anim.name !== m[9]) g.anim = { name: m[9], once: !!m[11], dur: 1e9 }; g.anim.at = now - m[10]; } else g.anim = null; }
+      return g; });
+    if (BitGems.list.length) BitGems.start();
+    // the dice
+    this.d = o.d; if (o.d) { Dice.on = !!o.d[0]; if (Dice.on) Dice.start(); }
+    this.first = false; },
+  // the things that only change now and then (OBS sends them when they change, and whenever the touchpad opens)
+  slowIn(o) { if (!MIRROR || !o || o.v !== this.V || !o.s) return; const s = o.s;
+    if (s.cb) { ChatBox.put(s.cb); ChatBox.cur = null; ChatBox.layout(); ChatBox.el.classList.toggle("off", s.cb.show === false); ChatBox.el.classList.toggle("clear", s.cb.bg === false); }
+    if (s.wl != null && s.wl !== Wanted.level) Wanted.set(s.wl, true);
+    if (s.lk) Lurk.sync(s.lk);
+    if (s.sp) Scrap.sync(s.sp);
+    if (s.dz != null && !!s.dz !== Disco.on) Disco.toggle();
+    if (s.sm != null && !!s.sm !== (Smoke.on && Smoke.offAt == null)) Smoke.run();
+    if (s.nt) Face.neutralTalk = s.nt;
+    this.later = { mt: s.mt, sw: s.sw && s.sw.length ? { list: s.sw, t: o.t, got: performance.now() } : null }; this.applyLater(); },
+  // (two of them can't always be matched straight away: the streak mountain's climbers while it is on screen, and snowmen)
+  applyLater() { const L = this.later; if (!L) return;
+    if (L.mt && !Mountain.up) { Mountain.list = L.mt.map(([k, name, color, value]) => ({ k, name, color, value })); L.mt = null; }
+    if (L.sw && this.cl) { this.snowmen = L.sw; L.sw = null; if (!Face.run) Face.start(); } },
+  // the touchpad is back on screen after a while: everything goes straight to where OBS has it now (no gliding across)
+  resync() { this.jump = true; BitGems.list.forEach(g => { g.seen = 0; g.local = 0; g.held = false; }); Dice.list.forEach(c => { c.seen = 0; c.local = 0; c.held = false; }); },
+  // an effect, alert or little burst that just started in OBS
+  run(k, a, i) { if (!MIRROR) return; const h = this.ON[k]; if (!h) return; this.evAt = performance.now();
+    try { Queue.nextId = i || null; h(...(a || [])); } catch (e) { console.error(e); } finally { Queue.nextId = null; } },
+  // your finger on the touchpad: the copy does these itself, straight away (the app sends the same to OBS)
+  local(c) { if (!MIRROR || !c) return; this.touchAt = performance.now();
+    if (c.cmd === "cloudGo") { Face.goTo(+c.x, +c.y); return; }
+    const T = String(c.n).startsWith("dice:") ? Dice : BitGems;
+    if (c.cmd === "gemGrab") T.grab(c.n); else if (c.cmd === "gemMove") { T.moveTo(c.n, +c.x, +c.y); const g = T.find(c.n); if (g && g.held) g.local = this.touchAt; }
+    else if (c.cmd === "gemFling") T.fling(c.n, +c.vx, +c.vy); },
+  // Something you grabbed or tossed moves by itself right here, instantly, the same way OBS moves it.
+  // - Over the direct link (news from OBS is only a blink old) it switches to showing OBS's own as soon as OBS's is
+  //   flying too, so what you see is exactly the stream's throw.
+  // - Through the relay (news is older) it keeps flying by itself, gently drawn toward where OBS's is, and once both
+  //   have come to rest it glides onto exactly OBS's spot.
+  mine(c, now) { if (!c.local) return false;
+    if (c.held) { if (now - c.local > 20000) { c.held = false; c.local = 0; return false; } return true; }
+    const i = Dice.list.indexOf(c), die = i >= 0, o = die ? (this.d && this.d[1][i]) : c.m;
+    const flying = !!o && (die ? o[5] === "air" || o[5] === "settle" : o[8] === 1), still = !o || (die ? o[5] === "rest" : !o[8]);
+    if (flying && this.lag <= 50 && now - c.local > 50) { c.local = 0; return false; }
+    if (c.st ? c.st !== "rest" : (c.air || c.topSpin || Math.abs(c.vx || 0) > .2)) {
+      if (flying) { const f = (Math.min(160, now - this.at) + this.lag) / 16, tx = die ? o[0] + (o[7] || 0) * f : o[2] + (o[12] || 0) * f; c.x += (tx - c.x) * .05; if (die) c.face = o[3]; }
+      return true; }
+    if ((still && now - c.local > 600) || now - c.local > 15000) c.local = 0; return false; },
+  // where everything you can grab is right now (0..1 across the screen), for the touchpad's finger
   items() { const L = [];
-    Dice.on && Dice.list.forEach(c => L.push({ id: c.id, x: c.x / 2560, y: c.y / 1440, r: Dice.S * .9 / 2560, die: 1 }));
+    if (Dice.on) Dice.list.forEach(c => L.push({ id: c.id, x: c.x / 2560, y: c.y / 1440, r: Dice.S * .9 / 2560, die: 1 }));
     BitGems.list.forEach(c => { const d = BitGems.dims(c); L.push({ id: c.name, x: c.x / 2560, y: (c.y - d.H * .5) / 1440, r: d.W * .9 / 2560 }); });
     return L; },
-  // your finger holding a gem or die (x, y: 0..1 across the touchpad); null when you let go
-  hold(id, x, y) { this.held = id ? { id, x, y } : null; },
-  lerp(c, k, x, y) { c.x += (x - c.x) * k; c.y += (y - c.y) * k; },
-  stepGems(dt) { const k = Math.min(1, .3 * dt);
+  diceRange() { return [Dice.lo() / 2560, Dice.hi() / 2560]; },
+  // every frame: glide everything you aren't holding to where OBS has it (carrying on the way it was moving, so it
+  // stays smooth between OBS's messages)
+  stepGems(dt, now) { const k = Math.min(1, .35 * dt), age = (Math.min(160, now - this.at) + Math.min(60, this.lag)) / 16;
     for (const c of BitGems.list) { const m = c.m; if (!m || c.local) continue;
-      if (this.held && this.held.id === c.name) { const d = BitGems.dims(c); this.lerp(c, .5, this.held.x * 2560, Math.min(BitGems.FLOOR, this.held.y * 1440 + d.H * .5)); }
-      else this.lerp(c, k, m.x, m.y);
-      c.tilt += (m.t - c.tilt) * k; c.roll = (c.roll || 0) + (m.r - (c.roll || 0)) * k; c.topSpin = m.ts; c.pulse = m.p; c.air = false; c.walk = null; c.lie = null; c.held = false; } },
-  stepDice(dt) { const d = this.d; if (!d) return; const k = Math.min(1, .3 * dt);
-    Dice.list.forEach((c, i) => { const m = d.l[i]; if (!m || c.local) return;
-      if (this.held && this.held.id === c.id) this.lerp(c, .5, Math.max(Dice.lo(), Math.min(Dice.hi(), this.held.x * 2560)), Math.min(Dice.FLOOR - Dice.S / 2, this.held.y * 1440));
-      else this.lerp(c, k, m[0], m[1]);
-      c.a += (m[2] - c.a) * k; c.face = m[3]; c.glow += (m[4] - c.glow) * k; c.st = m[5]; c.roll = m[6]; }); }
+      const tx = m[2] + (m[12] || 0) * age, ty = Math.min(BitGems.FLOOR, m[3] + (m[13] || 0) * age), tr = m[5] + (m[6] || 0) * age;
+      if (!c.seen) { c.seen = 1; c.x = tx; c.y = ty; c.tilt = m[4]; c.roll = tr; }
+      c.x += (tx - c.x) * k; c.y += (ty - c.y) * k; c.tilt += (m[4] - c.tilt) * k; c.roll = (c.roll || 0) + (tr - (c.roll || 0)) * k; c.topSpin = m[6]; c.pulse = m[7];
+      c.air = false; c.walk = null; c.lie = null; c.held = false; c.vx = 0;
+      if (m[14] && Math.random() < .7) BitGems.fx.push({ x: c.x + rand(-c.w * .3, c.w * .3), y: c.y - c.w * .45, vx: rand(-.6, .6), vy: rand(-1, .2), life: 1, col: bitColor(c.bits), s: rand(2, 4) }); } },
+  stepDice(dt, now) { const d = this.d; if (!d) return; const k = Math.min(1, .4 * dt), age = (Math.min(160, now - this.at) + Math.min(60, this.lag)) / 16;
+    Dice.list.forEach((c, i) => { const m = d[1][i]; if (!m || c.local) return;
+      if (m[5] === "shake") {                           // being rattled: the same rattle, right here
+        if (c.st !== "shake" || c.sx == null) { c.sx = m[0]; c.sat = now; } const t = now - c.sat;
+        c.x = c.sx + Math.sin(t / 23 + i) * 5; c.y = Dice.FLOOR - Dice.S / 2 - Math.abs(Math.sin(t / 55 + i * 1.3)) * 26; c.a = Math.sin(t / 37 + i * 2) * .35; c.face = m[3]; c.glow = 0; c.st = "shake"; c.seen = 1; return; }
+      c.sx = null;
+      const tx = m[0] + (m[7] || 0) * age, ty = Math.min(Dice.FLOOR - Dice.S / 2, m[1] + (m[8] || 0) * age), ta = m[2] + (m[9] || 0) * age;
+      if (!c.seen) { c.seen = 1; c.x = tx; c.y = ty; c.a = ta; c.glow = m[4]; }
+      c.x += (tx - c.x) * k; c.y += (ty - c.y) * k; c.a += (ta - c.a) * k; c.face = m[3]; c.glow += (m[4] - c.glow) * k; c.st = m[5]; c.roll = m[6]; c.held = false; }); }
 };
-window.Mirror = Mirror; window.MIRROR = MIRROR;                 // the app's touchpad reaches it from outside the frame
-if (!MIRROR) setInterval(() => BitGems.report(), 100);         // keeps the touchpad copy up to date even when no gems or dice are moving
+window.Mirror = Mirror; window.MIRROR = MIRROR; window.Raf = Raf; window.Low = Low;       // the app's touchpad reaches these from outside the frame
+if (MIRROR) setInterval(() => Mirror.applyLater(), 1000);        // (anything that couldn't be matched to OBS straight away is tried again)
+else setInterval(() => Mirror.send(), 15);                      // keeps the touchpad copy up to date (only while the app says it's open)
 
 /* ================= smoke lap =================
    Two soft ribbons of smoke, one lime green and one purple (the logo's colours), twisting around each other like a
@@ -6063,7 +6282,7 @@ window.onRemote = c => {
   else if (c.cmd === "sound") SoundIn.receive(c);
   else if (c.cmd === "soundList") { const list = Object.assign({}, MySounds.names); Object.keys(BUNDLED_SOUNDS).forEach(k => list[k] = "built in"); if (window.remoteSend) window.remoteSend({ cmd: "sounds", list }); }
   else if (c.cmd === "soundTest") { if (!MySounds.urls[c.type] && !BUNDLED_SOUNDS[c.type]) MySounds.report(c.type, "no sound saved for this in OBS"); else { const cur = MySounds.playing[c.type]; if (cur) cur.pause(); MySounds.play(c.type); } }
-  else if (c.cmd === "gemWatch") { BitGems.watchUntil = performance.now() + 40000; BitGems.report(true); }
+  else if (c.cmd === "mirWatch") Mirror.watch(c.on !== false);                // the app's touchpad is open (or has closed): see Mirror
   else if (c.cmd === "gemGrab") (String(c.n).startsWith("dice:") ? Dice : BitGems).grab(c.n);            // dice on the touchpad go by "dice:1"/"dice:2"
   else if (c.cmd === "gemMove") (String(c.n).startsWith("dice:") ? Dice : BitGems).moveTo(c.n, +c.x, +c.y);
   else if (c.cmd === "gemFling") (String(c.n).startsWith("dice:") ? Dice : BitGems).fling(c.n, +c.vx, +c.vy);
@@ -6156,14 +6375,21 @@ const FxLine = {
 FxLine.orig = {};
 for (const [name, ms] of Object.entries(FxLine.MODS)) { const m = { VTerrible, ScrapHaul, SmokeLap, Mango, Banana, Fishy, Chef, Tank, Kazul, Jinx, Pirate, Turkey, Penguin, Eagle, Bolt }[name], orig = m.run.bind(m);
   FxLine.orig[name] = orig;
-  m.run = (...a) => FxLine.push(() => { if (ms) FxLine.until = performance.now() + ms; Mirror.fwd(name + ".run", a); orig(...a); }); }   // the touchpad copy plays it the moment OBS does
+  m.run = (...a) => FxLine.push(() => { if (ms) FxLine.until = performance.now() + ms; Mirror.fwd("fx", [name, ...a]); orig(...a); }); }   // the touchpad copy plays it the moment OBS does
 
-/* one alert at a time, in order */
+/* one alert at a time, in order.
+   (For the app's touchpad copy: every alert is given an id when it's lined up; OBS tells the copy "that one starts
+   now" as each begins, so the copy plays them at the same moments instead of keeping a line of its own.) */
 const Queue = {
-  q: [], busy: false,
-  push(fn) { this.q.push(fn); if (this.q.length > 30) this.q.shift(); if (!this.busy) this.next(); },
-  next() { const fn = this.q.shift(); if (!fn) { this.busy = false; return; } this.busy = true;
-    let ms = 6000; try { ms = fn(); } catch (e) { console.error(e); } setTimeout(() => this.next(), ms); }
+  q: [], busy: false, nextId: null, held: {},
+  push(fn) { const id = this.nextId; this.nextId = null;
+    if (MIRROR) { if (!id) { try { fn(); } catch (e) { console.error(e); } return; }
+      this.held[id] = fn; const ks = Object.keys(this.held); if (ks.length > 40) delete this.held[ks[0]]; return; }
+    this.q.push([fn, id]); if (this.q.length > 30) this.q.shift(); if (!this.busy) this.next(); },
+  next() { const it = this.q.shift(); if (!it) { this.busy = false; return; } this.busy = true;
+    if (it[1]) Mirror.fwd("q.go", [it[1]]);
+    let ms = 6000; try { ms = it[0](); } catch (e) { console.error(e); } setTimeout(() => this.next(), ms); },
+  go(id) { const fn = this.held[id]; if (!fn) return; delete this.held[id]; try { fn(); } catch (e) { console.error(e); } }
 };
 const Alerts = {
   sub: (name, color) => Queue.push(() => { MySounds.play("sub"); edgeGlow("#22c55e80", "#4ade80a0"); return doSub(name, color); }),
@@ -6171,7 +6397,8 @@ const Alerts = {
   bits: (name, amount, color) => Queue.push(() => { MySounds.play("bits"); const ms = doBits(name, amount, color);
     setTimeout(() => BitGems.add(name, amount), Math.max(0, ms - 600)); return ms; }),     // then their gem drops in and stays all stream
   streak: (name, value, login, color) => Queue.push(() => { MySounds.play("streak"); return doStreak(name, value, login, color); }),
-  raid: name => Queue.push(() => { MySounds.play("raid"); return doRaidCustom(name); })
+  raid: name => Queue.push(() => { MySounds.play("raid"); return doRaidCustom(name); }),
+  raidFx: name => Queue.push(() => doRaidCustom(name))                  // a raider's custom effect played by their redeem (no raid sound)
 };
 
 /* ================= test bar ================= */
@@ -6188,7 +6415,7 @@ function setupTestBar() {
   bar.querySelectorAll("[data-t]").forEach(b => b.addEventListener("click", () => setTimeout(hide, 60)));
   bar.querySelectorAll("select, input[type=color]").forEach(x => x.addEventListener("change", () => setTimeout(hide, 60)));
 }
-if (!LIVE || qs.has("test")) setupTestBar();
+if (!MIRROR && (!LIVE || qs.has("test"))) setupTestBar();
 /* In OBS (live), the test bar is hidden. Right-click the source > Interact, then click the invisible square in the
    bottom-right corner to open it; click the corner again to close it. While it's open it shows on stream too. */
 else {
@@ -6494,6 +6721,11 @@ const Lurk = {
     this.list = this.list.filter(x => x.t > day); this.save();
   },
   save() { try { localStorage.setItem(this.KEY, JSON.stringify(this.list)); } catch (e) {} this.sign(); },
+  // the touchpad copy: the same lurkers as OBS ([key, name, colour] for each); new ones take their seat quietly
+  sync(L) { const want = new Map(L.map(([k, name, color]) => [k, { k, name, color, t: Date.now() }]));
+    this.list.slice().forEach(x => { if (!want.has(x.k) && !this.arriving.has(x.k)) this.leave(x.k); });
+    want.forEach((e, k) => { if (this.list.some(x => x.k === k)) return; this.list.push(e); if (this.up && this.G) { this.seat(e); this.layout(); } });
+    this.sign(); },
   sign() { const n = this.list.length; $("#towerSign").textContent = n ? `LURKERS · ${n}` : "LURKERS"; },
   join(name, login, color) {
     const k = (login || name).toLowerCase();
@@ -6508,6 +6740,7 @@ const Lurk = {
     const k = (login || "").toLowerCase();
     const i = this.list.findIndex(x => x.k === k);
     if (i < 0) return;
+    Mirror.fwd("Lurk.leave", [k]);
     this.list.splice(i, 1); this.save();
     this.q = this.q.filter(x => x !== k); this.arriving.delete(k);
     const h = this.heads[k];
@@ -6835,12 +7068,35 @@ const ChatBox = {
   tell() { if (window.remoteSend) { const c = this.get(); window.remoteSend({ cmd: "chatState", show: c.show !== false, bg: c.bg !== false }); } },
   cfg(c) { this.put({ twitch: c.twitch || "", kickRoom: c.kickRoom || "", kickKey: c.kickKey || "", kickCluster: c.kickCluster || "" }); if (c.bg != null) this.bg(c.bg); if (c.show != null && this.get().show == null) this.show(c.show); this.connect(); }
 };
-// the things that happen on stream because of Twitch (alerts, gifts, !scroop, lurkers, stars, chat snow/rain): OBS
-// tells the touchpad copy each time one starts
-Mirror.MFX = { "Alerts.sub": [Alerts, "sub"], "Alerts.follow": [Alerts, "follow"], "Alerts.bits": [Alerts, "bits"], "Alerts.streak": [Alerts, "streak"], "Alerts.raid": [Alerts, "raid"],
-  "Gifts.gift": [Gifts, "gift"], "Gifts.recipient": [Gifts, "recipient"], "Scrap.dig": [Scrap, "dig"], "Scrap.showBoard": [Scrap, "showBoard"],
-  "Lurk.join": [Lurk, "join"], "Lurk.leave": [Lurk, "leave"], "Wanted.set": [Wanted, "set"], "Face.chatSnow": [Face, "chatSnow"], "Face.chatRain": [Face, "chatRain"] };
-if (!MIRROR) for (const [k, [o, f]] of Object.entries(Mirror.MFX)) { const orig = o[f].bind(o); o[f] = (...a) => { Mirror.fwd(k, a); return orig(...a); }; }
+/* ---- what OBS tells the touchpad copy about as it starts, and what the copy does when it hears ---- */
+// in OBS: these also happen in the copy (the ones marked true wait their turn in the alert line, and the copy plays
+// each when OBS starts it)
+[["sub", 1], ["follow", 1], ["bits", 1], ["streak", 1], ["raid", 1], ["raidFx", 1]].forEach(([f]) => Mirror.hook(Alerts, f, "Alerts." + f, true));
+Mirror.hook(Gifts, "gift", "Gifts.gift", true); Mirror.hook(Gifts, "recipient", "Gifts.recipient");
+Mirror.hook(Lurk, "join", "Lurk.join"); Mirror.hook(Wanted, "set", "Wanted.set");
+Mirror.hook(Face, "fire", "Face.fire"); Mirror.hook(Face, "bark", "Face.bark"); Mirror.hook(Face, "doAction", "Face.doAction");
+if (!MIRROR) { const show = toast; toast = (...a) => { Mirror.fwd("toast", a); return show(...a); }; }
+// in the copy: what each of those does
+Mirror.ON = {
+  fx: (name, ...a) => { if (FxLine.orig[name]) FxLine.orig[name](...a); },             // an effect from the effect line
+  "q.go": id => Queue.go(id),                                                           // "the alert you were told about starts now"
+  "Alerts.sub": (...a) => Alerts.sub(...a), "Alerts.follow": (...a) => Alerts.follow(...a), "Alerts.bits": (...a) => Alerts.bits(...a),
+  "Alerts.streak": (...a) => Alerts.streak(...a), "Alerts.raid": (...a) => Alerts.raid(...a), "Alerts.raidFx": (...a) => Alerts.raidFx(...a),
+  "Gifts.gift": (...a) => Gifts.gift(...a), "Gifts.recipient": n => Gifts.recipient(n),
+  "Lurk.join": (...a) => Lurk.join(...a), "Lurk.leave": k => Lurk.leave(k), "Wanted.set": n => Wanted.set(n),
+  "Face.fire": () => Face.fire(), "Face.bark": () => Face.bark(), "Face.doAction": () => Face.doAction(),
+  snow: (x, name, color) => { Face.snowIn = [x, name, color]; }, "snow.at": (x, name) => { Face.snowAt = [x, name]; },
+  "Scrap.spawn": x => Scrap.sync([[1, x]]),
+  "Scrap.run": (i, x, job) => { Scrap.build(); const p = Scrap.piles[i]; if (!p) return; if (p.state === "none") Scrap.spawn(x); if (p.state !== "up") return; p.state = "claimed"; Scrap.run(p, job); },
+  "Scrap.board": html => Scrap.showBoard(html),
+  toast: (...a) => toast(...a),
+  "gem.sp": (who, x, y, n, col) => { const g = BitGems.find(who); if (g && g.local) return; BitGems.sparkle(x, y, n, col); BitGems.start(); },
+  "gem.dust": (who, x, w) => { const g = BitGems.find(who); if (g && g.local) return; BitGems.dust(x, w); BitGems.start(); },
+  "dice.fx": (kind, i, x, y, face) => { const c = Dice.list[i]; if (c && c.local) return; Dice.puff(kind, { x, y, face }, true); }
+};
+// the app's own chat reader feeds the copy's chat box (the copy doesn't connect to chat itself)
+Mirror.chat = m => { try { ChatBox.add(m); } catch (e) {} };
+Mirror.chatFrom = feed => { if (feed) { ChatFeed.BADGES = feed.BADGES; ChatFeed.EXTRA = feed.EXTRA; } };
 ChatBox.init();
 BitGems.load();
 Dice.load();
@@ -6853,7 +7109,11 @@ if (LIVE) Live.init();
    Only runs when the OBS link has &ctl=KEY (the pairing key shown in the app's Control screen).
    The app and this page talk instantly through KZRelay (two public MQTT servers at once) on a channel named
    after that key. Every command is answered with "ack", so the app knows it arrived. This page also says
-   "hello" (its name and version) when it connects and whenever the app asks. */
+   "hello" (its name and version) when it connects and whenever the app asks.
+   HTML3 can also be linked straight to the app (KZDirect: phone to PC over your own Wi-Fi, a few milliseconds
+   instead of a trip round the internet). The app asks for that link through the relay. While it's up, the things
+   sent many times a second (the touchpad) go over it only; everything else goes over both it and the relay, and
+   whichever copy arrives second is ignored, so nothing depends on the direct link working. */
 /* ================= KZRelay: instant messages between the app and the overlays =================
    A tiny MQTT client over WebSockets. It connects to two free public MQTT servers at once and sends every
    message through both, so if one is slow or down the other still delivers; duplicates are dropped.
@@ -6933,23 +7193,109 @@ window.KZRelay = function (topic, onMessage, servers) {
   return api;
 };
 
+/* ================= KZDirect: a direct link between the app and an overlay page =================
+   The relay above goes out to the internet and back. When the phone and the PC can reach each other directly (they
+   are on the same Wi-Fi), this opens a direct connection between the two pages (WebRTC data channels, the same thing
+   video calls use), set up by passing two short messages through the relay. Messages then take a few milliseconds.
+   If it can't connect, or drops, nothing is lost: everything simply keeps going through the relay, and the app tries
+   again now and then.
+   Two channels: "sure" (everything arrives, in order) and "fast" (for things sent many times a second where only the
+   newest matters: if one is lost it is simply skipped, so they can never pile up).
+     opt.role      "app" (asks for the link) or "overlay" (answers)
+     opt.signal    o => send a set-up message to the other side through the relay
+     opt.onMessage o => a message arrived over the direct link
+     opt.onState   (up, why) => the link came up or went down
+     opt.ips       () => this device's own network addresses, if the app knows them (see withIps) */
+window.KZDirect = function (opt) {
+  const RTC = window.RTCPeerConnection, app = opt.role === "app", me = Math.random().toString(36).slice(2, 10);   // (me: which open copy of the app this is)
+  const api = { up: false, ok: !!RTC, tries: 0, lastWhy: "", since: 0 };
+  let pc = null, sure = null, fast = null, sid = "", timer = 0, retry = 0, busy = false, lastIn = 0, beat = 0, peer = "";
+  const say = (up, why) => { if (up === api.up && !why) return; api.up = up; api.lastWhy = why || ""; api.since = Date.now(); try { opt.onState && opt.onState(up, why || ""); } catch (e) {} };
+  const close = () => { clearTimeout(timer); clearInterval(beat); const p = pc; pc = sure = fast = null; sid = "";
+    if (p) { try { p.onconnectionstatechange = p.ondatachannel = null; p.close(); } catch (e) {} } };
+  const fail = why => { const was = api.up; close(); say(false, why);
+    // try again: straight away if it had been working, otherwise after 8 s, 16 s, 32 s, then once a minute, and after a few of those every 5 minutes
+    if (app) { clearTimeout(retry); const wait = was ? 1500 : api.tries > 6 ? 300000 : Math.min(60000, 4000 * Math.pow(2, Math.min(4, api.tries))); retry = setTimeout(() => api.start(), wait); } };
+  const gathered = (p, ms) => new Promise(ok => { if (p.iceGatheringState === "complete") return ok(); const t = setTimeout(ok, ms);
+    p.addEventListener("icegatheringstatechange", () => { if (p.iceGatheringState === "complete") { clearTimeout(t); ok(); } }); });
+  // Browsers hide the device's own network address behind a made-up name (xxxx.local) that the other side often can't
+  // look up. Where the app knows the phone's real address, it is added alongside, so the PC can find the phone.
+  const withIps = sdp => { let ips = []; try { ips = (opt.ips && opt.ips()) || []; } catch (e) {} if (!ips.length) return sdp; let n = 0;
+    return sdp.split("\r\n").map(l => { const m = /^a=candidate:\S+ (\d) udp (\d+) (\S+\.local) (\d+) typ host(.*)$/i.exec(l); if (!m) return l;
+      return [l].concat(ips.filter(ip => /^\d+\.\d+\.\d+\.\d+$/.test(ip)).map(ip => "a=candidate:" + (9000 + (++n)) + " " + m[1] + " udp " + m[2] + " " + ip + " " + m[4] + " typ host" + m[5])).join("\r\n"); }).join("\r\n"); };
+  const wire = (p, mySid) => {
+    const check = () => { if (sid !== mySid || api.up || !sure || !fast || sure.readyState !== "open" || fast.readyState !== "open") return;
+      clearTimeout(timer); api.tries = 0; lastIn = Date.now(); say(true);
+      // the overlay side hangs up if the app has gone quiet (the app sends a little "are you there" every 2 seconds)
+      clearInterval(beat); if (!app) beat = setInterval(() => { if (api.up && Date.now() - lastIn > 12000) fail("the app went quiet"); }, 3000); };
+    const on = ch => { ch.onopen = check; ch.onclose = () => { if (sid === mySid && api.up) fail("closed"); };
+      ch.onmessage = e => { if (sid !== mySid) return; lastIn = Date.now(); let o; try { o = JSON.parse(e.data); } catch (x) { return; } try { opt.onMessage(o); } catch (x) { console.error(x); } }; if (ch.readyState === "open") check(); };
+    p.onconnectionstatechange = () => { if (sid !== mySid) return; const st = p.connectionState; if (st === "failed" || st === "closed") fail(st); };
+    if (sure) on(sure); if (fast) on(fast);
+    p.ondatachannel = e => { if (sid !== mySid) return; if (e.channel.label === "sure") sure = e.channel; else if (e.channel.label === "fast") fast = e.channel; else return; on(e.channel); };
+  };
+  // the app: ask the overlay for a direct link
+  api.start = async () => { if (!RTC || !app || busy) return; clearTimeout(retry); close(); busy = true; api.tries++; const mine = sid = Math.random().toString(36).slice(2, 10);
+    try { const p = pc = new RTC({ iceServers: [] });
+      sure = p.createDataChannel("sure"); fast = p.createDataChannel("fast", { ordered: false, maxRetransmits: 0 }); wire(p, mine);
+      await p.setLocalDescription(await p.createOffer()); await gathered(p, 1200); if (sid !== mine) return;
+      opt.signal({ rtc: "offer", sid: mine, cid: me, sdp: withIps(p.localDescription.sdp) });
+      timer = setTimeout(() => { if (sid === mine && !api.up) fail("no direct path"); }, 9000);
+    } catch (e) { if (sid === mine) fail("couldn't start: " + (e && e.message || e)); } finally { busy = false; } };
+  // a set-up message from the other side
+  api.signal = async m => { if (!RTC || !m) return;
+    try {
+      if (m.rtc === "answer" && app) { if (m.sid !== sid || !pc || pc.signalingState !== "have-local-offer") return; await pc.setRemoteDescription({ type: "answer", sdp: m.sdp }); }
+      else if (m.rtc === "busy" && app) { if (m.sid === sid) { api.tries = Math.max(api.tries, 4); fail("another phone or tab has the direct link"); } }
+      else if (m.rtc === "offer" && !app) {
+        // one direct link at a time: if another open copy of the app is using it right now, this one keeps to the relay
+        if (api.up && peer && m.cid && m.cid !== peer && Date.now() - lastIn < 6000) { opt.signal({ rtc: "busy", sid: m.sid }); return; }
+        close(); if (api.up) say(false, "new link"); peer = m.cid || ""; const mine = sid = m.sid, p = pc = new RTC({ iceServers: [] }); wire(p, mine);
+        await p.setRemoteDescription({ type: "offer", sdp: m.sdp }); await p.setLocalDescription(await p.createAnswer()); await gathered(p, 1200); if (sid !== mine) return;
+        opt.signal({ rtc: "answer", sid: mine, sdp: p.localDescription.sdp });
+        timer = setTimeout(() => { if (sid === mine && !api.up) { close(); say(false, "no direct path"); } }, 12000); }
+    } catch (e) { if (app) fail("set-up failed: " + (e && e.message || e)); else { close(); say(false, "set-up failed"); } } };
+  // send one message; false if the link isn't up (the caller then uses the relay)
+  api.send = (o, quick) => { const ch = quick ? fast : sure; if (!api.up || !ch || ch.readyState !== "open") return false;
+    try { if (quick && ch.bufferedAmount > 65536) return true;        // the fast channel never queues up: skip this one
+      ch.send(JSON.stringify(o)); return true; } catch (e) { return false; } };
+  api.heard = () => { lastIn = Date.now(); };
+  api.quiet = () => Date.now() - lastIn;                      // how long since anything arrived
+  api.drop = why => { if (pc) fail(why || "dropped"); };
+  api.stop = () => { clearTimeout(retry); close(); say(false, "stopped"); };
+  return api;
+};
+
 (() => {
   const qs = new URLSearchParams(location.search), key = qs.get("ctl");
   if (!key || !window.WebSocket) return;
-  const PAGE = "html3", VERSION = "d0252ae";
-  let said = false;
-  const relay = KZRelay("kzctl/" + key, c => {
+  const PAGE = "html3", VERSION = "45877f5", INST = Math.random().toString(36).slice(2, 8);
+  const QUICK = { mir: 1, rtt: 1 };                                 // sent many times a second: only the newest matters
+  let said = false, direct = null;
+  const seen = new Set(), seenList = [], fresh = id => { if (!id) return true; if (seen.has(id)) return false; seen.add(id); seenList.push(id); if (seenList.length > 800) seen.delete(seenList.shift()); return true; };
+  const out = o => { o = Object.assign({ from: "overlay", page: PAGE, version: VERSION, _id: INST + Math.random().toString(36).slice(2, 10) }, o);
+    if (o.cmd === "hello") { o.inst = INST; o.rtc = direct && direct.ok ? 1 : 0; }       // which load of the page this is, and whether it can link directly
+    if (direct && direct.up) { if (QUICK[o.cmd]) { direct.send(o, true); return; } direct.send(o, false); }
+    relay.send(o); };
+  const hello = () => out({ cmd: "hello", tw: window.twitchStatus || null });
+  const handle = c => {
     if (!c || c.from === "overlay" || (c.to && c.to !== "all" && c.to !== PAGE)) return;
+    if (!fresh(c._id)) return;                                      // already had it (it came by the other route too)
     if (c.t && Date.now() - c.t > 60000) return;                     // ignore anything stale
-    const ack = () => relay.send({ from: "overlay", page: PAGE, version: VERSION, cmd: "ack", ack: c._id });
-    if (c.cmd === "ping") relay.send({ from: "overlay", page: PAGE, version: VERSION, cmd: "hello", tw: window.twitchStatus || null });
+    const ack = () => out({ cmd: "ack", ack: c._id });
+    if (c.cmd === "ping") hello();
+    else if (c.cmd === "rtt") out({ cmd: "rtt", t0: c.t0, via: c.via });         // "are you there": answered the same way it came, so the app can time the trip
+    else if (c.cmd === "rtc") { if (direct) direct.signal(c); }
     else if (c.cmd === "reload") {                                  // load the newest version (a fresh address skips any cached copy)
       ack(); setTimeout(() => { const u = new URL(location.href); u.searchParams.set("_v", Date.now()); location.replace(u.toString()); }, 300);
     } else if (typeof window.onRemote === "function") { try { window.onRemote(c); if (!c.noack) ack(); } catch (x) { console.error(x); } }
-  });
+  };
+  const relay = KZRelay("kzctl/" + key, handle);
+  if (PAGE === "html3" && window.KZDirect) direct = KZDirect({ role: "overlay", signal: o => relay.send(Object.assign({ from: "overlay", page: PAGE, cmd: "rtc" }, o)), onMessage: handle });
   // lets the page answer the app itself (e.g. "the art arrived and is saved")
-  window.remoteSend = o => relay.send(Object.assign({ from: "overlay", page: PAGE, version: VERSION }, o));
-  relay.onUp = () => { if (!said) { said = true; relay.send({ from: "overlay", page: PAGE, version: VERSION, cmd: "hello", tw: window.twitchStatus || null }); } };
+  window.remoteSend = out;
+  window.remoteDirect = () => !!(direct && direct.up);              // is the direct link to the app up?
+  relay.onUp = () => { if (!said) { said = true; hello(); } };
 })();
 </script>
 </body>
