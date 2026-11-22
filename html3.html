@@ -6529,6 +6529,8 @@ const ChatBox = {
 };
 ChatBox.init();
 BitGems.load();
+// one-off: thebigyin's 100 bits from before the gems existed (drops in once, the first time this version loads)
+try { if (!localStorage.getItem("kzGemSeed1")) { localStorage.setItem("kzGemSeed1", "1"); setTimeout(() => BitGems.add("thebigyin", 100), 1500); } } catch (e) {}
 if (LIVE) Live.init();
 </script>
 <script>
@@ -6619,7 +6621,7 @@ window.KZRelay = function (topic, onMessage, servers) {
 (() => {
   const qs = new URLSearchParams(location.search), key = qs.get("ctl");
   if (!key || !window.WebSocket) return;
-  const PAGE = "html3", VERSION = "9ac0984";
+  const PAGE = "html3", VERSION = "73d64dc";
   let said = false;
   const relay = KZRelay("kzctl/" + key, c => {
     if (!c || c.from === "overlay" || (c.to && c.to !== "all" && c.to !== PAGE)) return;
