@@ -28,7 +28,7 @@ body.fit{background:#06050c}
 #chatbox .lines{position:absolute;left:18px;right:18px;bottom:12px;display:flex;flex-direction:column;justify-content:flex-end}
 #chatbox .ln{line-height:1.35;word-wrap:break-word;animation:cfIn .35s ease-out;text-shadow:0 2px 4px #000c;transition:opacity 1s}
 #chatbox .ln.gone{opacity:0}
-/* each message shows for 5 s then fades; with nothing left showing, the whole box (background too) fades away */
+/* each message shows for 10 s then fades; with nothing left showing, the whole box (background too) fades away */
 #chatbox{transition:opacity .8s} #chatbox.idle{opacity:0} #chatbox.idle:hover{opacity:1}
 @keyframes cfIn{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
 #chatbox .cf-ic{display:inline-block;vertical-align:-.12em;margin-right:.3em} #chatbox .cf-nm{font-weight:900} #chatbox .cf-nm::after{content:":";color:#d8d0f0}
@@ -6391,7 +6391,7 @@ const ChatBox = {
   KEY: "kzChatBox", el: null,
   get() { let v = {}; try { v = JSON.parse(localStorage.getItem(this.KEY)) || {}; } catch (e) {} return v; },
   put(o) { const v = Object.assign(this.get(), o); try { localStorage.setItem(this.KEY, JSON.stringify(v)); } catch (e) {} return v; },
-  DEF: { x: 2560 - 1280 - 30, y: 30, w: 1280, h: 196 },
+  DEF: { x: 2560 - 1280 - 30, y: 105, w: 1280, h: 196 },
   init() {
     const el = this.el = $("#chatbox"), lines = el.querySelector(".lines"); this.lines = lines; this.layout();
     el.querySelector(".x").onclick = e => { e.stopPropagation(); this.show(false); if (window.remoteSend) window.remoteSend({ cmd: "chatShown", on: false }); };
@@ -6405,6 +6405,8 @@ const ChatBox = {
     let c = this.get();
     if (!c.wide2 && c.w) { const w = Math.min(2400, c.w * 2), x = Math.max(0, (c.x != null ? c.x + c.w : 2530) - w); c = this.put({ w, x, wide2: 1 }); this.cur = null; this.layout(); }   // twice as wide as before
     else if (!c.wide2) this.put({ wide2: 1 });
+    if (!c.nudge1) { const x = Math.min(2400, (c.x != null ? c.x : this.DEF.x) + 100), y = (c.y != null ? c.y : this.DEF.y) + 75, w = Math.max(260, Math.min(c.w || this.DEF.w, 2560 - 20 - x));
+      c = this.put({ x, y, w, nudge1: 1 }); this.cur = null; this.layout(); }                  // moved 100 right and 75 down once, narrowed so it stays clear of the right edge
     this.show(c.show !== false); this.bg(c.bg !== false); this.el.classList.add("idle"); this.connect();
   },
   box(o, live) { const c = Object.assign({}, this.DEF, this.get(), this.cur || {}, o || {}); if (o) { this.cur = c; this.layout(c); } return c; },
@@ -6417,7 +6419,7 @@ const ChatBox = {
   connect() { const c = this.get(); ChatFeed.start({ twitch: c.twitch || (Live && Live.login) || "", kickRoom: c.kickRoom || "", kickKey: c.kickKey || "", kickCluster: c.kickCluster || "" }, m => this.add(m)); },
   add(m) { const d = document.createElement("div"); d.className = "ln"; ChatFeed.render(m, d); this.lines.append(d); while (this.lines.children.length > 12) this.lines.firstChild.remove();
     this.el.classList.remove("idle"); this.live = (this.live || 0) + 1;
-    setTimeout(() => { d.classList.add("gone"); setTimeout(() => { d.remove(); if (--this.live <= 0) { this.live = 0; this.el.classList.add("idle"); } }, 1000); }, 5000); },
+    setTimeout(() => { d.classList.add("gone"); setTimeout(() => { d.remove(); if (--this.live <= 0) { this.live = 0; this.el.classList.add("idle"); } }, 1000); }, 10000); },
   // tells the app what the chat box is doing now (so the app can confirm a switch really happened in OBS)
   tell() { if (window.remoteSend) { const c = this.get(); window.remoteSend({ cmd: "chatState", show: c.show !== false, bg: c.bg !== false }); } },
   cfg(c) { this.put({ twitch: c.twitch || "", kickRoom: c.kickRoom || "", kickKey: c.kickKey || "", kickCluster: c.kickCluster || "" }); if (c.bg != null) this.bg(c.bg); if (c.show != null && this.get().show == null) this.show(c.show); this.connect(); }
@@ -6513,7 +6515,7 @@ window.KZRelay = function (topic, onMessage, servers) {
 (() => {
   const qs = new URLSearchParams(location.search), key = qs.get("ctl");
   if (!key || !window.WebSocket) return;
-  const PAGE = "html3", VERSION = "d9c3477";
+  const PAGE = "html3", VERSION = "7790cb8";
   let said = false;
   const relay = KZRelay("kzctl/" + key, c => {
     if (!c || c.from === "overlay" || (c.to && c.to !== "all" && c.to !== PAGE)) return;
