@@ -5615,7 +5615,7 @@ const BitGems = {
   RIGHT: 2560 - 800,                     // gems never go into the 800 px next to the right side of the screen
   load() { try { this.list = (JSON.parse(localStorage.getItem(this.KEY)) || []).map(g => this.make(g)); } catch (e) { this.list = []; } if (this.list.length) this.start(); },
   save() { try { localStorage.setItem(this.KEY, JSON.stringify(this.list.map(g => ({ name: g.name, bits: g.bits, x: Math.round(g.x) })))); } catch (e) {} },
-  Wd(bits) { return Math.round(150 + Math.min(150, Math.log10(Math.max(1, bits)) * 36)); },     // width of the diamond: 1 bit ≈ 150 px, 10k bits ≈ 294 px
+  Wd(bits) { return Math.round((150 + Math.min(150, Math.log10(Math.max(1, bits)) * 36)) * .7); },     // width of the diamond: 1 bit ≈ 105 px, 10k bits ≈ 206 px
   lo(c) { return c.w / 2 + 20; }, hi(c) { return this.RIGHT - c.w / 2; },
   make(o) { const w = this.Wd(o.bits); const c = { name: o.name, bits: o.bits, w, x: o.x || rand(200, this.RIGHT - 200), y: this.FLOOR, vy: 0, vx: 0, tilt: 0, tv: 0, air: false,
     next: performance.now() + rand(4000, 14000), walk: null, pulse: 0, born: performance.now() }; c.x = Math.max(this.lo(c), Math.min(this.hi(c), c.x)); return c; },
@@ -5671,7 +5671,7 @@ const BitGems = {
       g.fillStyle = hg; g.beginPath(); crown.forEach(([x, y], i) => i ? g.lineTo(x, y) : g.moveTo(x, y)); g.closePath(); g.fill();
     }
     // the name on the wide top part: big, white, thick dark outline, soft glow in the gem's colour
-    const ny = top + CR * .55; let fs = CR * .62; g.font = `900 ${fs}px ${FONT}`; const w = g.measureText(c.name).width, maxW = W * .86; if (w > maxW) fs = Math.max(24, fs * maxW / w); g.font = `900 ${fs}px ${FONT}`;
+    const ny = top + CR * .55; let fs = CR * .62; g.font = `900 ${fs}px ${FONT}`; const w = g.measureText(c.name).width, maxW = W * .9; if (w > maxW) fs = Math.max(20, fs * maxW / w); g.font = `900 ${fs}px ${FONT}`;
     g.textAlign = "center"; g.textBaseline = "middle"; g.lineJoin = "round";
     g.lineWidth = fs * .26; g.strokeStyle = "rgba(10,6,24,.9)"; g.strokeText(c.name, 0, ny);
     g.shadowColor = this.shade(col, .3); g.shadowBlur = fs * .5; g.fillStyle = "#fff"; g.fillText(c.name, 0, ny); g.shadowBlur = 0; g.fillText(c.name, 0, ny);
@@ -6627,7 +6627,7 @@ window.KZRelay = function (topic, onMessage, servers) {
 (() => {
   const qs = new URLSearchParams(location.search), key = qs.get("ctl");
   if (!key || !window.WebSocket) return;
-  const PAGE = "html3", VERSION = "51b34b8";
+  const PAGE = "html3", VERSION = "4e90117";
   let said = false;
   const relay = KZRelay("kzctl/" + key, c => {
     if (!c || c.from === "overlay" || (c.to && c.to !== "all" && c.to !== PAGE)) return;
