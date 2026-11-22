@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Kick login · Channel Points</title>
+<style>body{margin:0;padding:24px 16px;font-family:"Segoe UI",system-ui,Roboto,Arial,sans-serif;background:#05040a;color:#f5f2ff}
+.box{max-width:520px;margin:0 auto;padding:18px;border-radius:18px;border:2px solid #53fc18;background:#0b0918}
+h1{font-size:20px;margin:0 0 10px} .code{font:700 15px/1.4 ui-monospace,Menlo,Consolas,monospace;word-break:break-all;background:#1a1530;border-radius:10px;padding:12px;margin:10px 0}
+button{font:800 16px sans-serif;color:#000;background:#53fc18;border:0;border-radius:12px;padding:12px 16px} .muted{color:#a59cc4;font-size:14px;line-height:1.5}</style></head>
+<body><div class="box"><h1>Kick login</h1><div id="out" class="muted">Working…</div></div>
+<script>
+const q = new URLSearchParams(location.search), code = q.get("code"), err = q.get("error"), out = document.getElementById("out");
+if (err) out.textContent = "Kick said: " + (q.get("error_description") || err) + ". Go back to the app and try Log in to Kick again.";
+else if (!code) out.textContent = "No login code here. Start from the app: Control › Chat settings › Log in to Kick.";
+else { out.innerHTML = "Copy this code, go back to the Channel Points app, and paste it into the <b>Kick login code</b> box:";
+  const c = document.createElement("div"); c.className = "code"; c.textContent = code; const b = document.createElement("button"); b.textContent = "Copy code";
+  b.onclick = async () => { try { await navigator.clipboard.writeText(code); b.textContent = "Copied ✓"; } catch (e) { const r = document.createRange(); r.selectNodeContents(c); getSelection().removeAllRanges(); getSelection().addRange(r); document.execCommand("copy"); b.textContent = "Copied ✓"; } };
+  out.after(c, b); }
+</script></body></html>

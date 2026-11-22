@@ -20,6 +20,10 @@ body.fit{background:#06050c}
   background:linear-gradient(160deg,#120d24d9,#07060ed9) padding-box,linear-gradient(150deg,#a3e635,#ffffff18 50%,#a855f7) border-box;border:3px solid transparent;
   box-shadow:0 10px 30px #0008;font-family:"Segoe UI",system-ui,Roboto,Arial,sans-serif;font-weight:600}
 #chatbox.off{display:none}
+/* background off: just the words, badges and emotes, with a dark outline so they stay readable on anything */
+#chatbox.clear{background:none;border-color:transparent;box-shadow:none}
+#chatbox.clear .ln{text-shadow:0 0 4px #000,0 0 4px #000,0 2px 3px #000,2px 0 2px #000,-2px 0 2px #000}
+#chatbox .cf-bd{height:1.05em;vertical-align:-.12em;margin-right:.2em;border-radius:3px} #chatbox .cf-kb{display:inline-block;font-size:.6em;font-weight:900;line-height:1.6em;height:1.6em;padding:0 .3em;color:#000;vertical-align:.15em}
 #chatbox .lines{position:absolute;left:18px;right:18px;bottom:12px;display:flex;flex-direction:column;justify-content:flex-end}
 #chatbox .ln{line-height:1.35;word-wrap:break-word;animation:cfIn .35s ease-out;text-shadow:0 2px 4px #000c}
 @keyframes cfIn{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
@@ -5656,6 +5660,8 @@ window.onRemote = c => {
   else if (c.cmd === "soundTest") { if (!MySounds.urls[c.type] && !BUNDLED_SOUNDS[c.type]) MySounds.report(c.type, "no sound saved for this in OBS"); else { const cur = MySounds.playing[c.type]; if (cur) cur.pause(); MySounds.play(c.type); } }
   else if (c.cmd === "chatCfg") ChatBox.cfg(c);
   else if (c.cmd === "chatShow") ChatBox.show(!!c.on);
+  else if (c.cmd === "chatBg") ChatBox.bg(!!c.on);
+  else if (c.cmd === "chatBadges") ChatFeed.loadBadges(c.token, c.cid, c.bid);
   else if (c.cmd === "chatReset") ChatBox.reset();
   else if (c.cmd === "firstsReset") { AutoFx.reset(); toast("First-chat effects reset: each viewer's next chat plays theirs again", false, 5000); }
   else if (c.cmd === "effect" && c.name === "bolt") Bolt.run();
@@ -5899,6 +5905,7 @@ const Live = {
       TwShare.start(this, this.TYPES);
       Chat.connect(this.login);
       ChatBox.connect();                                              // the on-stream chat box follows this channel unless the app set one
+      ChatFeed.loadBadges(TOKEN, this.cid, this.uid);                  // Twitch badge pictures for the chat box
       setInterval(() => this.revalidate(), 3600 * 1000);
     } catch (e) { toast("Can't reach Twitch. Retrying in 15s…", true, 14000); setTimeout(() => this.init(), 15000); }
   },
@@ -6294,7 +6301,8 @@ const ChatFeed = {
       marks.sort((a, b) => a[0] - b[0]); const parts = []; let at = 0;
       marks.forEach(([a, b, id]) => { if (a > at) parts.push({ text: chars.slice(at, a).join("") }); parts.push({ img: "https://static-cdn.jtvnw.net/emoticons/v2/" + id + "/default/dark/2.0", alt: chars.slice(a, b + 1).join("") }); at = b + 1; });
       if (at < chars.length) parts.push({ text: chars.slice(at).join("") });
-      this.emit({ src: "twitch", name: (tags["display-name"] || m[2]).replace(/\\s/g, " "), color: tags.color || "", parts });
+      const badges = (tags.badges || "").split(",").filter(Boolean).map(b => { const [set, v] = b.split("/"); return { set, v }; });
+      this.emit({ src: "twitch", name: (tags["display-name"] || m[2]).replace(/\\s/g, " "), color: tags.color || "", parts, badges, t: +tags["tmi-sent-ts"] || Date.now() });
     });
     ws.onclose = () => { if (ws.dead) return; this.status("twitch", "reconnecting"); setTimeout(() => { if (this.tw === ws) this.twitch(); }, 4000); };
   },
@@ -6313,7 +6321,8 @@ const ChatFeed = {
         const s = d.sender || {}, parts = [], re = /\[emote:(\d+):([^\]]*)\]/g, text = String(d.content || ""); let at = 0, x;
         while ((x = re.exec(text))) { if (x.index > at) parts.push({ text: text.slice(at, x.index) }); parts.push({ img: "https://files.kick.com/emotes/" + x[1] + "/fullsize", alt: x[2] }); at = x.index + x[0].length; }
         if (at < text.length) parts.push({ text: text.slice(at) });
-        this.emit({ src: "kick", name: s.username || "someone", color: (s.identity && s.identity.color) || "", parts }); } };
+        const badges = ((s.identity && s.identity.badges) || []).map(b => ({ set: b.type || "" })).filter(b => b.set);
+        this.emit({ src: "kick", name: s.username || "someone", color: (s.identity && s.identity.color) || "", parts, badges, t: Date.now() }); } };
     ws.onclose = () => { if (ws.dead) return; this.status("kick", "reconnecting"); setTimeout(() => { if (this.kk === ws) this.kick(); }, 5000); };
   },
   // ---------- one message as page elements (never as HTML text, so chat can't inject anything)
@@ -6321,13 +6330,26 @@ const ChatFeed = {
     twitch: '<svg viewBox="0 0 24 24" width="1em" height="1em"><path fill="#a970ff" d="M4.3 3 3 6.4v13.1h4.5V22h2.5l2.5-2.5h3.6L21 14.6V3H4.3Zm15 10.8-2.8 2.8H12l-2.5 2.5v-2.5H5.7V4.7h13.6v9.1ZM16.6 7.9v4.8h-1.7V7.9h1.7Zm-4.5 0v4.8h-1.7V7.9h1.7Z"/></svg>',
     kick: '<svg viewBox="0 0 24 24" width="1em" height="1em"><rect width="24" height="24" rx="5" fill="#53fc18"/><path fill="#000" d="M6 5h4v4h2V7h2V5h4v6h-2v2h2v6h-4v-2h-2v-2h-2v4H6V5Z"/></svg>'
   },
+  // Twitch badge pictures (set/version → url), filled in by whoever has a Twitch token (loadBadges)
+  BADGES: {},
+  async loadBadges(token, clientId, broadcasterId) {
+    const get = async p => { try { const r = await fetch("https://api.twitch.tv/helix/" + p, { headers: { Authorization: "Bearer " + token, "Client-Id": clientId } }); return r.ok ? (await r.json()).data || [] : []; } catch (e) { return []; } };
+    const add = list => list.forEach(s => (s.versions || []).forEach(v => { this.BADGES[s.set_id + "/" + v.id] = v.image_url_2x || v.image_url_1x; }));
+    add(await get("chat/badges/global")); if (broadcasterId) add(await get("chat/badges?broadcaster_id=" + broadcasterId));
+  },
+  KICKBADGE: { broadcaster: ["#53fc18", "🎥"], moderator: ["#00c7ff", "⚔"], vip: ["#ffbf00", "♦"], og: ["#ff7a00", "OG"], founder: ["#ff4fd8", "F"], verified: ["#53fc18", "✓"], subscriber: ["#a970ff", "★"], sub_gifter: ["#ff4fd8", "🎁"], staff: ["#ff2d2d", "K"] },
+  badgeEls(m) { const out = [];
+    (m.badges || []).forEach(b => {
+      if (m.src === "twitch") { const u = this.BADGES[b.set + "/" + b.v]; if (!u) return; const i = document.createElement("img"); i.className = "cf-bd"; i.src = u; i.alt = b.set; out.push(i); }
+      else { const k = this.KICKBADGE[b.set]; if (!k) return; const sp = document.createElement("span"); sp.className = "cf-bd cf-kb"; sp.textContent = k[1]; sp.style.background = k[0]; out.push(sp); } });
+    return out; },
   render(m, el) {
     const ic = document.createElement("span"); ic.className = "cf-ic"; ic.innerHTML = this.ICONS[m.src] || "";
     const nm = document.createElement("span"); nm.className = "cf-nm"; nm.textContent = m.name; nm.style.color = m.color || (m.src === "kick" ? "#53fc18" : "#c9a7ff");
     const tx = document.createElement("span"); tx.className = "cf-tx";
     m.parts.forEach(p => { if (p.img) { const i = document.createElement("img"); i.className = "cf-em"; i.src = p.img; i.alt = p.alt || ""; i.onerror = () => i.replaceWith(document.createTextNode(p.alt || "")); tx.append(i); }
       else tx.append(document.createTextNode(p.text)); });
-    el.append(ic, nm, document.createTextNode(" "), tx); return el;
+    el.append(ic, ...this.badgeEls(m), nm, document.createTextNode(" "), tx); return el;
   }
 };
 
@@ -6350,17 +6372,18 @@ const ChatBox = {
       const up = () => { removeEventListener("pointermove", mv); removeEventListener("pointerup", up); el.classList.remove("drag"); this.put(this.cur); };
       addEventListener("pointermove", mv); addEventListener("pointerup", up); };
     el.querySelector(".bar").onpointerdown = e => drag(e, "move"); el.querySelector(".grip").onpointerdown = e => drag(e, "size");
-    const c = this.get(); this.show(c.show !== false); this.connect();
+    const c = this.get(); this.show(c.show !== false); this.bg(c.bg !== false); this.connect();
   },
   box(o, live) { const c = Object.assign({}, this.DEF, this.get(), this.cur || {}, o || {}); if (o) { this.cur = c; this.layout(c); } return c; },
   layout(c) { c = c || Object.assign({}, this.DEF, this.get()); this.cur = c; const el = this.el;
     el.style.left = c.x + "px"; el.style.top = c.y + "px"; el.style.width = c.w + "px"; el.style.height = c.h + "px";
     el.style.fontSize = Math.max(14, (c.h - 30) / (4 * 1.35)) + "px"; },            // 4 lines fill the box
   show(on) { this.put({ show: !!on }); this.el.classList.toggle("off", !on); },
+  bg(on) { this.put({ bg: !!on }); this.el.classList.toggle("clear", !on); },
   reset() { this.put({ x: this.DEF.x, y: this.DEF.y, w: this.DEF.w, h: this.DEF.h }); this.cur = null; this.layout(); this.show(true); },
   connect() { const c = this.get(); ChatFeed.start({ twitch: c.twitch || (Live && Live.login) || "", kickRoom: c.kickRoom || "", kickKey: c.kickKey || "", kickCluster: c.kickCluster || "" }, m => this.add(m)); },
   add(m) { const d = document.createElement("div"); d.className = "ln"; ChatFeed.render(m, d); this.lines.append(d); while (this.lines.children.length > 12) this.lines.firstChild.remove(); },
-  cfg(c) { this.put({ twitch: c.twitch || "", kickRoom: c.kickRoom || "", kickKey: c.kickKey || "", kickCluster: c.kickCluster || "" }); if (c.show != null && this.get().show == null) this.show(c.show); this.connect(); }
+  cfg(c) { this.put({ twitch: c.twitch || "", kickRoom: c.kickRoom || "", kickKey: c.kickKey || "", kickCluster: c.kickCluster || "" }); if (c.bg != null) this.bg(c.bg); if (c.show != null && this.get().show == null) this.show(c.show); this.connect(); }
 };
 ChatBox.init();
 if (LIVE) Live.init();
@@ -6453,7 +6476,7 @@ window.KZRelay = function (topic, onMessage, servers) {
 (() => {
   const qs = new URLSearchParams(location.search), key = qs.get("ctl");
   if (!key || !window.WebSocket) return;
-  const PAGE = "html3", VERSION = "4e8b2aa";
+  const PAGE = "html3", VERSION = "1dc10ad";
   let said = false;
   const relay = KZRelay("kzctl/" + key, c => {
     if (!c || c.from === "overlay" || (c.to && c.to !== "all" && c.to !== PAGE)) return;
