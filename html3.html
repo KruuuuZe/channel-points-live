@@ -1932,6 +1932,7 @@ const Gifts = {
 };
 
 /* custom alert sounds: a sound file per alert, saved in this browser (IndexedDB) and played whenever that alert plays */
+const BUNDLED_SOUNDS = {};
 const MySounds = {
   urls: {}, names: {}, db: null,
   open() { return this.db || (this.db = new Promise((ok, no) => { const r = indexedDB.open("alertSounds", 1);
@@ -1950,7 +1951,8 @@ const MySounds = {
     try { await this.tx("readwrite", st => st.delete(type)); } catch (e) {} this.mark(); },
   // a sound never plays over itself: if it's still playing, this play is skipped. Returns the Audio (or null).
   playing: {},
-  play(type) { const u = this.urls[type]; if (!u) return null; const cur = this.playing[type]; if (cur && !cur.ended && !cur.paused) return null;
+  // a sound built into the overlay (src/sounds) wins; otherwise the one added in OBS (🔊+) or sent from the app
+  play(type) { const u = (typeof BUNDLED_SOUNDS !== "undefined" && BUNDLED_SOUNDS[type]) || this.urls[type]; if (!u) return null; const cur = this.playing[type]; if (cur && !cur.ended && !cur.paused) return null;
     try { const a = new Audio(u); a.volume = 1; this.playing[type] = a;
       a.play().then(() => this.report(type, "played")).catch(e => this.report(type, "couldn't play: " + (e && e.message || e)));
       return a; } catch (e) { this.report(type, "couldn't play: " + e.message); return null; } },
@@ -5536,8 +5538,8 @@ const SmokeLap = {
 window.onRemote = c => {
   if (c.cmd === "stars") Wanted.set(+c.n || 0);
   else if (c.cmd === "sound") SoundIn.receive(c);
-  else if (c.cmd === "soundList") { if (window.remoteSend) window.remoteSend({ cmd: "sounds", list: Object.assign({}, MySounds.names) }); }
-  else if (c.cmd === "soundTest") { if (!MySounds.urls[c.type]) MySounds.report(c.type, "no sound saved for this in OBS"); else { const cur = MySounds.playing[c.type]; if (cur) cur.pause(); MySounds.play(c.type); } }
+  else if (c.cmd === "soundList") { const list = Object.assign({}, MySounds.names); Object.keys(BUNDLED_SOUNDS).forEach(k => list[k] = "built in"); if (window.remoteSend) window.remoteSend({ cmd: "sounds", list }); }
+  else if (c.cmd === "soundTest") { if (!MySounds.urls[c.type] && !BUNDLED_SOUNDS[c.type]) MySounds.report(c.type, "no sound saved for this in OBS"); else { const cur = MySounds.playing[c.type]; if (cur) cur.pause(); MySounds.play(c.type); } }
   else if (c.cmd === "chatCfg") ChatBox.cfg(c);
   else if (c.cmd === "chatShow") ChatBox.show(!!c.on);
   else if (c.cmd === "chatReset") ChatBox.reset();
@@ -6332,7 +6334,7 @@ window.KZRelay = function (topic, onMessage, servers) {
 (() => {
   const qs = new URLSearchParams(location.search), key = qs.get("ctl");
   if (!key || !window.WebSocket) return;
-  const PAGE = "html3", VERSION = "5bc4558";
+  const PAGE = "html3", VERSION = "f81354e";
   let said = false;
   const relay = KZRelay("kzctl/" + key, c => {
     if (!c || c.from === "overlay" || (c.to && c.to !== "all" && c.to !== PAGE)) return;
