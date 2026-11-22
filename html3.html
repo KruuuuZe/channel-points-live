@@ -599,7 +599,7 @@ const hs = new URLSearchParams(location.hash.replace(/^#/, ""));
 // See "the touchpad copy" (Mirror) further down.
 const MIRROR = qs.has("mirror");
 const Low = { k: 1 };                                    // how much smaller the copy's canvases are than the stream's (1 = the same size)
-const Raf = { paused: false, eco: false, frames: 0, due: 0, slow: 0, ms: 0 };   // the copy's animation clock: pictures drawn, pictures it meant to draw, late ones, time spent drawing
+const Raf = { paused: false, eco: false, bg: false, frames: 0, due: 0, slow: 0, ms: 0 };   // the copy's animation clock: pictures drawn, pictures it meant to draw, late ones, time spent drawing
 if (MIRROR) {
   document.head.insertAdjacentHTML("beforeend", "<style>#testbar,#tapzone{display:none!important}html,body,#view{background:transparent!important}</style>");
   // (1) The copy never reads or changes anything the app has saved: its "storage" is just memory, and starts empty.
@@ -610,18 +610,23 @@ if (MIRROR) {
     let ok = false; try { ok = window.localStorage === st; } catch (e) {}
     if (!ok) { const P = Storage.prototype; P.getItem = function (k) { return st.getItem(k); }; P.setItem = function (k, v) { st.setItem(k, v); }; P.removeItem = function (k) { st.removeItem(k); }; P.clear = function () { st.clear(); }; } }
   // (2) One shared animation clock for everything in the copy.
-  //     - It can be paused: while the touchpad is off screen the copy does no work at all.
+  //     - It can be paused: while the app isn't on screen at all the copy does no work.
+  //     - While the app is open but the touchpad is scrolled out of view (Raf.bg) the copy keeps going, so anything
+  //       that starts on stream is already playing here when you scroll back to it. It then draws 30 pictures a
+  //       second while something is playing, and only about 6 a second (woken by a timer) while nothing is.
   //     - It draws at most 60 pictures a second, like the stream, even on a phone whose screen refreshes 90 or 120
   //       times a second (which would otherwise double the work for nothing).
   //     - When nothing on screen is really moving (a resting cloud, gems and dice only breathe and twinkle) it draws
   //       30 a second, which looks the same and halves the work. The moment anything moves, or you touch the
   //       touchpad, it is back to 60. (See Mirror.calm.)
   //     - It counts what it drew and what it meant to draw, so the app can show how the touchpad is keeping up.
-  { const real = window.requestAnimationFrame.bind(window); let q = [], on = false, last = 0, lastReal = 0, ri = 16.67;
-    const arm = () => { if (!on && q.length && !Raf.paused) { on = true; real(tick); } };
+  { const real = window.requestAnimationFrame.bind(window); let q = [], on = false, last = 0, lastReal = 0, ri = 16.67, nap = 0;
+    const arm = () => { if (on || !q.length || Raf.paused) return; on = true;
+      if (Raf.bg && Raf.eco) nap = setTimeout(() => { nap = 0; real(tick); }, 150); else real(tick); };
+    const wake = () => { if (nap) { clearTimeout(nap); nap = 0; on = false; } last = lastReal = 0; arm(); };
     const tick = t => { on = false;
       if (lastReal) { const dr = t - lastReal; if (dr > 3) ri = Math.min(17, ri * 1.01, dr); } lastReal = t;      // how often this phone's screen refreshes (16.7 ms at 60 a second, 8.3 at 120)
-      const gap = Raf.eco ? 31 : 12.5;
+      const gap = Raf.bg ? (Raf.eco ? 140 : 31) : Raf.eco ? 31 : 12.5;
       if (last && t - last < gap) return arm();                     // too soon (a fast screen, or the calm pace): wait for the next refresh
       const run = q; q = []; const a = performance.now();
       if (last) { const want = Math.ceil((gap - .5) / ri) * ri, d = Math.min(250, t - last); Raf.due += d / want; if (d > want * 1.7) Raf.slow++; } else Raf.due++;
@@ -631,7 +636,8 @@ if (MIRROR) {
       const M = window.Mirror; Raf.eco = !!(M && M.calm && M.calm(a, run.length));
       if (q.length && !Raf.paused) arm(); else last = lastReal = 0; };
     window.requestAnimationFrame = cb => { q.push(cb); arm(); return 0; };
-    Raf.pause = p => { Raf.paused = !!p; last = lastReal = 0; arm(); }; }
+    Raf.pause = p => { Raf.paused = !!p; wake(); };
+    Raf.back = b => { b = !!b; if (Raf.bg === b) return; Raf.bg = b; wake(); }; }             // the touchpad has scrolled out of view (true) or back into it (false)
   // (3) The copy's full-screen canvases are drawn at the touchpad's own size in real screen pixels instead of
   //     2560x1440: the phone's screen can't show more than that anyway, and it is several times less work every frame.
   //     Everything that draws still uses the full-size numbers: each small canvas reports the full size, its drawing is
@@ -1664,7 +1670,7 @@ const Gifts = {
   gift(gifter, total, color) {
     const t = Math.max(1, total | 0);
     // big gift drops get smaller boxes so every present fits on the screen
-    const s = { gifter, total: t, color, names: [], started: false, dropped: 0, born: Date.now(), from: null, ready: false,
+    const s = { gifter, total: t, color, names: [], started: false, dropped: 0, born: Date.now(), from: null, ready: false, qid: Queue.nextId,
       scale: Math.min(1, Math.sqrt(900000 / (Math.min(t, 200) * 19000))) };
     const cut = Date.now() - 15000;
     while (this.waiting.length && s.names.length < s.total) { const w = this.waiting.shift(); if (w.t > cut) s.names.push(w.name); }
@@ -2215,7 +2221,7 @@ const Scrap = {
   },
   /* !scroopleaderboard: show the board for 20 seconds */
   showBoard(html) { this.build(); const b = $("#scrapboard"); if (html != null) b.innerHTML = html; else this.board(); b.classList.add("on");   // (the touchpad copy shows OBS's board)
-    Mirror.fwd("Scrap.board", [b.innerHTML]);
+    Mirror.began2("Scrap.board", [b.innerHTML], (e, now) => now - e.at < 20000);
     clearTimeout(this.boardT); this.boardT = setTimeout(() => b.classList.remove("on"), 20000); },
   start() { this.build(); if (MIRROR) return; this.schedule(this.FIRST); this.listenSA(); },       // (the touchpad copy gets its piles and digs from OBS)
   busy() { return this.piles.filter(p => p.state !== "none").length; },
@@ -2313,7 +2319,7 @@ const Scrap = {
     // how many hits it takes and what's inside are decided here, up front, so the touchpad copy shows the very same dig
     if (!job.hits) job.hits = 10 + Math.floor(Math.random() * 6);                       // 10 to 15 hits to break a pile
     if (!job.roll) { const r = this.roll(); job.roll = [SCRAP_LOOT.indexOf(r.l), r.n]; }
-    Mirror.fwd("Scrap.run", [this.piles.indexOf(p), p.x, job]);
+    Mirror.began2("Scrap.run", [this.piles.indexOf(p), p.x, job], () => p.state === "claimed");
     Sound.init(); MySounds.play("scroop");
     const box = $("#scrap"), uc = css(bright(job.color)), X = p.x - 67;      // the soldier stands just left of the pile, facing it (toward the right edge)
     const w = el("div", "scroop" + (job.team ? " " + job.team : "")); w.style.left = X + "px"; w.style.setProperty("--uc", uc); w.dataset.k = job.k; w._job = job;
@@ -6094,9 +6100,14 @@ const Dice = {
 const Mirror = {
   V: 2, inst: Math.random().toString(36).slice(2, 8),
   // ---------------- in OBS: what it sends ----------------
-  watchUntil: 0, lastRep: 0, q: 0, qn: 0, slowStr: "", slowAt: 0,
-  // the app says "the touchpad is open" every 15 seconds while it is; nothing is sent when nobody is looking
-  watch(on) { if (MIRROR) return; this.watchUntil = on ? performance.now() + 45000 : 0; if (on) this.send(true); },
+  watchUntil: 0, lastRep: 0, q: 0, qn: 0, slowStr: "", slowAt: 0, far: false,
+  // the app says "the touchpad is open" every 15 seconds while it is; nothing is sent when the app isn't on screen.
+  // far: the app is open but the touchpad is scrolled out of view. Its copy keeps playing along (every effect and
+  // alert is still sent as it starts), but where things are is only sent when something has really moved (at most
+  // twice a second), and otherwise once every 5 seconds.
+  // turn: a word the app picks each time its copy starts following afresh; it goes on everything sent from now on,
+  // so the app can tell this news from older news that was still on its way (see Pad in control.html).
+  watch(on, far, turn) { if (MIRROR) return; this.watchUntil = on ? performance.now() + 45000 : 0; this.far = !!far; if (on) { this.turn = turn ? String(turn).slice(0, 12) : undefined; this.send(true); } },
   watched() { return !MIRROR && !!window.remoteSend && performance.now() < this.watchUntil; },
   direct() { return !!(window.remoteDirect && window.remoteDirect()); },          // linked straight to the phone (not through the internet)?
   // where everything that moves is, right now (short lists of numbers, to keep it small)
@@ -6113,15 +6124,45 @@ const Mirror = {
       sw: F.snowmen.map(m => [Math.round(m.x), m.name, m.color, m.born || 0]), nt: F.neutralTalk || "" }; },
   // called very often; sends at most 33 times a second over the direct link, 10 through the internet relay
   send(force) { if (!this.watched()) return; const now = performance.now();
-    if (!force && now - this.lastRep < (this.direct() ? 30 : 95)) return; this.lastRep = now;
+    if (!force && now - this.lastRep < (this.far ? 480 : this.direct() ? 30 : 95)) return; this.lastRep = now;
     if (force || now - this.slowAt > 700) { this.slowAt = now; const st = this.slow(), str = JSON.stringify(st);
-      if (force || str !== this.slowStr) { this.slowStr = str; window.remoteSend({ cmd: "mirs", v: this.V, t: Date.now(), s: st }); } }
-    window.remoteSend(Object.assign({ cmd: "mir", v: this.V, i: this.inst, q: ++this.q }, this.snap())); },
+      if (force || str !== this.slowStr) { this.slowStr = str; if (force) Object.assign(st, this.catchUp()); window.remoteSend({ cmd: "mirs", v: this.V, t: Date.now(), w: this.turn, s: st }); } }
+    const sn = this.snap();
+    if (this.far) { const sig = this.coarse(sn); if (!force && sig === this.farSig && now - this.farAt < 5000) return; this.farSig = sig; this.farAt = now; }
+    window.remoteSend(Object.assign({ cmd: "mir", v: this.V, i: this.inst, q: ++this.q, w: this.turn }, sn)); },
+  // the same picture, roughly: has anything moved enough to be worth telling a touchpad that nobody is looking at?
+  farSig: "", farAt: 0,
+  coarse(s) { const r = v => Math.round(v / 48), c = s.c;
+    return JSON.stringify([c[0], c[1], r(c[2]), r(c[3]), c[4], c[5], c[6], c[7], c[8], c[12], c[15], c[16], s.g.map(m => [m[0], m[1], r(m[2]), r(m[3]), m[8], m[9]]), s.d[0], s.d[1].map(m => [r(m[0]), r(m[1]), m[3], m[5]])]); },
   // something starting right now (an effect, an alert, a sparkle...): the copy plays the same thing
-  fwd(k, a, i) { if (!this.watched()) return; try { window.remoteSend({ cmd: "mfx", k, a: JSON.parse(JSON.stringify(a || [])), i: i || undefined }); } catch (e) {} },
+  // (e: a name for this one start, so a copy that is told about it twice only plays it once)
+  fwd(k, a, i, e) { if (!this.watched()) return; try { window.remoteSend({ cmd: "mfx", k, a: JSON.parse(JSON.stringify(a || [])), i: i || undefined, e: e || undefined, w: this.turn }); } catch (x) {} },
   // makes one of this page's actions also happen in the copy (lined: it waits its turn in the alert line)
   hook(o, f, k, lined) { if (MIRROR) return; const orig = o[f].bind(o);
-    o[f] = (...a) => { let id; if (lined) id = Queue.nextId = this.inst + (++this.qn); this.fwd(k, a, id); try { return orig(...a); } finally { if (lined) Queue.nextId = null; } }; },
+    o[f] = (...a) => { let id; if (lined) { id = Queue.nextId = this.inst + (++this.qn); try { this.pend.set(id, [k, JSON.parse(JSON.stringify(a))]); } catch (x) {} if (this.pend.size > 60) this.pend.delete(this.pend.keys().next().value); }
+      this.fwd(k, a, id);
+      try { return orig(...a); } finally { if (lined) { if (Queue.nextId === id) this.pend.delete(id); Queue.nextId = null; } } }; },      // (still set: it didn't join the line after all)
+  /* ---- catching up. A touchpad that opens in the middle of things (the app was just opened, or was behind another
+     app) is told two more things along with where everything is:
+     - ql: the alerts still waiting in OBS's line, so each one plays in the copy when its turn comes;
+     - np: what is on screen right now (the alert that is showing, the effect that is playing, a gift's chests, a
+       scroop dig, the scoreboard), with how long ago it started. The copy plays those from their start. */
+  pend: new Map(), live: [], en: 0,
+  // an alert from the line has just started
+  began(id, ms) { const p = this.pend.get(id); this.pend.delete(id); if (!p) return;
+    this.live.push({ id, k: p[0], a: p[1], at: performance.now(), ms: ms > 0 ? ms : 6000 }); if (this.live.length > 16) this.live.shift(); },
+  // something else that stays on screen for a while has just started (alive: is it still going?)
+  began2(k, a, alive) { if (MIRROR) return null; let c; try { c = JSON.parse(JSON.stringify(a || [])); } catch (x) { return null; }
+    const e = { id: this.inst + "e" + (++this.en), k, a: c, at: performance.now(), alive }; this.live.push(e); if (this.live.length > 16) this.live.shift();
+    this.fwd(k, a, null, e.id); return e; },
+  alive(e, now) { if (e.alive) { try { return !!e.alive(e, now); } catch (x) { return false; } }
+    if (now < e.at + e.ms) return true;
+    if (e.k === "Gifts.gift") { const s = Gifts.sessions.find(x => x.qid === e.id); return !!(s && s.started && !(s.head && s.head.out)) && now - e.at < 300000; }   // its chests are still out
+    return false; },
+  catchUp() { const now = performance.now(), names = id => { const s = Gifts.sessions.find(x => x.qid === id); return s ? s.names.slice(0, 200) : []; };
+    this.live = this.live.filter(e => this.alive(e, now));
+    return { ql: Queue.q.filter(it => it[1] && this.pend.has(it[1])).map(it => { const p = this.pend.get(it[1]); return p[0] === "Gifts.gift" ? [it[1], p[0], p[1], names(it[1])] : [it[1], p[0], p[1]]; }),
+      np: this.live.map(e => e.k === "Gifts.gift" ? [e.id, e.k, e.a, Math.round(now - e.at), names(e.id)] : [e.id, e.k, e.a, Math.round(now - e.at)]) }; },
 
   // ---------------- in the copy: what it does with it ----------------
   cl: null, d: null, at: 0, lastQ: 0, from: "", first: true, jump: true, touchAt: 0, later: null, snowmen: null, ON: {},
@@ -6131,6 +6172,7 @@ const Mirror = {
   // The copy then draws 30 pictures a second instead of 60: it looks the same and is half the work.
   calm(now, loops) { if (now - this.touchAt < 2000 || now - this.evAt < 1500) return false;
     if (loops > (Face.run ? 1 : 0) + (BitGems.running ? 1 : 0) + (Dice.running ? 1 : 0)) return false;       // an effect is drawing
+    if (Raf.bg) return true;                               // the touchpad is out of view: the cloud, gems and dice only have to be in the right place when it comes back
     const c = this.cl, F = Face;
     if (c && (c.on || F.a > .02) && (F.tank || F.fx || c.rain || c.storm || c.sn || F.puffs.length || F.flakes.length || F.drops.length || Math.abs(c.x - (F.px || 0)) + Math.abs(c.y - (F.py || 0)) > 4)) return false;
     if (BitGems.fx.length || Dice.fx.length) return false;
@@ -6156,6 +6198,7 @@ const Mirror = {
     this.first = false; },
   // the things that only change now and then (OBS sends them when they change, and whenever the touchpad opens)
   slowIn(o) { if (!MIRROR || !o || o.v !== this.V || !o.s) return; const s = o.s;
+    if (s.ql || s.np) this.caughtUp(s);
     if (s.cb) { ChatBox.put(s.cb); ChatBox.cur = null; ChatBox.layout(); ChatBox.el.classList.toggle("off", s.cb.show === false); ChatBox.el.classList.toggle("clear", s.cb.bg === false); }
     if (s.wl != null && s.wl !== Wanted.level) Wanted.set(s.wl, true);
     if (s.lk) Lurk.sync(s.lk);
@@ -6170,9 +6213,32 @@ const Mirror = {
     if (L.sw && this.cl) { this.snowmen = L.sw; L.sw = null; if (!Face.run) Face.start(); } },
   // the touchpad is back on screen after a while: everything goes straight to where OBS has it now (no gliding across)
   resync() { this.jump = true; BitGems.list.forEach(g => { g.seen = 0; g.local = 0; g.held = false; }); Dice.list.forEach(c => { c.seen = 0; c.local = 0; c.held = false; }); },
-  // an effect, alert or little burst that just started in OBS
-  run(k, a, i) { if (!MIRROR) return; const h = this.ON[k]; if (!h) return; this.evAt = performance.now();
-    try { Queue.nextId = i || null; h(...(a || [])); } catch (e) { console.error(e); } finally { Queue.nextId = null; } },
+  // an effect, alert or little burst that just started in OBS (e: its name, if it has one; each is only played once)
+  did: new Set(),
+  once(e) { if (this.did.has(e)) return false; this.did.add(e); if (this.did.size > 300) this.did.delete(this.did.values().next().value); return true; },
+  run(k, a, i, e) { if (!MIRROR) return; const h = this.ON[k]; if (!h || (e && !this.once(e)) || (i && (Queue.held[i] || Queue.went.has(i)))) return; this.evAt = performance.now();
+    try { Queue.nextId = i || null; h(...(a || [])); } catch (x) { console.error(x); } finally { Queue.nextId = null; } },
+  // an alert that is waiting in OBS's line: it waits here too (names: who a gift's presents are for, so far)
+  lineUp(id, k, a, names) { if (Queue.held[id] || Queue.went.has(id) || !/^(Alerts\.|Gifts\.gift$)/.test(k)) return false;
+    this.run(k, a, id); if (names && Queue.held[id]) names.forEach(n => { try { Gifts.recipient(n); } catch (x) {} }); return true; },
+  // the touchpad opened in the middle of things: line up what's waiting in OBS, and play what is on screen there now
+  caughtUp(s) {
+    for (const [id, k, a, names] of s.ql || []) this.lineUp(id, k, a, names);
+    for (const [id, k, a, age, names] of s.np || []) {
+      if (/^(Alerts\.|Gifts\.gift$)/.test(k)) { this.lineUp(id, k, a, names); Queue.go(id); continue; }
+      if (!this.ON[k] || !this.once(id)) continue;
+      this.run(k, a);
+      if (k === "Scrap.board") { clearTimeout(Scrap.boardT); Scrap.boardT = setTimeout(() => $("#scrapboard").classList.remove("on"), Math.max(800, 20000 - age)); }   // it comes down when OBS's does
+    } },
+  // An effect starts here the moment OBS says so. Only if the one before is still playing here (it started late,
+  // because the touchpad opened in the middle of it) does the next one wait for it, as in OBS: never two at once.
+  fxQ: [], fxT: 0,
+  fxGo(name, a) { if (!FxLine.orig[name]) return; this.fxQ.push([name, a, performance.now()]); this.fxPump(); },
+  fxPump() { if (this.fxT || !this.fxQ.length) return; const now = performance.now(), it = this.fxQ[0];
+    if (FxLine.playing() && now - it[2] < 25000) { this.fxT = setTimeout(() => { this.fxT = 0; this.fxPump(); }, 120); return; }
+    this.fxQ.shift(); const ms = FxLine.MODS[it[0]]; if (ms) FxLine.until = now + ms; this.evAt = now;
+    try { FxLine.orig[it[0]](...it[1]); } catch (x) { console.error(x); }
+    if (this.fxQ.length) this.fxT = setTimeout(() => { this.fxT = 0; this.fxPump(); }, 400); },
   // your finger on the touchpad: the copy does these itself, straight away (the app sends the same to OBS)
   local(c) { if (!MIRROR || !c) return; this.touchAt = performance.now();
     if (c.cmd === "cloudGo") { Face.goTo(+c.x, +c.y); return; }
@@ -6282,7 +6348,7 @@ window.onRemote = c => {
   else if (c.cmd === "sound") SoundIn.receive(c);
   else if (c.cmd === "soundList") { const list = Object.assign({}, MySounds.names); Object.keys(BUNDLED_SOUNDS).forEach(k => list[k] = "built in"); if (window.remoteSend) window.remoteSend({ cmd: "sounds", list }); }
   else if (c.cmd === "soundTest") { if (!MySounds.urls[c.type] && !BUNDLED_SOUNDS[c.type]) MySounds.report(c.type, "no sound saved for this in OBS"); else { const cur = MySounds.playing[c.type]; if (cur) cur.pause(); MySounds.play(c.type); } }
-  else if (c.cmd === "mirWatch") Mirror.watch(c.on !== false);                // the app's touchpad is open (or has closed): see Mirror
+  else if (c.cmd === "mirWatch") Mirror.watch(c.on !== false, c.far, c.w);    // the app's touchpad is open (or has closed): see Mirror
   else if (c.cmd === "gemGrab") (String(c.n).startsWith("dice:") ? Dice : BitGems).grab(c.n);            // dice on the touchpad go by "dice:1"/"dice:2"
   else if (c.cmd === "gemMove") (String(c.n).startsWith("dice:") ? Dice : BitGems).moveTo(c.n, +c.x, +c.y);
   else if (c.cmd === "gemFling") (String(c.n).startsWith("dice:") ? Dice : BitGems).fling(c.n, +c.vx, +c.vy);
@@ -6358,7 +6424,7 @@ window.onRemote = c => {
    If an effect is playing (someone's first-chat effect, a redeem, the test buttons, the hourly lightning lap), another one
    doesn't play on top of it: it waits in line and plays once the screen is clear, in the order they came in. */
 const FxLine = {
-  q: [], running: false, until: 0,
+  q: [], running: false, until: 0, cur: null,
   // the effects in line, and how to tell each one is still playing (a busy flag, or how long it lasts)
   MODS: { VTerrible: null, ScrapHaul: null, SmokeLap: null, Mango: null, Banana: null, Fishy: null, Chef: null, Tank: null, Kazul: null, Jinx: null, Pirate: null, Turkey: 7600, Penguin: 10600, Eagle: 9000, Bolt: null },
   playing() { if (performance.now() < this.until) return true;
@@ -6368,6 +6434,7 @@ const FxLine = {
     const go = () => { if (this.playing()) return setTimeout(go, 300);                 // something still on screen (e.g. it started before the line existed)
       try { fn(); } catch (e) { console.error(e); }
       const t0 = performance.now(), wait = () => { if (this.playing() && performance.now() - t0 < 90000) return setTimeout(wait, 300);
+        this.cur = null;                                                                 // (it's over: a touchpad that opens now isn't told about it)
         setTimeout(() => { this.running = false; this.pump(); }, 700); };                // a short breather between effects
       setTimeout(wait, 300); };
     go(); }
@@ -6375,7 +6442,7 @@ const FxLine = {
 FxLine.orig = {};
 for (const [name, ms] of Object.entries(FxLine.MODS)) { const m = { VTerrible, ScrapHaul, SmokeLap, Mango, Banana, Fishy, Chef, Tank, Kazul, Jinx, Pirate, Turkey, Penguin, Eagle, Bolt }[name], orig = m.run.bind(m);
   FxLine.orig[name] = orig;
-  m.run = (...a) => FxLine.push(() => { if (ms) FxLine.until = performance.now() + ms; Mirror.fwd("fx", [name, ...a]); orig(...a); }); }   // the touchpad copy plays it the moment OBS does
+  m.run = (...a) => FxLine.push(() => { if (ms) FxLine.until = performance.now() + ms; FxLine.cur = Mirror.began2("fx", [name, ...a], e => FxLine.cur === e); orig(...a); }); }   // the touchpad copy plays it the moment OBS does
 
 /* one alert at a time, in order.
    (For the app's touchpad copy: every alert is given an id when it's lined up; OBS tells the copy "that one starts
@@ -6388,8 +6455,19 @@ const Queue = {
     this.q.push([fn, id]); if (this.q.length > 30) this.q.shift(); if (!this.busy) this.next(); },
   next() { const it = this.q.shift(); if (!it) { this.busy = false; return; } this.busy = true;
     if (it[1]) Mirror.fwd("q.go", [it[1]]);
-    let ms = 6000; try { ms = it[0](); } catch (e) { console.error(e); } setTimeout(() => this.next(), ms); },
-  go(id) { const fn = this.held[id]; if (!fn) return; delete this.held[id]; try { fn(); } catch (e) { console.error(e); } }
+    let ms = 6000; try { ms = it[0](); } catch (e) { console.error(e); }
+    if (it[1]) Mirror.began(it[1], ms);
+    setTimeout(() => this.next(), ms); },
+  // ---- the copy: "that one starts now". It starts straight away, unless the alert before it is still showing here
+  // (it started late, because the touchpad opened in the middle of it): then it waits for that one, as in OBS.
+  went: new Set(), goQ: [], goT: 0, busyUntil: 0,
+  go(id) { if (!this.held[id] || this.went.has(id) || this.goQ.includes(id)) return; this.goQ.push(id); this.goPump(); },
+  goPump() { if (this.goT || !this.goQ.length) return; const now = performance.now(), wait = this.busyUntil - now;
+    if (wait > 40) { this.goT = setTimeout(() => { this.goT = 0; this.goPump(); }, Math.min(wait, 20000)); return; }
+    const id = this.goQ.shift(), fn = this.held[id]; delete this.held[id]; this.went.add(id); if (this.went.size > 300) this.went.delete(this.went.values().next().value);
+    let ms = 6000; if (fn) { try { ms = fn(); } catch (e) { console.error(e); } }
+    this.busyUntil = now + (ms > 0 ? Math.min(ms, 20000) : 6000);
+    if (this.goQ.length) this.goPump(); }
 };
 const Alerts = {
   sub: (name, color) => Queue.push(() => { MySounds.play("sub"); edgeGlow("#22c55e80", "#4ade80a0"); return doSub(name, color); }),
@@ -7078,7 +7156,7 @@ Mirror.hook(Face, "fire", "Face.fire"); Mirror.hook(Face, "bark", "Face.bark"); 
 if (!MIRROR) { const show = toast; toast = (...a) => { Mirror.fwd("toast", a); return show(...a); }; }
 // in the copy: what each of those does
 Mirror.ON = {
-  fx: (name, ...a) => { if (FxLine.orig[name]) FxLine.orig[name](...a); },             // an effect from the effect line
+  fx: (name, ...a) => Mirror.fxGo(name, a),                                             // an effect from the effect line
   "q.go": id => Queue.go(id),                                                           // "the alert you were told about starts now"
   "Alerts.sub": (...a) => Alerts.sub(...a), "Alerts.follow": (...a) => Alerts.follow(...a), "Alerts.bits": (...a) => Alerts.bits(...a),
   "Alerts.streak": (...a) => Alerts.streak(...a), "Alerts.raid": (...a) => Alerts.raid(...a), "Alerts.raidFx": (...a) => Alerts.raidFx(...a),
@@ -7269,7 +7347,7 @@ window.KZDirect = function (opt) {
 (() => {
   const qs = new URLSearchParams(location.search), key = qs.get("ctl");
   if (!key || !window.WebSocket) return;
-  const PAGE = "html3", VERSION = "45877f5", INST = Math.random().toString(36).slice(2, 8);
+  const PAGE = "html3", VERSION = "3d58273", INST = Math.random().toString(36).slice(2, 8);
   const QUICK = { mir: 1, rtt: 1 };                                 // sent many times a second: only the newest matters
   let said = false, direct = null;
   const seen = new Set(), seenList = [], fresh = id => { if (!id) return true; if (seen.has(id)) return false; seen.add(id); seenList.push(id); if (seenList.length > 800) seen.delete(seenList.shift()); return true; };
