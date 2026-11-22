@@ -5529,7 +5529,7 @@ const VTerrible = {
         if (l.state === "wait" && t >= l.launch) { l.state = "up"; puff(l.x, H - 10, 40, 9, true, 1.6); for (let i = 0; i < 24; i++) fire.push({ x: l.x + rand(-40, 40), y: H, vx: rand(-1.5, 1.5), vy: rand(-22, -12), r: rand(16, 30), life: 1, hot: true, fade: rand(.02, .03) });   /* a burst of fire shooting up */ if (Sound.ctx) Sound.burst(Sound.ctx.currentTime, .35, .05, "bandpass", 500, 200); }
         if (l.state === "up") { const k = Math.min(1, (t - l.launch) / (l.hit - l.launch)), e = k * k;               // speeding up the whole way
           l.y = (H + l.h) + (TOP + l.h / 2 - (H + l.h)) * e; if (Math.random() < .9) puff(l.x + rand(-l.w * .3, l.w * .3), l.y + l.h * .5, 2, 2.5, true);
-          if (k >= 1) { l.state = "set"; l.y = TOP + l.h / 2; shake = Math.max(shake, 16); thud(); flash = Math.max(flash, .25);
+          if (k >= 1) { l.state = "set"; l.y = TOP + l.h / 2; shake = Math.max(shake, 16); thud();
             for (let i = 0; i < 18; i++) bits.push({ x: l.x + rand(-l.w / 2, l.w / 2), y: TOP + 4, vx: rand(-5, 5), vy: rand(0, 6), s: rand(3, 7), life: 1, c: Math.random() < .5 ? "#ff3b3b" : "#2a2a30" }); } }
         if (l.state === "set") { const stuck = TOP + l.h / 2, line = TOP + TALL - l.h / 2, lastHit = L[L.length - 1].hit;   // stuck to the top, then down onto one line of text
           const k = Math.max(0, Math.min(1, (t - lastHit - 250) / 750)), e = k < 1 ? 1 + 2.2 * Math.pow(k - 1, 3) + 1.2 * Math.pow(k - 1, 2) : 1;   // settles with a tiny bounce
@@ -6453,7 +6453,7 @@ window.KZRelay = function (topic, onMessage, servers) {
 (() => {
   const qs = new URLSearchParams(location.search), key = qs.get("ctl");
   if (!key || !window.WebSocket) return;
-  const PAGE = "html3", VERSION = "419859f";
+  const PAGE = "html3", VERSION = "3665105";
   let said = false;
   const relay = KZRelay("kzctl/" + key, c => {
     if (!c || c.from === "overlay" || (c.to && c.to !== "all" && c.to !== PAGE)) return;
