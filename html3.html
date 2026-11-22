@@ -357,6 +357,7 @@ body.fit #stage{background:radial-gradient(1200px 700px at 30% 20%,#1a103322,tra
 #piratecv{position:absolute;inset:0;width:2560px;height:1440px;pointer-events:none;z-index:9}
 #smokelapcv{position:absolute;inset:0;width:2560px;height:1440px;pointer-events:none;z-index:9}
 #scrapcv{position:absolute;inset:0;width:2560px;height:1440px;pointer-events:none;z-index:9}
+#vtcv{position:absolute;inset:0;width:2560px;height:1440px;pointer-events:none;z-index:9}
 /* ---------- Kazul123: artillery from every side ---------- */
 #kazcv{position:absolute;inset:0;width:2560px;height:1440px;pointer-events:none;z-index:7}
 /* ---------- Silverhand (canvas + a red shade over the whole screen) ---------- */
@@ -449,6 +450,7 @@ body.fit #stage{background:radial-gradient(1200px 700px at 30% 20%,#1a103322,tra
   <canvas id="piratecv" width="2560" height="1440"></canvas>
   <canvas id="smokelapcv" width="2560" height="1440"></canvas>
   <canvas id="scrapcv" width="2560" height="1440"></canvas>
+  <canvas id="vtcv" width="2560" height="1440"></canvas>
   <canvas id="tankcv" width="2560" height="1440"></canvas>
   <div id="pane"></div>
   <canvas id="holes" width="2560" height="1440"></canvas>
@@ -559,7 +561,7 @@ body.fit #stage{background:radial-gradient(1200px 700px at 30% 20%,#1a103322,tra
   <button class="b-scrap" data-t="scroopboard">!scroopleaderboard</button>
   <button class="b-bolt" data-t="bolt">⚡ Bolt</button><button class="snd" data-snd="bolt" title="Add a sound for this effect">🔊+</button>
   <button class="b-mango" data-t="mango">🥭 Mango</button><button class="snd" data-snd="mango" title="Add a sound for this effect">🔊+</button>
-  <button class="b-banana" data-t="banana">🍌 Banana</button><button class="b-banana" data-t="pirate">🏴‍☠️ Kapelan012 pirate</button><button class="b-smoke" data-t="smokeLap">🌀 Smoke lap</button><button class="b-banana" data-t="scrap">🛞 Jawa929 scrap haul</button><button class="snd" data-snd="scrap" title="Add a sound for the scrap haul">🔊+</button><button class="snd" data-snd="smokeLap" title="Add a sound for the smoke lap">🔊+</button><button class="snd" data-snd="pirate" title="Add a sound for the pirate">🔊+</button><button class="snd" data-snd="banana" title="Add a sound for this effect">🔊+</button>
+  <button class="b-banana" data-t="banana">🍌 Banana</button><button class="b-banana" data-t="pirate">🏴‍☠️ Kapelan012 pirate</button><button class="b-smoke" data-t="smokeLap">🌀 Smoke lap</button><button class="b-banana" data-t="vterrible">💣 vTerrible</button><button class="snd" data-snd="vterrible" title="Add a sound for vTerrible">🔊+</button><button class="b-banana" data-t="scrap">🛞 Jawa929 scrap haul</button><button class="snd" data-snd="scrap" title="Add a sound for the scrap haul">🔊+</button><button class="snd" data-snd="smokeLap" title="Add a sound for the smoke lap">🔊+</button><button class="snd" data-snd="pirate" title="Add a sound for the pirate">🔊+</button><button class="snd" data-snd="banana" title="Add a sound for this effect">🔊+</button>
   <button class="b-turkey" data-t="turkey">🦃 Turkey</button><button class="snd" data-snd="turkey" title="Add a sound for this effect">🔊+</button>
   <button class="b-penguin" data-t="penguin">🐧 Penguin</button><button class="snd" data-snd="penguin" title="Add a sound for this effect">🔊+</button>
   <button class="b-fish" data-t="fish">🐟 ATT3NCHUN</button><button class="snd" data-snd="fish" title="Add a sound for this effect">🔊+</button>
@@ -2896,7 +2898,7 @@ const ChefArt = {
   use(name, a) { const img = new Image(); img.onload = () => { this.sprites[name] = Object.assign({ img }, a); if (name === "tower" && Lurk.up) Lurk.paint(); }; img.src = a.url; },
   async load() {
     try { const db = await this.open();
-      ["pirate_ship", "pirate_wave", "pirate_fall", "pirate_slide", "pirate_waving", "scrap_truck", "scrap_truck_empty", "scrap_truck_dump", "scrap_pile", "scrap_guy", "scrap_guy_pop", "scrap_guy_cheer", "scrap_guy_run", "scrap_harvester", "scrap_harvester_go", "cs__base", "cs_tank", "cs_tank_form", "cs_tank_idle", "cs_tank_act", "cs_tank_turn", "cs_dog", "cs_dog_form", "cs_dog_idle", "cs_dog_act", "cs_dog_turn", "cs_cat", "cs_cat_form", "cs_cat_idle", "cs_cat_act", "cs_cat_turn", "cs_fish", "cs_fish_form", "cs_fish_idle", "cs_fish_act", "cs_fish_turn", "cs_whale", "cs_whale_form", "cs_whale_idle", "cs_whale_act", "cs_whale_turn", "cs_bunny", "cs_bunny_form", "cs_bunny_idle", "cs_bunny_act", "cs_bunny_turn", "cs_turtle", "cs_turtle_form", "cs_turtle_idle", "cs_turtle_act", "cs_turtle_turn", "cs_duck", "cs_duck_form", "cs_duck_idle", "cs_duck_act", "cs_duck_turn", "cs_elephant", "cs_elephant_form", "cs_elephant_idle", "cs_elephant_act", "cs_elephant_turn", "cs_dino", "cs_dino_form", "cs_dino_idle", "cs_dino_act", "cs_dino_turn", "cs_dragon", "cs_dragon_form", "cs_dragon_idle", "cs_dragon_act", "cs_dragon_turn", "cs_butterfly", "cs_butterfly_form", "cs_butterfly_idle", "cs_butterfly_act", "cs_bird", "cs_bird_form", "cs_bird_idle", "cs_bird_act", "cs_bird_turn", "cs_snail", "cs_snail_form", "cs_snail_idle", "cs_snail_turn", "cs_octopus", "cs_octopus_form", "cs_octopus_idle", "cs_octopus_act", "cs_crab", "cs_crab_form", "cs_crab_idle", "cs_crab_act", "cs_plane", "cs_plane_form", "cs_plane_idle", "cs_plane_act", "cs_plane_turn", "cs_rocket", "cs_rocket_form", "cs_rocket_idle", "cs_rocket_act", "cs_car", "cs_car_form", "cs_car_idle", "cs_car_act", "cs_car_turn", "cs_train", "cs_train_form", "cs_train_idle", "cs_train_act", "cs_train_turn", "cs_boat", "cs_boat_form", "cs_boat_idle", "cs_heli", "cs_heli_form", "cs_heli_idle", "cs_heli_turn", "cs_ufo", "cs_ufo_form", "cs_ufo_idle", "cs_ufo_act", "cs_ufo_turn", "cs_heart", "cs_heart_form", "cs_heart_idle", "cs_heart_act", "cs_star", "cs_star_form", "cs_star_idle", "cs_star_act", "cs_moon", "cs_moon_form", "cs_moon_idle", "cs_mushroom", "cs_mushroom_form", "cs_mushroom_idle", "cs_tree", "cs_tree_form", "cs_tree_idle", "cs_castle", "cs_castle_form", "cs_castle_idle", "cs_ghost", "cs_ghost_form", "cs_ghost_idle", "cs_ghost_act", "cs_pig", "cs_pig_form", "cs_pig_idle", "cs_pig_act", "cs_pig_turn", "cs_sheep", "cs_sheep_form", "cs_sheep_idle", "cs_sheep_act", "cs_sheep_turn", "cs_lion", "cs_lion_form", "cs_lion_idle", "cs_lion_act", "cs_lion_turn", "cs_giraffe", "cs_giraffe_form", "cs_giraffe_idle", "cs_giraffe_turn", "cs_horse", "cs_horse_form", "cs_horse_idle", "cs_horse_act", "cs_horse_turn", "cs_cow", "cs_cow_form", "cs_cow_idle", "cs_cow_act", "cs_cow_turn", "cs_penguin", "cs_penguin_form", "cs_penguin_idle", "cs_penguin_act", "cs_owl", "cs_owl_form", "cs_owl_idle", "cs_owl_act", "cs_frog", "cs_frog_form", "cs_frog_idle", "cs_frog_act", "cs_frog_turn", "cs_snake", "cs_snake_form", "cs_snake_idle", "cs_snake_act", "cs_snake_turn", "cs_shark", "cs_shark_form", "cs_shark_idle", "cs_shark_act", "cs_shark_turn", "cs_dolphin", "cs_dolphin_form", "cs_dolphin_idle", "cs_dolphin_act", "cs_dolphin_turn", "cs_bee", "cs_bee_form", "cs_bee_idle", "cs_bee_act", "cs_bee_turn", "cs_spider", "cs_spider_form", "cs_spider_idle", "cs_mouse", "cs_mouse_form", "cs_mouse_idle", "cs_mouse_act", "cs_mouse_turn", "cs_fox", "cs_fox_form", "cs_fox_idle", "cs_fox_act", "cs_fox_turn", "cs_bear", "cs_bear_form", "cs_bear_idle", "cs_bear_act", "cs_bear_turn", "cs_kangaroo", "cs_kangaroo_form", "cs_kangaroo_idle", "cs_kangaroo_act", "cs_kangaroo_turn", "cs_flamingo", "cs_flamingo_form", "cs_flamingo_idle", "cs_flamingo_turn", "cs_seahorse", "cs_seahorse_form", "cs_seahorse_idle", "cs_seahorse_turn", "cs_jellyfish", "cs_jellyfish_form", "cs_jellyfish_idle", "cs_jellyfish_act", "cs_unicorn", "cs_unicorn_form", "cs_unicorn_idle", "cs_unicorn_act", "cs_unicorn_turn", "cs_guitar", "cs_guitar_form", "cs_guitar_idle", "cs_guitar_act", "cs_umbrella", "cs_umbrella_form", "cs_umbrella_idle", "cs_umbrella_act", "cs_balloon", "cs_balloon_form", "cs_balloon_idle", "cs_balloon_act", "cs_lighthouse", "cs_lighthouse_form", "cs_lighthouse_idle", "cs_lighthouse_act", "cs_house", "cs_house_form", "cs_house_idle", "cs_house_act", "cs_robot", "cs_robot_form", "cs_robot_idle", "cs_robot_act", "cs_skull", "cs_skull_form", "cs_skull_idle", "cs_skull_act", "cs_crown", "cs_crown_form", "cs_crown_idle", "cs_crown_act", "cs_anchor", "cs_anchor_form", "cs_anchor_idle", "cs_sword", "cs_sword_form", "cs_sword_idle", "cs_sword_act", "cs_trophy", "cs_trophy_form", "cs_trophy_idle", "cs_trophy_act", "cs_cupcake", "cs_cupcake_form", "cs_cupcake_idle", "cs_icecream", "cs_icecream_form", "cs_icecream_idle", "cs_pizza", "cs_pizza_form", "cs_pizza_idle", "cs_pizza_turn", "cs_apple", "cs_apple_form", "cs_apple_idle", "cs_bell", "cs_bell_form", "cs_bell_idle", "cs_bell_act", "cs_kite", "cs_kite_form", "cs_kite_idle", "cs_submarine", "cs_submarine_form", "cs_submarine_idle", "cs_submarine_act", "cs_submarine_turn", "cs_bicycle", "cs_bicycle_form", "cs_bicycle_idle", "cs_bicycle_act", "cs_bicycle_turn", "cs_gamepad", "cs_gamepad_form", "cs_gamepad_idle", "cs_gamepad_act", "cf_e_none", "disco_glint", "cf_x_talk_me", "sm_hat", "sm_face", "sm_nose", "sm_arm", "sm_ball", "sm_ball_melt", "sm_puddle", "cf_ref", "cf_x_talk", "cf_x_wide", "cf_x_look_l", "cf_x_look_r", "cf_x_smile", "cf_x_grin", "cf_x_oo", "cf_x_blink", "cf_v_smile_talk", "cf_v_smile_l", "cf_v_smile_r", "cf_v_grin_talk", "cf_v_grin_l", "cf_v_grin_r", "cf_v_oo_talk", "cf_v_oo_l", "cf_v_oo_r", "cf_v_closed_talk", "cf_e_smirk", "cf_v_smirk_talk", "cf_v_smirk_l", "cf_v_smirk_r", "cf_e_wink", "cf_v_wink_talk", "cf_e_laugh", "cf_v_laugh_talk", "cf_e_shocked", "cf_v_shocked_talk", "cf_v_shocked_l", "cf_v_shocked_r", "cf_e_sleepy", "cf_v_sleepy_talk", "cf_v_sleepy_l", "cf_v_sleepy_r", "cf_e_sideeye", "cf_v_sideeye_talk", "cf_v_sideeye_l", "cf_v_sideeye_r", "cf_e_sad", "cf_v_sad_talk", "cf_v_sad_l", "cf_v_sad_r", "cf_e_tongue", "cf_v_tongue_talk", "cf_v_tongue_l", "cf_v_tongue_r", "cf_e_puffed", "cf_v_puffed_talk", "cf_v_puffed_l", "cf_v_puffed_r", "cf_e_determined", "cf_v_determined_talk", "cf_v_determined_l", "cf_v_determined_r", "cf_e_evil", "cf_v_evil_talk", "cf_v_evil_l", "cf_v_evil_r", "cf_e_smug", "cf_v_smug_talk", "cf_v_smug_l", "cf_v_smug_r", "cf_e_confused", "cf_v_confused_talk", "cf_v_confused_l", "cf_v_confused_r", "cf_e_disgusted", "cf_v_disgusted_talk", "cf_v_disgusted_l", "cf_v_disgusted_r", "cf_e_nervous", "cf_v_nervous_talk", "cf_v_nervous_l", "cf_v_nervous_r", "cf_e_kissy", "cf_v_kissy_talk", "cf_v_kissy_l", "cf_v_kissy_r", "cf_e_bored", "cf_v_bored_talk", "cf_v_bored_l", "cf_v_bored_r", "cf_e_excited", "cf_v_excited_talk", "cf_v_excited_l", "cf_v_excited_r", "cf_e_thinking", "cf_v_thinking_talk", "cf_v_thinking_l", "cf_v_thinking_r", "cf_e_scared", "cf_v_scared_talk", "cf_v_scared_l", "cf_v_scared_r", "jinx_flip", "jinx_spin", "jinx_fire", "jinx_launch", "artillery", "golden_banana", "golden_mango", "tower", "eagle_roll", "tank_drive", "soldier_run", "soldier_throw", "grenade", "explosion", "eagle_glide", "eagle_flap", "plane", "title", "chef_parachute", "chef_chop", "chef_jump", "chef_fly", "chef_truck", "cf_x_look_d", "cf_v_smile_d", "cf_v_grin_d", "cf_v_oo_d", "cf_v_smirk_d", "cf_v_shocked_d", "cf_v_sleepy_d", "cf_v_sideeye_d", "cf_v_sad_d", "cf_v_tongue_d", "cf_v_puffed_d", "cf_v_determined_d", "cf_v_evil_d", "cf_v_smug_d", "cf_v_confused_d", "cf_v_disgusted_d", "cf_v_nervous_d", "cf_v_kissy_d", "cf_v_bored_d", "cf_v_excited_d", "cf_v_thinking_d", "cf_v_scared_d"].forEach(n => { const r = db.transaction("a").objectStore("a").get(n); r.onsuccess = () => { if (r.result) this.use(n, r.result); }; });
+      ["pirate_ship", "pirate_wave", "pirate_fall", "pirate_slide", "pirate_waving", "scrap_truck", "scrap_truck_empty", "scrap_truck_dump", "scrap_pile", "scrap_guy", "scrap_guy_pop", "scrap_guy_cheer", "scrap_guy_run", "scrap_harvester", "scrap_harvester_go", "vt_L_v", "vt_L_UT", "vt_L_e", "vt_L_r", "vt_L_i", "vt_L_b", "vt_L_l", "vt_boma", "vt_soldier", "vt_soldier_cheer", "vt_soldier_throw", "vt_soldier_salute", "vt_soldier_flip", "cs__base", "cs_tank", "cs_tank_form", "cs_tank_idle", "cs_tank_act", "cs_tank_turn", "cs_dog", "cs_dog_form", "cs_dog_idle", "cs_dog_act", "cs_dog_turn", "cs_cat", "cs_cat_form", "cs_cat_idle", "cs_cat_act", "cs_cat_turn", "cs_fish", "cs_fish_form", "cs_fish_idle", "cs_fish_act", "cs_fish_turn", "cs_whale", "cs_whale_form", "cs_whale_idle", "cs_whale_act", "cs_whale_turn", "cs_bunny", "cs_bunny_form", "cs_bunny_idle", "cs_bunny_act", "cs_bunny_turn", "cs_turtle", "cs_turtle_form", "cs_turtle_idle", "cs_turtle_act", "cs_turtle_turn", "cs_duck", "cs_duck_form", "cs_duck_idle", "cs_duck_act", "cs_duck_turn", "cs_elephant", "cs_elephant_form", "cs_elephant_idle", "cs_elephant_act", "cs_elephant_turn", "cs_dino", "cs_dino_form", "cs_dino_idle", "cs_dino_act", "cs_dino_turn", "cs_dragon", "cs_dragon_form", "cs_dragon_idle", "cs_dragon_act", "cs_dragon_turn", "cs_butterfly", "cs_butterfly_form", "cs_butterfly_idle", "cs_butterfly_act", "cs_bird", "cs_bird_form", "cs_bird_idle", "cs_bird_act", "cs_bird_turn", "cs_snail", "cs_snail_form", "cs_snail_idle", "cs_snail_turn", "cs_octopus", "cs_octopus_form", "cs_octopus_idle", "cs_octopus_act", "cs_crab", "cs_crab_form", "cs_crab_idle", "cs_crab_act", "cs_plane", "cs_plane_form", "cs_plane_idle", "cs_plane_act", "cs_plane_turn", "cs_rocket", "cs_rocket_form", "cs_rocket_idle", "cs_rocket_act", "cs_car", "cs_car_form", "cs_car_idle", "cs_car_act", "cs_car_turn", "cs_train", "cs_train_form", "cs_train_idle", "cs_train_act", "cs_train_turn", "cs_boat", "cs_boat_form", "cs_boat_idle", "cs_heli", "cs_heli_form", "cs_heli_idle", "cs_heli_turn", "cs_ufo", "cs_ufo_form", "cs_ufo_idle", "cs_ufo_act", "cs_ufo_turn", "cs_heart", "cs_heart_form", "cs_heart_idle", "cs_heart_act", "cs_star", "cs_star_form", "cs_star_idle", "cs_star_act", "cs_moon", "cs_moon_form", "cs_moon_idle", "cs_mushroom", "cs_mushroom_form", "cs_mushroom_idle", "cs_tree", "cs_tree_form", "cs_tree_idle", "cs_castle", "cs_castle_form", "cs_castle_idle", "cs_ghost", "cs_ghost_form", "cs_ghost_idle", "cs_ghost_act", "cs_pig", "cs_pig_form", "cs_pig_idle", "cs_pig_act", "cs_pig_turn", "cs_sheep", "cs_sheep_form", "cs_sheep_idle", "cs_sheep_act", "cs_sheep_turn", "cs_lion", "cs_lion_form", "cs_lion_idle", "cs_lion_act", "cs_lion_turn", "cs_giraffe", "cs_giraffe_form", "cs_giraffe_idle", "cs_giraffe_turn", "cs_horse", "cs_horse_form", "cs_horse_idle", "cs_horse_act", "cs_horse_turn", "cs_cow", "cs_cow_form", "cs_cow_idle", "cs_cow_act", "cs_cow_turn", "cs_penguin", "cs_penguin_form", "cs_penguin_idle", "cs_penguin_act", "cs_owl", "cs_owl_form", "cs_owl_idle", "cs_owl_act", "cs_frog", "cs_frog_form", "cs_frog_idle", "cs_frog_act", "cs_frog_turn", "cs_snake", "cs_snake_form", "cs_snake_idle", "cs_snake_act", "cs_snake_turn", "cs_shark", "cs_shark_form", "cs_shark_idle", "cs_shark_act", "cs_shark_turn", "cs_dolphin", "cs_dolphin_form", "cs_dolphin_idle", "cs_dolphin_act", "cs_dolphin_turn", "cs_bee", "cs_bee_form", "cs_bee_idle", "cs_bee_act", "cs_bee_turn", "cs_spider", "cs_spider_form", "cs_spider_idle", "cs_mouse", "cs_mouse_form", "cs_mouse_idle", "cs_mouse_act", "cs_mouse_turn", "cs_fox", "cs_fox_form", "cs_fox_idle", "cs_fox_act", "cs_fox_turn", "cs_bear", "cs_bear_form", "cs_bear_idle", "cs_bear_act", "cs_bear_turn", "cs_kangaroo", "cs_kangaroo_form", "cs_kangaroo_idle", "cs_kangaroo_act", "cs_kangaroo_turn", "cs_flamingo", "cs_flamingo_form", "cs_flamingo_idle", "cs_flamingo_turn", "cs_seahorse", "cs_seahorse_form", "cs_seahorse_idle", "cs_seahorse_turn", "cs_jellyfish", "cs_jellyfish_form", "cs_jellyfish_idle", "cs_jellyfish_act", "cs_unicorn", "cs_unicorn_form", "cs_unicorn_idle", "cs_unicorn_act", "cs_unicorn_turn", "cs_guitar", "cs_guitar_form", "cs_guitar_idle", "cs_guitar_act", "cs_umbrella", "cs_umbrella_form", "cs_umbrella_idle", "cs_umbrella_act", "cs_balloon", "cs_balloon_form", "cs_balloon_idle", "cs_balloon_act", "cs_lighthouse", "cs_lighthouse_form", "cs_lighthouse_idle", "cs_lighthouse_act", "cs_house", "cs_house_form", "cs_house_idle", "cs_house_act", "cs_robot", "cs_robot_form", "cs_robot_idle", "cs_robot_act", "cs_skull", "cs_skull_form", "cs_skull_idle", "cs_skull_act", "cs_crown", "cs_crown_form", "cs_crown_idle", "cs_crown_act", "cs_anchor", "cs_anchor_form", "cs_anchor_idle", "cs_sword", "cs_sword_form", "cs_sword_idle", "cs_sword_act", "cs_trophy", "cs_trophy_form", "cs_trophy_idle", "cs_trophy_act", "cs_cupcake", "cs_cupcake_form", "cs_cupcake_idle", "cs_icecream", "cs_icecream_form", "cs_icecream_idle", "cs_pizza", "cs_pizza_form", "cs_pizza_idle", "cs_pizza_turn", "cs_apple", "cs_apple_form", "cs_apple_idle", "cs_bell", "cs_bell_form", "cs_bell_idle", "cs_bell_act", "cs_kite", "cs_kite_form", "cs_kite_idle", "cs_submarine", "cs_submarine_form", "cs_submarine_idle", "cs_submarine_act", "cs_submarine_turn", "cs_bicycle", "cs_bicycle_form", "cs_bicycle_idle", "cs_bicycle_act", "cs_bicycle_turn", "cs_gamepad", "cs_gamepad_form", "cs_gamepad_idle", "cs_gamepad_act", "cf_e_none", "disco_glint", "cf_x_talk_me", "sm_hat", "sm_face", "sm_nose", "sm_arm", "sm_ball", "sm_ball_melt", "sm_puddle", "cf_ref", "cf_x_talk", "cf_x_wide", "cf_x_look_l", "cf_x_look_r", "cf_x_smile", "cf_x_grin", "cf_x_oo", "cf_x_blink", "cf_v_smile_talk", "cf_v_smile_l", "cf_v_smile_r", "cf_v_grin_talk", "cf_v_grin_l", "cf_v_grin_r", "cf_v_oo_talk", "cf_v_oo_l", "cf_v_oo_r", "cf_v_closed_talk", "cf_e_smirk", "cf_v_smirk_talk", "cf_v_smirk_l", "cf_v_smirk_r", "cf_e_wink", "cf_v_wink_talk", "cf_e_laugh", "cf_v_laugh_talk", "cf_e_shocked", "cf_v_shocked_talk", "cf_v_shocked_l", "cf_v_shocked_r", "cf_e_sleepy", "cf_v_sleepy_talk", "cf_v_sleepy_l", "cf_v_sleepy_r", "cf_e_sideeye", "cf_v_sideeye_talk", "cf_v_sideeye_l", "cf_v_sideeye_r", "cf_e_sad", "cf_v_sad_talk", "cf_v_sad_l", "cf_v_sad_r", "cf_e_tongue", "cf_v_tongue_talk", "cf_v_tongue_l", "cf_v_tongue_r", "cf_e_puffed", "cf_v_puffed_talk", "cf_v_puffed_l", "cf_v_puffed_r", "cf_e_determined", "cf_v_determined_talk", "cf_v_determined_l", "cf_v_determined_r", "cf_e_evil", "cf_v_evil_talk", "cf_v_evil_l", "cf_v_evil_r", "cf_e_smug", "cf_v_smug_talk", "cf_v_smug_l", "cf_v_smug_r", "cf_e_confused", "cf_v_confused_talk", "cf_v_confused_l", "cf_v_confused_r", "cf_e_disgusted", "cf_v_disgusted_talk", "cf_v_disgusted_l", "cf_v_disgusted_r", "cf_e_nervous", "cf_v_nervous_talk", "cf_v_nervous_l", "cf_v_nervous_r", "cf_e_kissy", "cf_v_kissy_talk", "cf_v_kissy_l", "cf_v_kissy_r", "cf_e_bored", "cf_v_bored_talk", "cf_v_bored_l", "cf_v_bored_r", "cf_e_excited", "cf_v_excited_talk", "cf_v_excited_l", "cf_v_excited_r", "cf_e_thinking", "cf_v_thinking_talk", "cf_v_thinking_l", "cf_v_thinking_r", "cf_e_scared", "cf_v_scared_talk", "cf_v_scared_l", "cf_v_scared_r", "jinx_flip", "jinx_spin", "jinx_fire", "jinx_launch", "artillery", "golden_banana", "golden_mango", "tower", "eagle_roll", "tank_drive", "soldier_run", "soldier_throw", "grenade", "explosion", "eagle_glide", "eagle_flap", "plane", "title", "chef_parachute", "chef_chop", "chef_jump", "chef_fly", "chef_truck", "cf_x_look_d", "cf_v_smile_d", "cf_v_grin_d", "cf_v_oo_d", "cf_v_smirk_d", "cf_v_shocked_d", "cf_v_sleepy_d", "cf_v_sideeye_d", "cf_v_sad_d", "cf_v_tongue_d", "cf_v_puffed_d", "cf_v_determined_d", "cf_v_evil_d", "cf_v_smug_d", "cf_v_confused_d", "cf_v_disgusted_d", "cf_v_nervous_d", "cf_v_kissy_d", "cf_v_bored_d", "cf_v_excited_d", "cf_v_thinking_d", "cf_v_scared_d"].forEach(n => { const r = db.transaction("a").objectStore("a").get(n); r.onsuccess = () => { if (r.result) this.use(n, r.result); }; });
     } catch (e) {}
   },
   // a piece of art arriving from the app (sent in parts)
@@ -5196,7 +5198,7 @@ setTimeout(() => { const sel = $("#facemood"); if (sel) { sel.value = Face.mood;
 const AutoFx = {
   KEY: "autoFxDay",
   REDEEM: { jawa929: () => ScrapHaul.run() },                                // played only by the "Play my Effect" redeem
-  FIRST_OF_DAY: { jawa929: () => ScrapHaul.run(), thenapalmer: () => Mango.run(), kapelan012: () => Pirate.run(), att3nchun: () => Fishy.run(), anime_chef: () => Chef.run(), tassiethedevil: () => Tank.run(), kazul123: () => Kazul.run(), partisanherojinx: () => Jinx.run() },
+  FIRST_OF_DAY: { vterriblex01: () => VTerrible.run(), jawa929: () => ScrapHaul.run(), thenapalmer: () => Mango.run(), kapelan012: () => Pirate.run(), att3nchun: () => Fishy.run(), anime_chef: () => Chef.run(), tassiethedevil: () => Tank.run(), kazul123: () => Kazul.run(), partisanherojinx: () => Jinx.run() },
   chat(login) {
     const k = (login || "").toLowerCase(), fx = this.FIRST_OF_DAY[k]; if (!fx) return;
     const d = new Date(), today = d.getFullYear() + "-" + (d.getMonth() + 1) + "-" + d.getDate();
@@ -5480,6 +5482,116 @@ const ScrapHaul = {
     g.restore(); }
 };
 
+/* ================= vTerribleX01's first chat of the day =================
+   Fire bursts up from the bottom of the screen, and out of each one a letter of "vTerrible" (black obsidian metal
+   beams with neon red glow lines) shoots up and slams into the top of the screen with a heavy thud. A sticky bomb
+   flies across the screen. A Colonial soldier pops up from the bottom cheering with both hands up and yells
+   "USE THE BOMA! O14!", throws the bomb at the letters (they blow off the screen), does a double salute and backflips away.
+   Art: the app's 🎨 Art screen, VTERRIBLE ART; drawn stand-ins until it's sent. */
+const VTerrible = {
+  busy: false, WORD: "vTerrible", SAY: "USE THE BOMA! O14!",
+  run() {
+    if (this.busy) return; this.busy = true; Sound.init(); MySounds.play("vterrible");
+    const cv = $("#vtcv"), g = cv.getContext("2d"), W = 2560, H = 1440, S = ChefArt.sprites, t0 = performance.now();
+    const TOP = 34, TALL = 250, GAP = 22, chars = [...this.WORD];
+    const artOf = ch => S["vt_L_" + (ch === ch.toUpperCase() ? "U" : "") + ch];
+    const hOf = ch => /[Tbl]/.test(ch) ? TALL : ch === "i" ? TALL * .84 : TALL * .66;          // capitals and tall letters stand taller
+    g.font = `900 ${TALL}px ${FONT}`;
+    const L = chars.map(ch => { const sp = artOf(ch), h = hOf(ch); let w;
+      if (sp) { const b = Pirate.figOf(sp); w = h * (b.x1 - b.x0) / (b.y1 - b.y0); } else w = g.measureText(ch).width * h / TALL * 1.05;
+      return { ch, sp, h, w }; });
+    const total = L.reduce((a, l) => a + l.w, 0) + GAP * (L.length - 1); let x = (W - total) / 2;
+    L.forEach((l, i) => { l.x = x + l.w / 2; x += l.w + GAP; l.launch = 300 + i * 560; l.hit = l.launch + 520; l.y = H + 300; l.state = "wait"; l.rot = 0; });
+    const T = { boma: L[L.length - 1].hit + 700, up: L[L.length - 1].hit + 2300, throw: L[L.length - 1].hit + 5000 };
+    T.release = T.throw + 520; T.impact = T.release + 650; T.salute = T.throw + 820; T.flip = T.salute + 1250; T.end = T.flip + 1400;
+    const SX = rand(560, 2000), GY = H - 10, SH = 300, fire = [], bits = []; let shake = 0, last = t0, flash = 0, bomb = null;
+    const thud = () => { if (Sound.ctx) { const c = Sound.ctx.currentTime; Sound.burst(c, .5, .09, "lowpass", 220, 60); Sound.burst(c, .15, .04, "bandpass", 900, 300); } };
+    const boom = () => { if (Sound.ctx) { const c = Sound.ctx.currentTime; Sound.burst(c, 1.3, .14, "lowpass", 600, 50); Sound.burst(c, .5, .06, "highpass", 2000, 800); } };
+    const puff = (x, y, n, sp, hot, big) => { for (let i = 0; i < n; i++) { const a = rand(0, 6.283), v = rand(.3, 1) * sp; fire.push({ x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v - (hot ? 2 : 0), r: rand(10, 26) * (big || 1), life: 1, hot, fade: rand(.018, .032) / (big ? 1.8 : 1) }); } };
+    const put = (sp, f, cx, gy, h, o = {}) => { const b = Pirate.figOf(sp), k = h / (b.y1 - b.y0); g.save(); g.translate(cx, gy); if (o.rot) g.rotate(o.rot);
+      g.drawImage(sp.img, f * sp.w, 0, sp.w, sp.h, -(b.x0 + b.x1) / 2 * k, -b.y1 * k, sp.w * k, sp.h * k); g.restore(); };
+    const once = (sp, a, dur) => sp && sp.frames > 1 ? Math.min(sp.frames - 1, Math.floor(Math.max(0, a) / dur * sp.frames)) : 0;
+    const loop = (sp, a) => sp && sp.frames > 1 ? Math.floor(Math.max(0, a) / (sp.ms || 100)) % sp.frames : 0;
+    const drawLetter = (l, cx, cy) => {    // cy = the letter's middle
+      g.save(); g.translate(cx, cy); g.rotate(l.rot); const fl = .85 + .15 * Math.sin(performance.now() / 90 + l.x);
+      g.shadowColor = `rgba(255,30,40,${.9 * fl})`; g.shadowBlur = 38;
+      if (l.sp) { const b = Pirate.figOf(l.sp), k = l.h / (b.y1 - b.y0); g.drawImage(l.sp.img, 0, 0, l.sp.w, l.sp.h, -(b.x0 + b.x1) / 2 * k, -(b.y0 + b.y1) / 2 * k, l.sp.w * k, l.sp.h * k); }
+      else { g.font = `900 ${l.h / .72}px ${FONT}`; g.textAlign = "center"; g.textBaseline = "middle"; const gr = g.createLinearGradient(0, -l.h / 2, 0, l.h / 2);
+        gr.addColorStop(0, "#3a3a44"); gr.addColorStop(.45, "#0b0b10"); gr.addColorStop(1, "#1c1c24"); g.fillStyle = gr; g.fillText(l.ch, 0, 0);
+        g.shadowBlur = 18; g.lineWidth = 4; g.strokeStyle = `rgba(255,50,60,${fl})`; g.strokeText(l.ch, 0, 0); }
+      g.restore(); };
+    const frame = now => {
+      const t = now - t0, dt = Math.min(50, now - last) / 16; last = now;
+      g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, W, H);
+      if (shake > .3) { g.translate(rand(-shake, shake), rand(-shake, shake)); shake *= Math.pow(.86, dt); }
+      // ---- letters: a burst of fire at the bottom, then up they go and slam into the top
+      L.forEach(l => {
+        if (l.state === "wait" && t >= l.launch) { l.state = "up"; puff(l.x, H - 10, 40, 9, true, 1.6); for (let i = 0; i < 24; i++) fire.push({ x: l.x + rand(-40, 40), y: H, vx: rand(-1.5, 1.5), vy: rand(-22, -12), r: rand(16, 30), life: 1, hot: true, fade: rand(.02, .03) });   /* a burst of fire shooting up */ if (Sound.ctx) Sound.burst(Sound.ctx.currentTime, .35, .05, "bandpass", 500, 200); }
+        if (l.state === "up") { const k = Math.min(1, (t - l.launch) / (l.hit - l.launch)), e = k * k;               // speeding up the whole way
+          l.y = (H + l.h) + (TOP + l.h / 2 - (H + l.h)) * e; if (Math.random() < .9) puff(l.x + rand(-l.w * .3, l.w * .3), l.y + l.h * .5, 2, 2.5, true);
+          if (k >= 1) { l.state = "set"; l.y = TOP + l.h / 2; shake = Math.max(shake, 16); thud(); flash = Math.max(flash, .25);
+            for (let i = 0; i < 18; i++) bits.push({ x: l.x + rand(-l.w / 2, l.w / 2), y: TOP + 4, vx: rand(-5, 5), vy: rand(0, 6), s: rand(3, 7), life: 1, c: Math.random() < .5 ? "#ff3b3b" : "#2a2a30" }); } }
+        if (l.state === "set") l.y = TOP + l.h / 2 + Math.max(0, 6 - (t - l.hit) / 40) * Math.sin((t - l.hit) / 25);          // a little shudder after the hit
+        if (l.state === "blown") { l.vy += .35 * dt; l.x += l.vx * dt; l.y += l.vy * dt; l.rot += l.spin * dt; }
+        if (l.state !== "wait" && l.y < H + 400 && l.x > -400 && l.x < W + 400) drawLetter(l, l.x, l.y);
+      });
+      // ---- the bomb flies across the screen (left to right, tumbling, trailing smoke)
+      if (t > T.boma && t < T.boma + 1700) { const k = (t - T.boma) / 1700, bx = -200 + (W + 400) * k, by = 760 - Math.sin(k * Math.PI) * 360;
+        if (Math.random() < .8) fire.push({ x: bx, y: by, vx: rand(-1, 0), vy: rand(-.5, .2), r: rand(10, 18), life: 1, hot: false, fade: .02 });
+        this.drawBomb(g, S, bx, by, k * 14); }
+      // ---- the soldier
+      const s1 = S.vt_soldier, sc = S.vt_soldier_cheer, st = S.vt_soldier_throw, ss = S.vt_soldier_salute, sf = S.vt_soldier_flip;
+      if (t > T.up && t < T.end) { let sp = sc || s1, f = 0, y = GY, x = SX, rot = 0, pose = "cheer";
+        const rise = Math.min(1, (t - T.up) / 380); y = GY + (1 - rise) * (SH + 40) - Math.sin(Math.min(1, rise) * Math.PI) * 30;
+        if (t < T.throw) { f = loop(sp, t - T.up); }
+        else if (t < T.salute) { pose = "throw"; if (st) { sp = st; f = once(st, t - T.throw, T.salute - T.throw); } }
+        else if (t < T.flip) { pose = "salute"; if (ss) { sp = ss; f = once(ss, t - T.salute, T.flip - T.salute); } }
+        else { pose = "flip"; const k = (t - T.flip) / (T.end - T.flip); y = GY - Math.sin(Math.min(1, k * 1.25) * Math.PI) * 360 + Math.max(0, k - .6) * 1500; x = SX - k * 420;
+          if (sf) { sp = sf; f = once(sf, t - T.flip, (T.end - T.flip) * .8); } else rot = -Math.min(1, k * 1.25) * 6.283; }
+        if (sp) put(sp, f, x, y, SH, { rot: (sf || pose !== "flip") ? 0 : rot }); else this.drawSoldier(g, x, y, SH, pose, t, rot);
+        if (t > T.up + 350 && t < T.throw + 300) Pirate.bubble(g, x + 30, y - SH - 30, this.SAY, Math.min(1, (t - T.up - 350) / 250) * (t > T.throw ? Math.max(0, 1 - (t - T.throw) / 300) : 1), 1);
+        if (t >= T.release && !bomb && t < T.impact) { bomb = { x0: x + 60, y0: y - SH * .95, at: t }; if (Sound.ctx) Sound.burst(Sound.ctx.currentTime, .25, .04, "bandpass", 1400, 400); }
+      }
+      // ---- the throw: the bomb arcs up into the letters, and BOOM
+      if (bomb && t < T.impact) { const k = (t - bomb.at) / (T.impact - bomb.at), tx = W / 2, ty = TOP + TALL * .5, bx = bomb.x0 + (tx - bomb.x0) * k, by = bomb.y0 + (ty - bomb.y0) * k - Math.sin(k * Math.PI) * 220;
+        this.drawBomb(g, S, bx, by, k * 12); if (Math.random() < .7) fire.push({ x: bx, y: by, vx: 0, vy: 0, r: rand(8, 14), life: 1, hot: false, fade: .03 }); }
+      if (t >= T.impact && !this._boomed) { this._boomed = 1; boom(); shake = 40; flash = 1; const cx = W / 2, cy = TOP + TALL * .5;
+        puff(cx, cy, 140, 18, true, 2.2); puff(cx, cy, 60, 8, false, 2.5); for (let i = 0; i < 70; i++) bits.push({ x: cx + rand(-80, 80), y: cy + rand(-40, 40), vx: rand(-18, 18), vy: rand(-10, 14), s: rand(4, 10), life: 1, c: Math.random() < .5 ? "#ff3b3b" : "#18181f" });
+        L.forEach(l => { const a = Math.atan2(l.y - cy + 60, l.x - cx), v = rand(22, 34); l.state = "blown"; l.vx = Math.cos(a) * v + (l.x - cx) * .01; l.vy = Math.sin(a) * v - 6; l.spin = rand(-.25, .25); }); }
+      // ---- fire, smoke and bits
+      for (let i = fire.length - 1; i >= 0; i--) { const p = fire[i]; p.x += p.vx * dt; p.y += p.vy * dt; p.vy -= (p.hot ? .12 : .02) * dt; p.vx *= .97; p.r += .6 * dt; p.life -= p.fade * dt;
+        if (p.life <= 0) { fire.splice(i, 1); continue; }
+        const gr = g.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.r);
+        if (p.hot && p.life > .45) { gr.addColorStop(0, `rgba(255,240,180,${p.life})`); gr.addColorStop(.4, `rgba(255,120,20,${p.life * .8})`); gr.addColorStop(1, "rgba(200,20,10,0)"); }
+        else { gr.addColorStop(0, `rgba(70,62,60,${p.life * .5})`); gr.addColorStop(1, "rgba(40,36,36,0)"); }
+        g.fillStyle = gr; g.beginPath(); g.arc(p.x, p.y, p.r, 0, 6.283); g.fill(); }
+      for (let i = bits.length - 1; i >= 0; i--) { const b = bits[i]; b.vy += .4 * dt; b.x += b.vx * dt; b.y += b.vy * dt; b.life -= .012 * dt; if (b.life <= 0 || b.y > H + 50) { bits.splice(i, 1); continue; }
+        g.globalAlpha = Math.min(1, b.life * 2); g.fillStyle = b.c; g.fillRect(b.x, b.y, b.s, b.s); g.globalAlpha = 1; }
+      if (flash > .01) { g.setTransform(1, 0, 0, 1, 0, 0); g.fillStyle = `rgba(255,200,160,${flash * .55})`; g.fillRect(0, 0, W, H); flash *= Math.pow(.88, dt); }
+      const gone = t > T.impact && L.every(l => l.y > H + 300 || l.y < -500 || l.x < -400 || l.x > W + 400);
+      if (!(t > T.end && gone && !fire.length && !bits.length) && t < T.end + 8000) requestAnimationFrame(frame);
+      else { g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, W, H); this._boomed = 0; this.busy = false; }
+    };
+    requestAnimationFrame(frame);
+  },
+  drawBomb(g, S, x, y, rot) { const sp = S.vt_boma; g.save(); g.translate(x, y); g.rotate(rot);
+    if (sp) { const b = Pirate.figOf(sp), k = 130 / Math.max(b.x1 - b.x0, b.y1 - b.y0); g.drawImage(sp.img, 0, 0, sp.w, sp.h, -(b.x0 + b.x1) / 2 * k, -(b.y0 + b.y1) / 2 * k, sp.w * k, sp.h * k); }
+    else { g.fillStyle = "#7a5a32"; g.fillRect(-60, -7, 70, 14); g.fillStyle = "#56603a"; g.beginPath(); g.ellipse(26, 0, 36, 26, 0, 0, 6.283); g.fill(); g.fillStyle = "#c9b98f"; g.beginPath(); g.ellipse(54, 0, 12, 22, 0, 0, 6.283); g.fill(); }
+    g.restore(); },
+  drawSoldier(g, x, y, h, pose, t, rot) { g.save(); g.translate(x, y - h / 2); g.rotate(rot || 0); g.translate(0, h / 2); const k = h / 300; g.scale(k, k);
+    g.fillStyle = "#3b3a36"; g.fillRect(-34, -110, 26, 110); g.fillRect(8, -110, 26, 110);                     // legs
+    g.fillStyle = "#5b6340"; g.fillRect(-46, -215, 92, 110); g.fillStyle = "#2c2c2c"; g.fillRect(-46, -150, 92, 12);   // jacket, belt
+    g.fillStyle = "#d9b38c"; g.beginPath(); g.arc(0, -245, 30, 0, 6.283); g.fill();
+    g.fillStyle = "#4d5236"; g.beginPath(); g.ellipse(0, -262, 40, 22, 0, Math.PI, 0); g.fill(); g.fillRect(-44, -264, 88, 8);   // helmet
+    g.strokeStyle = "#5b6340"; g.lineWidth = 20; g.lineCap = "round"; g.beginPath();
+    const w = Math.sin(t / 110) * 12;
+    if (pose === "cheer") { g.moveTo(-42, -205); g.lineTo(-70, -300 + w); g.moveTo(42, -205); g.lineTo(70, -300 - w); }
+    else if (pose === "throw") { g.moveTo(-42, -205); g.lineTo(-60, -130); g.moveTo(42, -205); g.lineTo(60, -320); }
+    else if (pose === "salute") { const up = Math.sin(t / 160) > 0; g.moveTo(-42, -205); g.lineTo(-60, -130); g.moveTo(42, -205); g.lineTo(up ? 10 : 60, up ? -262 : -130); }
+    else { g.moveTo(-42, -205); g.lineTo(-70, -150); g.moveTo(42, -205); g.lineTo(70, -150); }
+    g.stroke(); g.restore(); }
+};
+
 /* ================= smoke lap =================
    Two soft ribbons of smoke, one lime green and one purple (the logo's colours), twisting around each other like a
    spiral, run a lap of the screen the same way the lightning lap does: from the bottom left corner up the left side,
@@ -5546,6 +5658,7 @@ window.onRemote = c => {
   else if (c.cmd === "firstsReset") { AutoFx.reset(); toast("First-chat effects reset: each viewer's next chat plays theirs again", false, 5000); }
   else if (c.cmd === "effect" && c.name === "bolt") Bolt.run();
   else if (c.cmd === "effect" && c.name === "smokeLap") SmokeLap.run();
+  else if (c.cmd === "effect" && c.name === "vterrible") VTerrible.run();
   else if (c.cmd === "effect" && c.name === "scrap") { if (c.shout != null) { try { localStorage.setItem("scrapShout", String(c.shout).trim()); } catch (e) {} } ScrapHaul.run(); }
   else if (c.cmd === "scrapShout") { try { localStorage.setItem("scrapShout", (c.text || "").trim()); } catch (e) {}
     if (window.remoteSend) window.remoteSend({ cmd: "scrapShoutOk", text: ScrapHaul.shout() }); }        // tell the app which word OBS will use
@@ -5608,9 +5721,9 @@ window.onRemote = c => {
 const FxLine = {
   q: [], running: false, until: 0,
   // the effects in line, and how to tell each one is still playing (a busy flag, or how long it lasts)
-  MODS: { ScrapHaul: null, SmokeLap: null, Mango: null, Banana: null, Fishy: null, Chef: null, Tank: null, Kazul: null, Jinx: null, Pirate: null, Turkey: 7600, Penguin: 10600, Eagle: 9000, Bolt: null },
+  MODS: { VTerrible: null, ScrapHaul: null, SmokeLap: null, Mango: null, Banana: null, Fishy: null, Chef: null, Tank: null, Kazul: null, Jinx: null, Pirate: null, Turkey: 7600, Penguin: 10600, Eagle: 9000, Bolt: null },
   playing() { if (performance.now() < this.until) return true;
-    return [Mango, Banana, Fishy, Chef, Tank, Kazul, Jinx, Pirate, SmokeLap, ScrapHaul].some(m => m.busy) || (Bolt.runs && Bolt.runs.length > 0); },
+    return [Mango, Banana, Fishy, Chef, Tank, Kazul, Jinx, Pirate, SmokeLap, ScrapHaul, VTerrible].some(m => m.busy) || (Bolt.runs && Bolt.runs.length > 0); },
   push(fn) { this.q.push(fn); if (this.q.length > 40) this.q.shift(); this.pump(); },
   pump() { if (this.running) return; const fn = this.q.shift(); if (!fn) return; this.running = true;
     const go = () => { if (this.playing()) return setTimeout(go, 300);                 // something still on screen (e.g. it started before the line existed)
@@ -5620,7 +5733,7 @@ const FxLine = {
       setTimeout(wait, 300); };
     go(); }
 };
-for (const [name, ms] of Object.entries(FxLine.MODS)) { const m = { ScrapHaul, SmokeLap, Mango, Banana, Fishy, Chef, Tank, Kazul, Jinx, Pirate, Turkey, Penguin, Eagle, Bolt }[name], orig = m.run.bind(m);
+for (const [name, ms] of Object.entries(FxLine.MODS)) { const m = { VTerrible, ScrapHaul, SmokeLap, Mango, Banana, Fishy, Chef, Tank, Kazul, Jinx, Pirate, Turkey, Penguin, Eagle, Bolt }[name], orig = m.run.bind(m);
   m.run = (...a) => FxLine.push(() => { if (ms) FxLine.until = performance.now() + ms; orig(...a); }); }
 
 /* one alert at a time, in order */
@@ -5719,6 +5832,7 @@ document.querySelectorAll("#testbar [data-t]").forEach(b => b.onclick = () => {
   else if (t === "disco") Disco.toggle();
   else if (t === "pirate") Pirate.run();
   else if (t === "smokeLap") SmokeLap.run();
+  else if (t === "vterrible") VTerrible.run();
   else if (t === "scrap") ScrapHaul.run();
   else if (t === "faceMode") Face.toggleFace();
   else if (t === "storm") Face.toggleStorm();
@@ -6337,7 +6451,7 @@ window.KZRelay = function (topic, onMessage, servers) {
 (() => {
   const qs = new URLSearchParams(location.search), key = qs.get("ctl");
   if (!key || !window.WebSocket) return;
-  const PAGE = "html3", VERSION = "9ed35ca";
+  const PAGE = "html3", VERSION = "7d6218d";
   let said = false;
   const relay = KZRelay("kzctl/" + key, c => {
     if (!c || c.from === "overlay" || (c.to && c.to !== "all" && c.to !== PAGE)) return;
