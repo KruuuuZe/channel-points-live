@@ -5805,12 +5805,12 @@ const BitGems = {
    On the app's touchpad they can be grabbed, dragged and tossed too. Art comes from the Art screen (dice_1..dice_6,
    dice_tumble, dice_shake); until it's sent, the dice are drawn. */
 const Dice = {
-  KEY: "kzDice", W: 2560, H: 1440, FLOOR: 1440 - 8, S: 110, RIGHT: 2560 - 800, on: true, list: [], fx: [], running: false, coolUntil: 0,
+  KEY: "kzDice", W: 2560, H: 1440, FLOOR: 1440 - 8, S: 88, RIGHT: 2560 - 800, on: true, list: [], fx: [], running: false, coolUntil: 0,
   PIPS: { 1: [[0, 0]], 2: [[-1, -1], [1, 1]], 3: [[-1, -1], [0, 0], [1, 1]], 4: [[-1, -1], [1, -1], [-1, 1], [1, 1]], 5: [[-1, -1], [1, -1], [0, 0], [-1, 1], [1, 1]], 6: [[-1, -1], [-1, 0], [-1, 1], [1, -1], [1, 0], [1, 1]] },
   lo() { return this.S * .6 + 20; }, hi() { return this.RIGHT - this.S * .6; },
   load() { let o = null; try { o = JSON.parse(localStorage.getItem(this.KEY)); } catch (e) {}
     this.on = !o || o.on !== false; const d = (o && o.d) || [[1380, 5], [1520, 2]];
-    this.list = d.map((q, i) => ({ id: "dice:" + (i + 1), x: q[0], y: this.FLOOR - this.S / 2, vx: 0, vy: 0, a: 0, va: 0, face: q[1] || 1, st: "rest", glow: 1, q: 0 }));
+    this.list = d.map((q, i) => ({ id: "dice:" + (i + 1), x: q[0], y: this.FLOOR - this.S / 2, vx: 0, vy: 0, a: 0, va: 0, face: q[1] || 1, st: "rest", glow: 1, q: 0, k: i }));
     if (this.on) this.start(); },
   save() { try { localStorage.setItem(this.KEY, JSON.stringify({ on: this.on, d: this.list.map(c => [Math.round(c.x), c.face]) })); } catch (e) {} },
   toggle(v) { this.on = v == null ? !this.on : !!v; this.save(); if (this.on) this.start(); BitGems.report(true); return this.on; },
@@ -5837,8 +5837,9 @@ const Dice = {
     if (glow > 0) { const gr = g.createRadialGradient(x, y, r * .6, x, y, r * 2.6);          // a soft green halo spreading round the dot
       gr.addColorStop(0, `rgba(60,235,110,${.5 * glow})`); gr.addColorStop(1, "rgba(60,235,110,0)"); g.fillStyle = gr; g.beginPath(); g.arc(x, y, r * 2.6, 0, 6.283); g.fill();
       g.shadowColor = "rgba(40,255,110,1)"; g.shadowBlur = r * 2.2 * glow; }
-    const c = glow > 0 ? `rgb(${Math.round(27 + 30 * glow)},${Math.round(24 + 196 * glow)},${Math.round(32 + 58 * glow)})` : "#1b1820";
+    const c = glow > 0 ? `rgb(${Math.round(27 + 30 * glow)},${Math.round(24 + 196 * glow)},${Math.round(32 + 58 * glow)})` : "#2a2c33";
     g.fillStyle = c; g.beginPath(); g.arc(x, y, r, 0, 6.283); g.fill(); g.shadowBlur = 0;
+    if (!(glow > 0)) { g.strokeStyle = "rgba(150,155,170,.55)"; g.lineWidth = 1.2; g.beginPath(); g.arc(x, y, r, 0, 6.283); g.stroke(); }
     if (glow > 0) { const hg = g.createRadialGradient(x, y, 0, x, y, r); hg.addColorStop(0, `rgba(210,255,215,${.85 * glow})`); hg.addColorStop(1, "rgba(120,255,150,0)"); g.fillStyle = hg; g.beginPath(); g.arc(x, y, r, 0, 6.283); g.fill(); } },
   draw(g, c, now) { const S = this.S, Sp = ChefArt.sprites, gl = c.glow * (.78 + .22 * Math.sin(now / 650 + c.k));
     g.save(); g.translate(c.x, c.y);
@@ -5852,12 +5853,29 @@ const Dice = {
     else if (Sp["dice_" + c.face]) sp = Sp["dice_" + c.face];
     if (sp) { const b = Pirate.figOf(sp), k = S / Math.max(b.x1 - b.x0, b.y1 - b.y0);
       g.drawImage(sp.img, f * sp.w, 0, sp.w, sp.h, -(b.x0 + b.x1) / 2 * k, -(b.y0 + b.y1) / 2 * k, sp.w * k, sp.h * k); }
-    else { const r = S * .18, h = S / 2, gr = g.createLinearGradient(-h, -h, h, h); gr.addColorStop(0, "#fffdf6"); gr.addColorStop(1, "#d9d2c2");
-      g.fillStyle = gr; g.beginPath(); g.roundRect(-h, -h, S, S, r); g.fill(); g.strokeStyle = "rgba(90,80,70,.55)"; g.lineWidth = 2; g.stroke();
-      g.fillStyle = "rgba(255,255,255,.5)"; g.beginPath(); g.roundRect(-h + 6, -h + 5, S - 12, S * .2, r * .6); g.fill(); }
+    else this.body(g, c, now);
     // the dots: drawn on the drawn die; over the art only when they glow (they sit in the same standard places)
     if (!sp || (gl > .02 && sp === Sp["dice_" + c.face])) { const d = S * .27; this.PIPS[c.face].forEach(([px, py]) => this.pip(g, px * d, py * d, S * .085, gl)); }
     g.restore(); },
+  // the drawn die (until the art is sent): dark titanium with a glowing purple edge, and a window of deep space inside it
+  // where stars and a purple nebula slowly drift; the dots are titanium studs that light up green when it lands
+  stars(c) { return c.stars || (c.stars = Array.from({ length: 34 }, () => ({ x: Math.random(), y: Math.random(), r: rand(.4, 1.5), a: rand(.3, 1), tw: rand(0, 6.28), sp: rand(.4, 1.2) }))); },
+  body(g, c, now) { const S = this.S, h = S / 2, r = S * .2;
+    const ti = g.createLinearGradient(-h, -h, h, h); ti.addColorStop(0, "#5a5e69"); ti.addColorStop(.35, "#2c2f37"); ti.addColorStop(.6, "#3d414b"); ti.addColorStop(1, "#1a1c22");
+    g.shadowColor = "rgba(150,70,255,.9)"; g.shadowBlur = S * .14; g.fillStyle = ti; g.beginPath(); g.roundRect(-h, -h, S, S, r); g.fill(); g.shadowBlur = 0;
+    g.strokeStyle = "#9b4dff"; g.lineWidth = S * .045; g.stroke();                                              // purple outline, the logo's purple
+    g.strokeStyle = "rgba(255,255,255,.18)"; g.lineWidth = 1; g.beginPath(); g.roundRect(-h + S * .05, -h + S * .05, S * .9, S * .9, r * .8); g.stroke();
+    const k = S * .11, w = S - 2 * k, ir = r * .6;                                                               // the space window
+    g.save(); g.beginPath(); g.roundRect(-h + k, -h + k, w, w, ir); g.clip();
+    const sky = g.createRadialGradient(-w * .15, -w * .2, 0, 0, 0, w * .8); sky.addColorStop(0, "#1d1140"); sky.addColorStop(.6, "#08061a"); sky.addColorStop(1, "#020208"); g.fillStyle = sky; g.fillRect(-h, -h, S, S);
+    const nx = Math.sin(now / 5000 + c.k * 2) * w * .18, ny = Math.cos(now / 6300 + c.k) * w * .14, neb = g.createRadialGradient(nx, ny, 0, nx, ny, w * .55);
+    neb.addColorStop(0, "rgba(140,70,235,.38)"); neb.addColorStop(.5, "rgba(90,40,170,.16)"); neb.addColorStop(1, "rgba(60,20,120,0)"); g.fillStyle = neb; g.fillRect(-h, -h, S, S);
+    const gx = -nx * .8, gy = -ny, gn = g.createRadialGradient(gx, gy, 0, gx, gy, w * .35); gn.addColorStop(0, "rgba(150,225,60,.12)"); gn.addColorStop(1, "rgba(150,225,60,0)"); g.fillStyle = gn; g.fillRect(-h, -h, S, S);
+    this.stars(c).forEach(st => { const x = -h + k + ((st.x + now / 90000 * st.sp) % 1) * w, y = -h + k + ((st.y + now / 140000 * st.sp) % 1) * w;
+      g.globalAlpha = st.a * (.6 + .4 * Math.sin(now / 700 + st.tw)); g.fillStyle = "#fff"; g.beginPath(); g.arc(x, y, st.r * S / 88, 0, 6.283); g.fill(); });
+    g.globalAlpha = 1; g.restore();
+    g.strokeStyle = "rgba(10,10,14,.8)"; g.lineWidth = 2; g.beginPath(); g.roundRect(-h + k, -h + k, w, w, ir); g.stroke();
+    const sh = g.createLinearGradient(0, -h, 0, -h + S * .3); sh.addColorStop(0, "rgba(255,255,255,.16)"); sh.addColorStop(1, "rgba(255,255,255,0)"); g.fillStyle = sh; g.beginPath(); g.roundRect(-h + 3, -h + 3, S - 6, S * .3, r * .7); g.fill(); },
   start() { if (this.running) return; this.running = true; let last = performance.now();
     const cv = $("#dicecv"), g = cv.getContext("2d"), Q = Math.PI / 2;
     const frame = now => { const dt = Math.min(50, now - last) / 16; last = now; g.clearRect(0, 0, this.W, this.H);
@@ -6823,7 +6841,7 @@ window.KZRelay = function (topic, onMessage, servers) {
 (() => {
   const qs = new URLSearchParams(location.search), key = qs.get("ctl");
   if (!key || !window.WebSocket) return;
-  const PAGE = "html3", VERSION = "b45099e";
+  const PAGE = "html3", VERSION = "f83664c";
   let said = false;
   const relay = KZRelay("kzctl/" + key, c => {
     if (!c || c.from === "overlay" || (c.to && c.to !== "all" && c.to !== PAGE)) return;
