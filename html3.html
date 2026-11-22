@@ -594,6 +594,10 @@ document.getElementById("favicon").href = LOGO;
 const $ = s => document.querySelector(s);
 const qs = new URLSearchParams(location.search);
 const hs = new URLSearchParams(location.hash.replace(/^#/, ""));
+// ?mirror=1: the copy of this overlay inside the app's touchpad. It shows exactly what OBS shows (OBS sends where
+// everything is), makes no sound, and doesn't listen to Twitch or the relay itself.
+const MIRROR = qs.has("mirror");
+if (MIRROR) document.head.insertAdjacentHTML("beforeend", "<style>#testbar,#tapzone{display:none!important}html,body,#view{background:transparent!important}</style>");
 const TOKEN = qs.get("token") || hs.get("token") || "";
 const LIVE = !!TOKEN;
 const FONT = '"Segoe UI",system-ui,-apple-system,Roboto,"Helvetica Neue",Arial,sans-serif';
@@ -1232,7 +1236,7 @@ const Sound = {
   init() {
     if (!this.ctx) {
       const AC = window.AudioContext || window.webkitAudioContext; if (!AC) return null;
-      this.ctx = new AC(); this.out = this.ctx.createGain(); this.out.gain.value = .8; this.out.connect(this.ctx.destination);
+      this.ctx = new AC(); this.out = this.ctx.createGain(); this.out.gain.value = MIRROR ? 0 : .8; this.out.connect(this.ctx.destination);
       const len = this.ctx.sampleRate, buf = this.ctx.createBuffer(1, len, this.ctx.sampleRate), d = buf.getChannelData(0);
       for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
       this.noise = buf;
@@ -1967,7 +1971,7 @@ const MySounds = {
   // a sound never plays over itself: if it's still playing, this play is skipped. Returns the Audio (or null).
   playing: {},
   // a sound built into the overlay (src/sounds) wins; otherwise the one added in OBS (🔊+) or sent from the app
-  play(type) { const u = (typeof BUNDLED_SOUNDS !== "undefined" && BUNDLED_SOUNDS[type]) || this.urls[type]; if (!u) return null; const cur = this.playing[type]; if (cur && !cur.ended && !cur.paused) return null;
+  play(type) { if (MIRROR) return null; const u = (typeof BUNDLED_SOUNDS !== "undefined" && BUNDLED_SOUNDS[type]) || this.urls[type]; if (!u) return null; const cur = this.playing[type]; if (cur && !cur.ended && !cur.paused) return null;
     try { const a = new Audio(u); a.volume = 1; this.playing[type] = a;
       a.play().then(() => this.report(type, "played")).catch(e => this.report(type, "couldn't play: " + (e && e.message || e)));
       return a; } catch (e) { this.report(type, "couldn't play: " + e.message); return null; } },
@@ -3960,6 +3964,11 @@ const Face = {
       // at any size, keep the whole cloud (or shape) on screen (not while it's coming out of / going back into its poof)
       if (!goingHome && t - enterAt > 2600 && !(this.steerTo || t < (this.padUntil || 0))) { const hw = 165 * this.sizeM * (1 + .5 * this.tankM), top = 180 * this.sizeM, bot = 140 * this.sizeM;
         const cx = Math.max(hw, Math.min(W - hw, px)), cy = Math.max(top, Math.min(H - bot, py)), ez = Math.abs(cx - px) + Math.abs(cy - py) > 30 ? .06 : 1; px += (cx - px) * ez; py += (cy - py) * ez; }   // drifts back on screen smoothly after hanging off it
+      if (MIRROR && Mirror.cl && Mirror.cl.on) { const m = Mirror.cl;            // the touchpad copy: sits where the cloud is in OBS (unless your finger is steering it right now)
+        if (Mirror.jump) { px = m.x; py = m.y; Mirror.jump = false; }
+        else if (performance.now() - Mirror.touchAt > 1500) { const k = Math.min(1, .25 * dt / 16); px += (m.x - px) * k; py += (m.y - py) * k; }
+        route = []; moveAt = 0; hoverUntil = t + 5000; }
+      this.px = px; this.py = py;
       if (this.fx) hoverUntil = Math.max(hoverUntil, t + 3000);                       // it stays put while an effect plays
       const dir = moving ? Math.sign(toX - fromX) : 0;
       // morphing: into the wanted shape, or back to a cloud (slower and softer). Switching tank <-> dog goes through
@@ -5646,7 +5655,7 @@ const BitGems = {
   watchUntil: 0, lastRep: 0,
   report(force) { const now = performance.now(); if (!window.remoteSend || (!force && (now > this.watchUntil || now - this.lastRep < 90))) return; this.lastRep = now;
     window.remoteSend({ cmd: "gems", g: this.list.map(c => [c.name, +(c.x / this.W).toFixed(4), +(c.y / this.H).toFixed(4), +c.tilt.toFixed(3), bitColor(c.bits), +(c.w / this.W).toFixed(4), c.held ? 1 : 0]),
-      d: Dice.report(), dr: [+(Dice.lo() / this.W).toFixed(4), +(Dice.hi() / this.W).toFixed(4)] }); },
+      d: Dice.report(), m: Mirror.snap(), dr: [+(Dice.lo() / this.W).toFixed(4), +(Dice.hi() / this.W).toFixed(4)] }); },
   add(name, bits) {
     const old = this.list.find(g => g.name.toLowerCase() === String(name).toLowerCase());
     if (old) { old.bits += bits; old.w = this.Wd(old.bits); old.pulse = 1; old.vy = -15; old.air = true; old.walk = null; this.sparkle(old.x, old.y - old.w * .4, 30, bitColor(old.bits)); this.play(old, "gem_power", true); }
@@ -5741,6 +5750,7 @@ const BitGems = {
   start() { this.warm(); if (this.running) return; this.running = true; let last = performance.now();
     const cv = $("#gemcv"), g = cv.getContext("2d");
     const frame = now => { const dt = Math.min(50, now - last) / 16; last = now; g.clearRect(0, 0, this.W, this.H);
+      if (MIRROR) Mirror.stepGems(dt); else
       for (const c of this.list) {
         c.pulse = Math.max(0, c.pulse - .02 * dt);
         if (c.held) {          // following your thumb on the touchpad, leaning the way it's being dragged
@@ -5787,9 +5797,9 @@ const BitGems = {
             else c.next = now + rand(5000, 12000); } }
       }
       // gems don't sit inside each other
-      for (let i = 0; i < this.list.length; i++) for (let j = i + 1; j < this.list.length; j++) { const a = this.list[i], b = this.list[j], dx = b.x - a.x, need = (a.w + b.w) / 2 + 10;
+      if (!MIRROR) for (let i = 0; i < this.list.length; i++) for (let j = i + 1; j < this.list.length; j++) { const a = this.list[i], b = this.list[j], dx = b.x - a.x, need = (a.w + b.w) / 2 + 10;
         if (Math.abs(dx) < need && !a.air && !b.air && !a.walk && !b.walk && !a.lie && !b.lie && !a.held && !b.held && !a.topSpin && !b.topSpin) { const p = (need - Math.abs(dx)) / 2 * Math.sign(dx || 1); a.x -= p * .2; b.x += p * .2; } }
-      this.list.forEach(c => { if (!c.held && !c.air && !c.topSpin && !c.vx && !c.walk && !c.lie && (c.x < this.lo(c) - 1 || c.x > this.hi(c) + 1)) {   // left outside its area: waddles back
+      this.list.forEach(c => { if (!MIRROR && !c.held && !c.air && !c.topSpin && !c.vx && !c.walk && !c.lie && (c.x < this.lo(c) - 1 || c.x > this.hi(c) + 1)) {   // left outside its area: waddles back
           const to = Math.max(this.lo(c), Math.min(this.hi(c), c.x)); c.walk = { x0: c.x, to, at: now, ms: Math.abs(to - c.x) * 4 + 600, steps: Math.max(2, Math.round(Math.abs(to - c.x) / 55)), lean: Math.sign(to - c.x) * .06 }; }
         this.draw(g, c, now); });
       this.report();
@@ -5880,6 +5890,7 @@ const Dice = {
     const cv = $("#dicecv"), g = cv.getContext("2d"), Q = Math.PI / 2;
     const frame = now => { const dt = Math.min(50, now - last) / 16; last = now; g.clearRect(0, 0, this.W, this.H);
       if (!this.on) { this.running = false; return; }
+      if (MIRROR) Mirror.stepDice(dt); else
       for (const c of this.list) {
         if (c.st === "held") { const ox = c.x; c.x += (c.tx - c.x) * Math.min(1, .3 * dt); c.y += (c.ty - c.y) * Math.min(1, .3 * dt);
           c.a += (Math.max(-.5, Math.min(.5, (c.x - ox) * .015)) - c.a) * .2 * dt; }
@@ -5904,7 +5915,7 @@ const Dice = {
         else { c.y = this.FLOOR - this.S / 2; if (c.restAt != null || c.glow > 0) c.glow = Math.min(1, c.glow + .03 * dt); }
       }
       // a moving bit gem that bumps into a die sends it flying: a really hard toss all over the screen (sometimes up to the top)
-      for (const gm of BitGems.list) { if (!(gm.held || gm.air || gm.topSpin || Math.abs(gm.vx || 0) > .3 || gm.walk || gm.lie)) continue;
+      if (!MIRROR) for (const gm of BitGems.list) { if (!(gm.held || gm.air || gm.topSpin || Math.abs(gm.vx || 0) > .3 || gm.walk || gm.lie)) continue;
         const d = BitGems.dims(gm), gx = gm.x, gy = gm.y - d.H * .55, gr = d.W * .5;
         for (const c of this.list) { if (c.held || now < (c.kickAt || 0)) continue; const dx = c.x - gx, dy = c.y - gy, dist = Math.hypot(dx, dy);
           if (dist < gr + this.S * .5) { const dir = Math.sign(dx || (gm.vx || 0) || 1), push = Math.min(1.4, 1 + Math.abs(gm.vx || 0) / 40);
@@ -5913,7 +5924,7 @@ const Dice = {
             this.clack(1); setTimeout(() => this.clack(.7), 40);
             for (let i = 0; i < 14; i++) this.fx.push({ x: c.x, y: c.y, vx: rand(-5, 5), vy: rand(-6, 1), life: 1, col: i % 2 ? "#b06bff" : "#8dffaa", s: rand(2, 4) }); } } }
       // the two dice knock into each other instead of passing through
-      const [a, b] = this.list; if (a && b && !a.held && !b.held) { const dx = b.x - a.x, dy = b.y - a.y, d = Math.hypot(dx, dy) || 1, need = this.S * 1.02;
+      const [a, b] = this.list; if (!MIRROR && a && b && !a.held && !b.held) { const dx = b.x - a.x, dy = b.y - a.y, d = Math.hypot(dx, dy) || 1, need = this.S * 1.02;
         if (d < need) { const nx = dx / d, ny = dy / d, p = (need - d) / 2; a.x -= nx * p; b.x += nx * p; if (a.st === "air" || b.st === "air") { a.y -= ny * p; b.y += ny * p; }
           const rv = (b.vx - a.vx) * nx + (b.vy - a.vy) * ny; if (rv < 0) { a.vx += rv * nx * .8; a.vy += rv * ny * .8; b.vx -= rv * nx * .8; b.vy -= rv * ny * .8; if (-rv > 2) this.clack(-rv / 12);
             [a, b].forEach(c => { if (c.st === "rest" || c.st === "settle") { c.st = "air"; c.q = Math.floor(c.a / Q); c.glow = 0; } }); } } }
@@ -5924,6 +5935,56 @@ const Dice = {
       requestAnimationFrame(frame); };
     requestAnimationFrame(frame); }
 };
+
+/* ================= the touchpad copy (?mirror=1) =================
+   OBS (the real overlay) sends a snapshot ~11 times a second while the app's touchpad is open: the cloud, every bit gem
+   and the dice. The copy inside the touchpad draws them with the very same code and art, gliding between snapshots.
+   Your finger moves things in the copy straight away (no waiting for OBS), and OBS follows. */
+const Mirror = {
+  cl: null, jump: false, touchAt: 0, held: null, g: [], d: null, cbAt: 0,
+  // ---- in OBS: the snapshot
+  snap() { const F = Face, now = performance.now(), r3 = v => Math.round((v || 0) * 1000) / 1000;
+    const o = { cl: { on: !!(F.on && !F.leaving), x: Math.round(F.px || 0), y: Math.round(F.py || 0), tank: !!F.tank, kind: F.kindWant || "", face: !!F.faceOn, storm: !!F.storm, rain: !!F.rain,
+        hue: r3(F.hue), size: r3(F.sizeTo == null ? 1 : F.sizeTo), dark: r3(F.darkTo || 0), mood: F.mood || "" },
+      g: BitGems.list.map(c => ({ n: c.name, b: c.bits, x: Math.round(c.x), y: Math.round(c.y), t: r3(c.tilt), r: r3(c.roll), ts: r3(c.topSpin), p: r3(c.pulse),
+        an: c.anim ? c.anim.name : "", aa: c.anim ? Math.round(now - c.anim.at) : 0, ao: c.anim && c.anim.once ? 1 : 0 })),
+      d: { on: Dice.on, l: Dice.list.map(c => [Math.round(c.x), Math.round(c.y), r3(c.a), c.face, Math.round(c.glow * 100) / 100, c.st, Math.round(c.roll || 0)]) } };
+    if (now - this.cbAt > 2000) { this.cbAt = now; o.cb = ChatBox.get(); }
+    return o; },
+  // ---- in the copy: take a snapshot
+  state(s) { if (!MIRROR || !s) return; const now = performance.now();
+    if (s.cl) { const F = Face, c = s.cl; this.cl = c;
+      if (c.on && !F.on) { F.toggle(); F.a = 1; this.jump = true; } else if (c.on && F.leaving) F.leaving = false; else if (!c.on && F.on && !F.leaving) F.toggle();
+      F.tank = c.tank; if (c.kind) F.kindWant = c.kind; F.faceOn = c.face; F.storm = c.storm; F.rain = c.rain;
+      if (F.hue !== c.hue) F.setHue(c.hue); F.sizeTo = c.size; F.darkTo = c.dark; if (c.mood && F.mood !== c.mood) F.setMood(c.mood); }
+    if (s.g) { const keep = s.g.map(m => { let c = BitGems.find(m.n); if (!c) { c = BitGems.make({ name: m.n, bits: m.b, x: m.x }); c.y = m.y; c.tilt = m.t; c.roll = m.r; }
+        if (c.bits !== m.b) { c.bits = m.b; c.w = BitGems.Wd(m.b); } c.m = m;
+        if (m.an) { if (!c.anim || c.anim.name !== m.an) c.anim = { name: m.an, once: !!m.ao, dur: 1e9 }; c.anim.at = now - m.aa; } else c.anim = null;
+        return c; });
+      BitGems.list = keep; if (keep.length) BitGems.start(); }
+    if (s.d) { this.d = s.d; if (Dice.on !== s.d.on) { Dice.on = s.d.on; } if (Dice.on) Dice.start(); }
+    if (s.cb && s.cb.twitch && !this.cbOn) { this.cbOn = true; ChatBox.put(s.cb); ChatBox.layout(); ChatBox.show(s.cb.show !== false); ChatBox.bg(s.cb.bg !== false); ChatBox.connect(); }
+    else if (s.cb) { const b = s.cb; ChatBox.put(b); ChatBox.cur = null; ChatBox.layout(); ChatBox.el.classList.toggle("off", b.show === false); ChatBox.el.classList.toggle("clear", b.bg === false); } },
+  // a command the app just sent to OBS, played in the copy too (so taps show up instantly)
+  cmd(c) { if (!MIRROR || !c) return; if (/^(gem|bitGems|chat|sound|art)/.test(c.cmd)) return;
+    if (c.cmd === "cloudGo") this.touchAt = performance.now();
+    try { window.onRemote(c); } catch (e) {} },
+  // your finger holding a gem or die (x, y: 0..1 across the touchpad); null when you let go
+  hold(id, x, y) { this.held = id ? { id, x, y } : null; },
+  lerp(c, k, x, y) { c.x += (x - c.x) * k; c.y += (y - c.y) * k; },
+  stepGems(dt) { const k = Math.min(1, .3 * dt);
+    for (const c of BitGems.list) { const m = c.m; if (!m) continue;
+      if (this.held && this.held.id === c.name) { const d = BitGems.dims(c); this.lerp(c, .5, this.held.x * 2560, Math.min(BitGems.FLOOR, this.held.y * 1440 + d.H * .5)); }
+      else this.lerp(c, k, m.x, m.y);
+      c.tilt += (m.t - c.tilt) * k; c.roll = (c.roll || 0) + (m.r - (c.roll || 0)) * k; c.topSpin = m.ts; c.pulse = m.p; c.air = false; c.walk = null; c.lie = null; c.held = false; } },
+  stepDice(dt) { const d = this.d; if (!d) return; const k = Math.min(1, .3 * dt);
+    Dice.list.forEach((c, i) => { const m = d.l[i]; if (!m) return;
+      if (this.held && this.held.id === c.id) this.lerp(c, .5, Math.max(Dice.lo(), Math.min(Dice.hi(), this.held.x * 2560)), Math.min(Dice.FLOOR - Dice.S / 2, this.held.y * 1440));
+      else this.lerp(c, k, m[0], m[1]);
+      c.a += (m[2] - c.a) * k; c.face = m[3]; c.glow += (m[4] - c.glow) * k; c.st = m[5]; c.roll = m[6]; }); }
+};
+window.Mirror = Mirror; window.MIRROR = MIRROR;                 // the app's touchpad reaches it from outside the frame
+if (!MIRROR) setInterval(() => BitGems.report(), 100);         // keeps the touchpad copy up to date even when no gems or dice are moving
 
 /* ================= smoke lap =================
    Two soft ribbons of smoke, one lime green and one purple (the logo's colours), twisting around each other like a
@@ -6738,7 +6799,7 @@ const ChatBox = {
     else if (!c.wide2) this.put({ wide2: 1 });
     if (!c.nudge1) { const x = Math.min(2400, (c.x != null ? c.x : this.DEF.x) + 100), y = (c.y != null ? c.y : this.DEF.y) + 75, w = Math.max(260, Math.min(c.w || this.DEF.w, 2560 - 20 - x));
       c = this.put({ x, y, w, nudge1: 1 }); this.cur = null; this.layout(); }                  // moved 100 right and 75 down once, narrowed so it stays clear of the right edge
-    this.show(c.show !== false); this.bg(c.bg !== false); this.el.classList.add("idle"); this.connect();
+    this.show(c.show !== false); this.bg(c.bg !== false); this.el.classList.add("idle"); if (!MIRROR) this.connect();
   },
   box(o, live) { const c = Object.assign({}, this.DEF, this.get(), this.cur || {}, o || {}); if (o) { this.cur = c; this.layout(c); } return c; },
   layout(c) { c = c || Object.assign({}, this.DEF, this.get()); this.cur = c; const el = this.el;
@@ -6759,7 +6820,7 @@ ChatBox.init();
 BitGems.load();
 Dice.load();
 // one-off: thebigyin's 100 bits from before the gems existed (drops in once, the first time this version loads)
-try { if (!localStorage.getItem("kzGemSeed1")) { localStorage.setItem("kzGemSeed1", "1"); setTimeout(() => BitGems.add("thebigyin", 100), 1500); } } catch (e) {}
+if (!MIRROR) try { if (!localStorage.getItem("kzGemSeed1")) { localStorage.setItem("kzGemSeed1", "1"); setTimeout(() => BitGems.add("thebigyin", 100), 1500); } } catch (e) {}
 if (LIVE) Live.init();
 </script>
 <script>
@@ -6850,7 +6911,7 @@ window.KZRelay = function (topic, onMessage, servers) {
 (() => {
   const qs = new URLSearchParams(location.search), key = qs.get("ctl");
   if (!key || !window.WebSocket) return;
-  const PAGE = "html3", VERSION = "89560b2";
+  const PAGE = "html3", VERSION = "e086c20";
   let said = false;
   const relay = KZRelay("kzctl/" + key, c => {
     if (!c || c.from === "overlay" || (c.to && c.to !== "all" && c.to !== PAGE)) return;
