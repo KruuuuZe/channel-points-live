@@ -368,6 +368,7 @@ body.fit #stage{background:radial-gradient(1200px 700px at 30% 20%,#1a103322,tra
 #scrapcv{position:absolute;inset:0;width:2560px;height:1440px;pointer-events:none;z-index:9}
 #vtcv{position:absolute;inset:0;width:2560px;height:1440px;pointer-events:none;z-index:9}
 #gemcv{position:absolute;inset:0;width:2560px;height:1440px;pointer-events:none;z-index:8}
+#dicecv{position:absolute;inset:0;width:2560px;height:1440px;pointer-events:none;z-index:8}
 /* ---------- Kazul123: artillery from every side ---------- */
 #kazcv{position:absolute;inset:0;width:2560px;height:1440px;pointer-events:none;z-index:7}
 /* ---------- Silverhand (canvas + a red shade over the whole screen) ---------- */
@@ -462,6 +463,7 @@ body.fit #stage{background:radial-gradient(1200px 700px at 30% 20%,#1a103322,tra
   <canvas id="scrapcv" width="2560" height="1440"></canvas>
   <canvas id="vtcv" width="2560" height="1440"></canvas>
   <canvas id="gemcv" width="2560" height="1440"></canvas>
+  <canvas id="dicecv" width="2560" height="1440"></canvas>
   <canvas id="tankcv" width="2560" height="1440"></canvas>
   <div id="pane"></div>
   <canvas id="holes" width="2560" height="1440"></canvas>
@@ -2909,7 +2911,7 @@ const ChefArt = {
   use(name, a) { const img = new Image(); img.onload = () => { this.sprites[name] = Object.assign({ img }, a); if (name === "tower" && Lurk.up) Lurk.paint(); }; img.src = a.url; },
   async load() {
     try { const db = await this.open();
-      ["pirate_ship", "pirate_wave", "pirate_fall", "pirate_slide", "pirate_waving", "scrap_truck", "scrap_truck_empty", "scrap_truck_dump", "scrap_pile", "scrap_guy", "scrap_guy_pop", "scrap_guy_cheer", "scrap_guy_run", "scrap_harvester", "scrap_harvester_go", "vt_L_v", "vt_L_UT", "vt_L_e", "vt_L_r", "vt_L_i", "vt_L_b", "vt_L_l", "vt_boma", "vt_soldier", "vt_soldier_cheer", "vt_soldier_throw", "vt_soldier_salute", "vt_soldier_flip", "gem_base", "gem_sparkle", "gem_pulse", "gem_fire", "gem_glint", "gem_turn", "gem_power", "gem_topspin", "gem_dizzy", "gem_bounce", "gem_twirl", "gem_sway", "gem_shiver", "gem_heart", "gem_bubbles", "gem_orbit", "gem_snow", "gem_galaxy", "gem_jelly", "cs__base", "cs_tank", "cs_tank_form", "cs_tank_idle", "cs_tank_act", "cs_tank_turn", "cs_dog", "cs_dog_form", "cs_dog_idle", "cs_dog_act", "cs_dog_turn", "cs_cat", "cs_cat_form", "cs_cat_idle", "cs_cat_act", "cs_cat_turn", "cs_fish", "cs_fish_form", "cs_fish_idle", "cs_fish_act", "cs_fish_turn", "cs_whale", "cs_whale_form", "cs_whale_idle", "cs_whale_act", "cs_whale_turn", "cs_bunny", "cs_bunny_form", "cs_bunny_idle", "cs_bunny_act", "cs_bunny_turn", "cs_turtle", "cs_turtle_form", "cs_turtle_idle", "cs_turtle_act", "cs_turtle_turn", "cs_duck", "cs_duck_form", "cs_duck_idle", "cs_duck_act", "cs_duck_turn", "cs_elephant", "cs_elephant_form", "cs_elephant_idle", "cs_elephant_act", "cs_elephant_turn", "cs_dino", "cs_dino_form", "cs_dino_idle", "cs_dino_act", "cs_dino_turn", "cs_dragon", "cs_dragon_form", "cs_dragon_idle", "cs_dragon_act", "cs_dragon_turn", "cs_butterfly", "cs_butterfly_form", "cs_butterfly_idle", "cs_butterfly_act", "cs_bird", "cs_bird_form", "cs_bird_idle", "cs_bird_act", "cs_bird_turn", "cs_snail", "cs_snail_form", "cs_snail_idle", "cs_snail_turn", "cs_octopus", "cs_octopus_form", "cs_octopus_idle", "cs_octopus_act", "cs_crab", "cs_crab_form", "cs_crab_idle", "cs_crab_act", "cs_plane", "cs_plane_form", "cs_plane_idle", "cs_plane_act", "cs_plane_turn", "cs_rocket", "cs_rocket_form", "cs_rocket_idle", "cs_rocket_act", "cs_car", "cs_car_form", "cs_car_idle", "cs_car_act", "cs_car_turn", "cs_train", "cs_train_form", "cs_train_idle", "cs_train_act", "cs_train_turn", "cs_boat", "cs_boat_form", "cs_boat_idle", "cs_heli", "cs_heli_form", "cs_heli_idle", "cs_heli_turn", "cs_ufo", "cs_ufo_form", "cs_ufo_idle", "cs_ufo_act", "cs_ufo_turn", "cs_heart", "cs_heart_form", "cs_heart_idle", "cs_heart_act", "cs_star", "cs_star_form", "cs_star_idle", "cs_star_act", "cs_moon", "cs_moon_form", "cs_moon_idle", "cs_mushroom", "cs_mushroom_form", "cs_mushroom_idle", "cs_tree", "cs_tree_form", "cs_tree_idle", "cs_castle", "cs_castle_form", "cs_castle_idle", "cs_ghost", "cs_ghost_form", "cs_ghost_idle", "cs_ghost_act", "cs_pig", "cs_pig_form", "cs_pig_idle", "cs_pig_act", "cs_pig_turn", "cs_sheep", "cs_sheep_form", "cs_sheep_idle", "cs_sheep_act", "cs_sheep_turn", "cs_lion", "cs_lion_form", "cs_lion_idle", "cs_lion_act", "cs_lion_turn", "cs_giraffe", "cs_giraffe_form", "cs_giraffe_idle", "cs_giraffe_turn", "cs_horse", "cs_horse_form", "cs_horse_idle", "cs_horse_act", "cs_horse_turn", "cs_cow", "cs_cow_form", "cs_cow_idle", "cs_cow_act", "cs_cow_turn", "cs_penguin", "cs_penguin_form", "cs_penguin_idle", "cs_penguin_act", "cs_owl", "cs_owl_form", "cs_owl_idle", "cs_owl_act", "cs_frog", "cs_frog_form", "cs_frog_idle", "cs_frog_act", "cs_frog_turn", "cs_snake", "cs_snake_form", "cs_snake_idle", "cs_snake_act", "cs_snake_turn", "cs_shark", "cs_shark_form", "cs_shark_idle", "cs_shark_act", "cs_shark_turn", "cs_dolphin", "cs_dolphin_form", "cs_dolphin_idle", "cs_dolphin_act", "cs_dolphin_turn", "cs_bee", "cs_bee_form", "cs_bee_idle", "cs_bee_act", "cs_bee_turn", "cs_spider", "cs_spider_form", "cs_spider_idle", "cs_mouse", "cs_mouse_form", "cs_mouse_idle", "cs_mouse_act", "cs_mouse_turn", "cs_fox", "cs_fox_form", "cs_fox_idle", "cs_fox_act", "cs_fox_turn", "cs_bear", "cs_bear_form", "cs_bear_idle", "cs_bear_act", "cs_bear_turn", "cs_kangaroo", "cs_kangaroo_form", "cs_kangaroo_idle", "cs_kangaroo_act", "cs_kangaroo_turn", "cs_flamingo", "cs_flamingo_form", "cs_flamingo_idle", "cs_flamingo_turn", "cs_seahorse", "cs_seahorse_form", "cs_seahorse_idle", "cs_seahorse_turn", "cs_jellyfish", "cs_jellyfish_form", "cs_jellyfish_idle", "cs_jellyfish_act", "cs_unicorn", "cs_unicorn_form", "cs_unicorn_idle", "cs_unicorn_act", "cs_unicorn_turn", "cs_guitar", "cs_guitar_form", "cs_guitar_idle", "cs_guitar_act", "cs_umbrella", "cs_umbrella_form", "cs_umbrella_idle", "cs_umbrella_act", "cs_balloon", "cs_balloon_form", "cs_balloon_idle", "cs_balloon_act", "cs_lighthouse", "cs_lighthouse_form", "cs_lighthouse_idle", "cs_lighthouse_act", "cs_house", "cs_house_form", "cs_house_idle", "cs_house_act", "cs_robot", "cs_robot_form", "cs_robot_idle", "cs_robot_act", "cs_skull", "cs_skull_form", "cs_skull_idle", "cs_skull_act", "cs_crown", "cs_crown_form", "cs_crown_idle", "cs_crown_act", "cs_anchor", "cs_anchor_form", "cs_anchor_idle", "cs_sword", "cs_sword_form", "cs_sword_idle", "cs_sword_act", "cs_trophy", "cs_trophy_form", "cs_trophy_idle", "cs_trophy_act", "cs_cupcake", "cs_cupcake_form", "cs_cupcake_idle", "cs_icecream", "cs_icecream_form", "cs_icecream_idle", "cs_pizza", "cs_pizza_form", "cs_pizza_idle", "cs_pizza_turn", "cs_apple", "cs_apple_form", "cs_apple_idle", "cs_bell", "cs_bell_form", "cs_bell_idle", "cs_bell_act", "cs_kite", "cs_kite_form", "cs_kite_idle", "cs_submarine", "cs_submarine_form", "cs_submarine_idle", "cs_submarine_act", "cs_submarine_turn", "cs_bicycle", "cs_bicycle_form", "cs_bicycle_idle", "cs_bicycle_act", "cs_bicycle_turn", "cs_gamepad", "cs_gamepad_form", "cs_gamepad_idle", "cs_gamepad_act", "cf_e_none", "disco_glint", "cf_x_talk_me", "sm_hat", "sm_face", "sm_nose", "sm_arm", "sm_ball", "sm_ball_melt", "sm_puddle", "cf_ref", "cf_x_talk", "cf_x_wide", "cf_x_look_l", "cf_x_look_r", "cf_x_smile", "cf_x_grin", "cf_x_oo", "cf_x_blink", "cf_v_smile_talk", "cf_v_smile_l", "cf_v_smile_r", "cf_v_grin_talk", "cf_v_grin_l", "cf_v_grin_r", "cf_v_oo_talk", "cf_v_oo_l", "cf_v_oo_r", "cf_v_closed_talk", "cf_e_smirk", "cf_v_smirk_talk", "cf_v_smirk_l", "cf_v_smirk_r", "cf_e_wink", "cf_v_wink_talk", "cf_e_laugh", "cf_v_laugh_talk", "cf_e_shocked", "cf_v_shocked_talk", "cf_v_shocked_l", "cf_v_shocked_r", "cf_e_sleepy", "cf_v_sleepy_talk", "cf_v_sleepy_l", "cf_v_sleepy_r", "cf_e_sideeye", "cf_v_sideeye_talk", "cf_v_sideeye_l", "cf_v_sideeye_r", "cf_e_sad", "cf_v_sad_talk", "cf_v_sad_l", "cf_v_sad_r", "cf_e_tongue", "cf_v_tongue_talk", "cf_v_tongue_l", "cf_v_tongue_r", "cf_e_puffed", "cf_v_puffed_talk", "cf_v_puffed_l", "cf_v_puffed_r", "cf_e_determined", "cf_v_determined_talk", "cf_v_determined_l", "cf_v_determined_r", "cf_e_evil", "cf_v_evil_talk", "cf_v_evil_l", "cf_v_evil_r", "cf_e_smug", "cf_v_smug_talk", "cf_v_smug_l", "cf_v_smug_r", "cf_e_confused", "cf_v_confused_talk", "cf_v_confused_l", "cf_v_confused_r", "cf_e_disgusted", "cf_v_disgusted_talk", "cf_v_disgusted_l", "cf_v_disgusted_r", "cf_e_nervous", "cf_v_nervous_talk", "cf_v_nervous_l", "cf_v_nervous_r", "cf_e_kissy", "cf_v_kissy_talk", "cf_v_kissy_l", "cf_v_kissy_r", "cf_e_bored", "cf_v_bored_talk", "cf_v_bored_l", "cf_v_bored_r", "cf_e_excited", "cf_v_excited_talk", "cf_v_excited_l", "cf_v_excited_r", "cf_e_thinking", "cf_v_thinking_talk", "cf_v_thinking_l", "cf_v_thinking_r", "cf_e_scared", "cf_v_scared_talk", "cf_v_scared_l", "cf_v_scared_r", "jinx_flip", "jinx_spin", "jinx_fire", "jinx_launch", "artillery", "golden_banana", "golden_mango", "tower", "eagle_roll", "tank_drive", "soldier_run", "soldier_throw", "grenade", "explosion", "eagle_glide", "eagle_flap", "plane", "title", "chef_parachute", "chef_chop", "chef_jump", "chef_fly", "chef_truck", "cf_x_look_d", "cf_v_smile_d", "cf_v_grin_d", "cf_v_oo_d", "cf_v_smirk_d", "cf_v_shocked_d", "cf_v_sleepy_d", "cf_v_sideeye_d", "cf_v_sad_d", "cf_v_tongue_d", "cf_v_puffed_d", "cf_v_determined_d", "cf_v_evil_d", "cf_v_smug_d", "cf_v_confused_d", "cf_v_disgusted_d", "cf_v_nervous_d", "cf_v_kissy_d", "cf_v_bored_d", "cf_v_excited_d", "cf_v_thinking_d", "cf_v_scared_d"].forEach(n => { const r = db.transaction("a").objectStore("a").get(n); r.onsuccess = () => { if (r.result) this.use(n, r.result); }; });
+      ["pirate_ship", "pirate_wave", "pirate_fall", "pirate_slide", "pirate_waving", "scrap_truck", "scrap_truck_empty", "scrap_truck_dump", "scrap_pile", "scrap_guy", "scrap_guy_pop", "scrap_guy_cheer", "scrap_guy_run", "scrap_harvester", "scrap_harvester_go", "vt_L_v", "vt_L_UT", "vt_L_e", "vt_L_r", "vt_L_i", "vt_L_b", "vt_L_l", "vt_boma", "vt_soldier", "vt_soldier_cheer", "vt_soldier_throw", "vt_soldier_salute", "vt_soldier_flip", "gem_base", "gem_sparkle", "gem_pulse", "gem_fire", "gem_glint", "gem_turn", "gem_power", "gem_topspin", "gem_dizzy", "gem_bounce", "gem_twirl", "gem_sway", "gem_shiver", "gem_heart", "gem_bubbles", "gem_orbit", "gem_snow", "gem_galaxy", "gem_jelly", "dice_1", "dice_2", "dice_3", "dice_4", "dice_5", "dice_6", "dice_tumble", "dice_shake", "cs__base", "cs_tank", "cs_tank_form", "cs_tank_idle", "cs_tank_act", "cs_tank_turn", "cs_dog", "cs_dog_form", "cs_dog_idle", "cs_dog_act", "cs_dog_turn", "cs_cat", "cs_cat_form", "cs_cat_idle", "cs_cat_act", "cs_cat_turn", "cs_fish", "cs_fish_form", "cs_fish_idle", "cs_fish_act", "cs_fish_turn", "cs_whale", "cs_whale_form", "cs_whale_idle", "cs_whale_act", "cs_whale_turn", "cs_bunny", "cs_bunny_form", "cs_bunny_idle", "cs_bunny_act", "cs_bunny_turn", "cs_turtle", "cs_turtle_form", "cs_turtle_idle", "cs_turtle_act", "cs_turtle_turn", "cs_duck", "cs_duck_form", "cs_duck_idle", "cs_duck_act", "cs_duck_turn", "cs_elephant", "cs_elephant_form", "cs_elephant_idle", "cs_elephant_act", "cs_elephant_turn", "cs_dino", "cs_dino_form", "cs_dino_idle", "cs_dino_act", "cs_dino_turn", "cs_dragon", "cs_dragon_form", "cs_dragon_idle", "cs_dragon_act", "cs_dragon_turn", "cs_butterfly", "cs_butterfly_form", "cs_butterfly_idle", "cs_butterfly_act", "cs_bird", "cs_bird_form", "cs_bird_idle", "cs_bird_act", "cs_bird_turn", "cs_snail", "cs_snail_form", "cs_snail_idle", "cs_snail_turn", "cs_octopus", "cs_octopus_form", "cs_octopus_idle", "cs_octopus_act", "cs_crab", "cs_crab_form", "cs_crab_idle", "cs_crab_act", "cs_plane", "cs_plane_form", "cs_plane_idle", "cs_plane_act", "cs_plane_turn", "cs_rocket", "cs_rocket_form", "cs_rocket_idle", "cs_rocket_act", "cs_car", "cs_car_form", "cs_car_idle", "cs_car_act", "cs_car_turn", "cs_train", "cs_train_form", "cs_train_idle", "cs_train_act", "cs_train_turn", "cs_boat", "cs_boat_form", "cs_boat_idle", "cs_heli", "cs_heli_form", "cs_heli_idle", "cs_heli_turn", "cs_ufo", "cs_ufo_form", "cs_ufo_idle", "cs_ufo_act", "cs_ufo_turn", "cs_heart", "cs_heart_form", "cs_heart_idle", "cs_heart_act", "cs_star", "cs_star_form", "cs_star_idle", "cs_star_act", "cs_moon", "cs_moon_form", "cs_moon_idle", "cs_mushroom", "cs_mushroom_form", "cs_mushroom_idle", "cs_tree", "cs_tree_form", "cs_tree_idle", "cs_castle", "cs_castle_form", "cs_castle_idle", "cs_ghost", "cs_ghost_form", "cs_ghost_idle", "cs_ghost_act", "cs_pig", "cs_pig_form", "cs_pig_idle", "cs_pig_act", "cs_pig_turn", "cs_sheep", "cs_sheep_form", "cs_sheep_idle", "cs_sheep_act", "cs_sheep_turn", "cs_lion", "cs_lion_form", "cs_lion_idle", "cs_lion_act", "cs_lion_turn", "cs_giraffe", "cs_giraffe_form", "cs_giraffe_idle", "cs_giraffe_turn", "cs_horse", "cs_horse_form", "cs_horse_idle", "cs_horse_act", "cs_horse_turn", "cs_cow", "cs_cow_form", "cs_cow_idle", "cs_cow_act", "cs_cow_turn", "cs_penguin", "cs_penguin_form", "cs_penguin_idle", "cs_penguin_act", "cs_owl", "cs_owl_form", "cs_owl_idle", "cs_owl_act", "cs_frog", "cs_frog_form", "cs_frog_idle", "cs_frog_act", "cs_frog_turn", "cs_snake", "cs_snake_form", "cs_snake_idle", "cs_snake_act", "cs_snake_turn", "cs_shark", "cs_shark_form", "cs_shark_idle", "cs_shark_act", "cs_shark_turn", "cs_dolphin", "cs_dolphin_form", "cs_dolphin_idle", "cs_dolphin_act", "cs_dolphin_turn", "cs_bee", "cs_bee_form", "cs_bee_idle", "cs_bee_act", "cs_bee_turn", "cs_spider", "cs_spider_form", "cs_spider_idle", "cs_mouse", "cs_mouse_form", "cs_mouse_idle", "cs_mouse_act", "cs_mouse_turn", "cs_fox", "cs_fox_form", "cs_fox_idle", "cs_fox_act", "cs_fox_turn", "cs_bear", "cs_bear_form", "cs_bear_idle", "cs_bear_act", "cs_bear_turn", "cs_kangaroo", "cs_kangaroo_form", "cs_kangaroo_idle", "cs_kangaroo_act", "cs_kangaroo_turn", "cs_flamingo", "cs_flamingo_form", "cs_flamingo_idle", "cs_flamingo_turn", "cs_seahorse", "cs_seahorse_form", "cs_seahorse_idle", "cs_seahorse_turn", "cs_jellyfish", "cs_jellyfish_form", "cs_jellyfish_idle", "cs_jellyfish_act", "cs_unicorn", "cs_unicorn_form", "cs_unicorn_idle", "cs_unicorn_act", "cs_unicorn_turn", "cs_guitar", "cs_guitar_form", "cs_guitar_idle", "cs_guitar_act", "cs_umbrella", "cs_umbrella_form", "cs_umbrella_idle", "cs_umbrella_act", "cs_balloon", "cs_balloon_form", "cs_balloon_idle", "cs_balloon_act", "cs_lighthouse", "cs_lighthouse_form", "cs_lighthouse_idle", "cs_lighthouse_act", "cs_house", "cs_house_form", "cs_house_idle", "cs_house_act", "cs_robot", "cs_robot_form", "cs_robot_idle", "cs_robot_act", "cs_skull", "cs_skull_form", "cs_skull_idle", "cs_skull_act", "cs_crown", "cs_crown_form", "cs_crown_idle", "cs_crown_act", "cs_anchor", "cs_anchor_form", "cs_anchor_idle", "cs_sword", "cs_sword_form", "cs_sword_idle", "cs_sword_act", "cs_trophy", "cs_trophy_form", "cs_trophy_idle", "cs_trophy_act", "cs_cupcake", "cs_cupcake_form", "cs_cupcake_idle", "cs_icecream", "cs_icecream_form", "cs_icecream_idle", "cs_pizza", "cs_pizza_form", "cs_pizza_idle", "cs_pizza_turn", "cs_apple", "cs_apple_form", "cs_apple_idle", "cs_bell", "cs_bell_form", "cs_bell_idle", "cs_bell_act", "cs_kite", "cs_kite_form", "cs_kite_idle", "cs_submarine", "cs_submarine_form", "cs_submarine_idle", "cs_submarine_act", "cs_submarine_turn", "cs_bicycle", "cs_bicycle_form", "cs_bicycle_idle", "cs_bicycle_act", "cs_bicycle_turn", "cs_gamepad", "cs_gamepad_form", "cs_gamepad_idle", "cs_gamepad_act", "cf_e_none", "disco_glint", "cf_x_talk_me", "sm_hat", "sm_face", "sm_nose", "sm_arm", "sm_ball", "sm_ball_melt", "sm_puddle", "cf_ref", "cf_x_talk", "cf_x_wide", "cf_x_look_l", "cf_x_look_r", "cf_x_smile", "cf_x_grin", "cf_x_oo", "cf_x_blink", "cf_v_smile_talk", "cf_v_smile_l", "cf_v_smile_r", "cf_v_grin_talk", "cf_v_grin_l", "cf_v_grin_r", "cf_v_oo_talk", "cf_v_oo_l", "cf_v_oo_r", "cf_v_closed_talk", "cf_e_smirk", "cf_v_smirk_talk", "cf_v_smirk_l", "cf_v_smirk_r", "cf_e_wink", "cf_v_wink_talk", "cf_e_laugh", "cf_v_laugh_talk", "cf_e_shocked", "cf_v_shocked_talk", "cf_v_shocked_l", "cf_v_shocked_r", "cf_e_sleepy", "cf_v_sleepy_talk", "cf_v_sleepy_l", "cf_v_sleepy_r", "cf_e_sideeye", "cf_v_sideeye_talk", "cf_v_sideeye_l", "cf_v_sideeye_r", "cf_e_sad", "cf_v_sad_talk", "cf_v_sad_l", "cf_v_sad_r", "cf_e_tongue", "cf_v_tongue_talk", "cf_v_tongue_l", "cf_v_tongue_r", "cf_e_puffed", "cf_v_puffed_talk", "cf_v_puffed_l", "cf_v_puffed_r", "cf_e_determined", "cf_v_determined_talk", "cf_v_determined_l", "cf_v_determined_r", "cf_e_evil", "cf_v_evil_talk", "cf_v_evil_l", "cf_v_evil_r", "cf_e_smug", "cf_v_smug_talk", "cf_v_smug_l", "cf_v_smug_r", "cf_e_confused", "cf_v_confused_talk", "cf_v_confused_l", "cf_v_confused_r", "cf_e_disgusted", "cf_v_disgusted_talk", "cf_v_disgusted_l", "cf_v_disgusted_r", "cf_e_nervous", "cf_v_nervous_talk", "cf_v_nervous_l", "cf_v_nervous_r", "cf_e_kissy", "cf_v_kissy_talk", "cf_v_kissy_l", "cf_v_kissy_r", "cf_e_bored", "cf_v_bored_talk", "cf_v_bored_l", "cf_v_bored_r", "cf_e_excited", "cf_v_excited_talk", "cf_v_excited_l", "cf_v_excited_r", "cf_e_thinking", "cf_v_thinking_talk", "cf_v_thinking_l", "cf_v_thinking_r", "cf_e_scared", "cf_v_scared_talk", "cf_v_scared_l", "cf_v_scared_r", "jinx_flip", "jinx_spin", "jinx_fire", "jinx_launch", "artillery", "golden_banana", "golden_mango", "tower", "eagle_roll", "tank_drive", "soldier_run", "soldier_throw", "grenade", "explosion", "eagle_glide", "eagle_flap", "plane", "title", "chef_parachute", "chef_chop", "chef_jump", "chef_fly", "chef_truck", "cf_x_look_d", "cf_v_smile_d", "cf_v_grin_d", "cf_v_oo_d", "cf_v_smirk_d", "cf_v_shocked_d", "cf_v_sleepy_d", "cf_v_sideeye_d", "cf_v_sad_d", "cf_v_tongue_d", "cf_v_puffed_d", "cf_v_determined_d", "cf_v_evil_d", "cf_v_smug_d", "cf_v_confused_d", "cf_v_disgusted_d", "cf_v_nervous_d", "cf_v_kissy_d", "cf_v_bored_d", "cf_v_excited_d", "cf_v_thinking_d", "cf_v_scared_d"].forEach(n => { const r = db.transaction("a").objectStore("a").get(n); r.onsuccess = () => { if (r.result) this.use(n, r.result); }; });
     } catch (e) {}
   },
   // a piece of art arriving from the app (sent in parts)
@@ -5638,11 +5640,13 @@ const BitGems = {
   grab(n) { const c = this.find(n); if (!c) return; c.held = true; c.air = false; c.walk = null; c.lie = null; c.anim = null; c.roll = 0; c.tx = c.x; c.ty = c.y; c.hist = []; this.start(); },
   moveTo(n, x, y) { const c = this.find(n); if (!c || !c.held) return; const d = this.dims(c); c.tx = x * this.W; c.ty = Math.min(this.FLOOR, y * this.H + d.H * .5); },
   fling(n, vx, vy) { const c = this.find(n); if (!c) return; c.held = false; c.air = true; c.trail = false;
-    c.vx = Math.max(-60, Math.min(60, (vx || 0) * 16)); c.vy = Math.max(-60, Math.min(40, (vy || 0) * 16)); c.tv = c.vx * .002;
-    if (Math.abs(c.vx) > 3) { c.topSpin = Math.max(-1.1, Math.min(1.1, c.vx * .035)); c.spinStart = Math.abs(c.topSpin); } this.save(); },
+    // a gem is heavy: a toss carries less speed than your thumb had, and it falls hard and doesn't bounce much
+    c.vx = Math.max(-40, Math.min(40, (vx || 0) * 10)); c.vy = Math.max(-40, Math.min(30, (vy || 0) * 10)); c.tv = c.vx * .0015;
+    if (Math.abs(c.vx) > 3) { c.topSpin = Math.max(-1.1, Math.min(1.1, c.vx * .05)); c.spinStart = Math.abs(c.topSpin); } this.save(); },
   watchUntil: 0, lastRep: 0,
-  report(force) { const now = performance.now(); if (!window.remoteSend || (!force && (now > this.watchUntil || now - this.lastRep < 180))) return; this.lastRep = now;
-    window.remoteSend({ cmd: "gems", g: this.list.map(c => [c.name, +(c.x / this.W).toFixed(4), +(c.y / this.H).toFixed(4), +c.tilt.toFixed(3), bitColor(c.bits), +(c.w / this.W).toFixed(4), c.held ? 1 : 0]) }); },
+  report(force) { const now = performance.now(); if (!window.remoteSend || (!force && (now > this.watchUntil || now - this.lastRep < 90))) return; this.lastRep = now;
+    window.remoteSend({ cmd: "gems", g: this.list.map(c => [c.name, +(c.x / this.W).toFixed(4), +(c.y / this.H).toFixed(4), +c.tilt.toFixed(3), bitColor(c.bits), +(c.w / this.W).toFixed(4), c.held ? 1 : 0]),
+      d: Dice.report(), dr: [+(Dice.lo() / this.W).toFixed(4), +(Dice.hi() / this.W).toFixed(4)] }); },
   add(name, bits) {
     const old = this.list.find(g => g.name.toLowerCase() === String(name).toLowerCase());
     if (old) { old.bits += bits; old.w = this.Wd(old.bits); old.pulse = 1; old.vy = -15; old.air = true; old.walk = null; this.sparkle(old.x, old.y - old.w * .4, 30, bitColor(old.bits)); this.play(old, "gem_power", true); }
@@ -5740,18 +5744,20 @@ const BitGems = {
       for (const c of this.list) {
         c.pulse = Math.max(0, c.pulse - .02 * dt);
         if (c.held) {          // following your thumb on the touchpad, leaning the way it's being dragged
-          const ox = c.x; c.x += (c.tx - c.x) * Math.min(1, .35 * dt); c.y += (c.ty - c.y) * Math.min(1, .35 * dt);
+          const ox = c.x; c.x += (c.tx - c.x) * Math.min(1, .3 * dt); c.y += (c.ty - c.y) * Math.min(1, .3 * dt);
           c.tilt += (Math.max(-.6, Math.min(.6, (c.x - ox) * .02)) - c.tilt) * .2 * dt; }
-        else if (c.air) { c.vy += .55 * dt; c.y += c.vy * dt; c.tilt += c.tv * dt; c.x += (c.vx || 0) * dt;
-          if (c.x < c.w / 2) { c.x = c.w / 2; c.vx = Math.abs(c.vx || 0) * .5; } if (c.x > this.W - c.w / 2) { c.x = this.W - c.w / 2; c.vx = -Math.abs(c.vx || 0) * .5; }   // bounces off the sides
+        else if (c.air) { c.vy += (c.trail ? .55 : .85) * dt; c.y += c.vy * dt; c.tilt += c.tv * dt; c.vx = (c.vx || 0) * Math.pow(.993, dt); c.x += c.vx * dt;     // heavy: falls fast, air slows it
+          if (c.x < c.w / 2) { c.x = c.w / 2; c.vx = Math.abs(c.vx || 0) * .3; } if (c.x > this.W - c.w / 2) { c.x = this.W - c.w / 2; c.vx = -Math.abs(c.vx || 0) * .3; }   // thuds off the sides
           if (c.y < -c.w * 2) { c.y = -c.w * 2; c.vy = Math.abs(c.vy) * .3; }
           if (c.trail && Math.random() < .7) this.fx.push({ x: c.x + rand(-c.w * .3, c.w * .3), y: c.y - c.w * .45, vx: rand(-.6, .6), vy: rand(-1, .2), life: 1, col: bitColor(c.bits), s: rand(2, 4) });
           if (c.y >= this.FLOOR) { c.y = this.FLOOR;
-            if (c.vy > 3) { c.vy *= -.34; c.tv = (c.tv + rand(-.03, .03)); this.sparkle(c.x, this.FLOOR - 4, 10, "#ffffff"); if (Sound.ctx) Sound.burst(Sound.ctx.currentTime, .12, .03, "highpass", 3200, 1200); }
+            if (c.vy > 4) { const hit = c.vy; c.vy *= -.22; c.vx = (c.vx || 0) * .8; c.tv = (c.tv * .6 + rand(-.02, .02)); this.sparkle(c.x, this.FLOOR - 4, 10, "#ffffff");
+              for (let i = 0; i < 8; i++) this.fx.push({ x: c.x + rand(-c.w * .5, c.w * .5), y: this.FLOOR - 3, vx: rand(-2.5, 2.5), vy: rand(-1.8, -.3), life: .9, col: "rgba(200,195,190,1)", s: rand(2, 4.5) });   // a puff of dust where it lands
+              if (Sound.ctx) { const t = Sound.ctx.currentTime, k = Math.min(1, hit / 25); Sound.burst(t, .14, .05 * k + .01, "lowpass", 900, 140); Sound.burst(t, .08, .02, "highpass", 3200, 1200); } }
             else { c.vy = 0; c.air = false; c.trail = false; c.wob = c.topSpin ? 0 : (c.tilt || rand(-.25, .25)); c.tilt = c.topSpin ? 0 : c.tilt; c.tv = 0; c.next = now + rand(5000, 14000); this.save(); } } }
         else if (c.topSpin || Math.abs(c.vx || 0) > .2) {     // flicked: sliding along and/or spinning on its point like a top
-          c.x += (c.vx || 0) * dt; c.vx = (c.vx || 0) * Math.pow(.95, dt); if (Math.abs(c.vx) < .2) c.vx = 0;
-          if (c.x < c.w / 2) { c.x = c.w / 2; c.vx = Math.abs(c.vx) * .5; } if (c.x > this.W - c.w / 2) { c.x = this.W - c.w / 2; c.vx = -Math.abs(c.vx) * .5; }
+          c.x += (c.vx || 0) * dt; c.vx = (c.vx || 0) * Math.pow(.92, dt); if (Math.abs(c.vx) < .2) c.vx = 0;        // heavy: grinds to a stop quickly
+          if (c.x < c.w / 2) { c.x = c.w / 2; c.vx = Math.abs(c.vx) * .3; } if (c.x > this.W - c.w / 2) { c.x = this.W - c.w / 2; c.vx = -Math.abs(c.vx) * .3; }
           if (c.topSpin) { c.roll = (c.roll || 0) + c.topSpin * dt; c.topSpin *= Math.pow(.993, dt);
             const slow = 1 - Math.min(1, Math.abs(c.topSpin) / (c.spinStart || 1)); c.tilt = Math.sin(now / 160) * .25 * slow * slow;   // wobbles more as it slows, like a top
             if (Math.abs(c.topSpin) < .03) { c.topSpin = 0; c.roll = 0; c.wob = .2; c.next = now + rand(4000, 9000); this.play(c, "gem_dizzy"); this.save(); } }
@@ -5790,6 +5796,105 @@ const BitGems = {
       for (let i = this.fx.length - 1; i >= 0; i--) { const p = this.fx[i]; p.x += p.vx * dt; p.y += p.vy * dt; p.vy += .08 * dt; p.life -= .025 * dt; if (p.life <= 0) { this.fx.splice(i, 1); continue; }
         g.globalAlpha = p.life * .8; g.fillStyle = p.col; g.beginPath(); g.arc(p.x, p.y, p.s, 0, 6.283); g.fill(); g.globalAlpha = 1; }
       if (this.list.length || this.fx.length) requestAnimationFrame(frame); else { g.clearRect(0, 0, this.W, this.H); this.running = false; this.report(true); } };
+    requestAnimationFrame(frame); }
+};
+
+/* ================= dice =================
+   Two dice sit along the bottom of the screen all stream. Anyone in chat types !dice: they rattle, get thrown across the
+   bottom, bounce and tumble like real dice and land on whatever face comes up; the dots they land on glow soft green.
+   On the app's touchpad they can be grabbed, dragged and tossed too. Art comes from the Art screen (dice_1..dice_6,
+   dice_tumble, dice_shake); until it's sent, the dice are drawn. */
+const Dice = {
+  KEY: "kzDice", W: 2560, H: 1440, FLOOR: 1440 - 8, S: 110, RIGHT: 2560 - 800, on: true, list: [], fx: [], running: false, coolUntil: 0,
+  PIPS: { 1: [[0, 0]], 2: [[-1, -1], [1, 1]], 3: [[-1, -1], [0, 0], [1, 1]], 4: [[-1, -1], [1, -1], [-1, 1], [1, 1]], 5: [[-1, -1], [1, -1], [0, 0], [-1, 1], [1, 1]], 6: [[-1, -1], [-1, 0], [-1, 1], [1, -1], [1, 0], [1, 1]] },
+  lo() { return this.S * .6 + 20; }, hi() { return this.RIGHT - this.S * .6; },
+  load() { let o = null; try { o = JSON.parse(localStorage.getItem(this.KEY)); } catch (e) {}
+    this.on = !o || o.on !== false; const d = (o && o.d) || [[1380, 5], [1520, 2]];
+    this.list = d.map((q, i) => ({ id: "dice:" + (i + 1), x: q[0], y: this.FLOOR - this.S / 2, vx: 0, vy: 0, a: 0, va: 0, face: q[1] || 1, st: "rest", glow: 1, q: 0 }));
+    if (this.on) this.start(); },
+  save() { try { localStorage.setItem(this.KEY, JSON.stringify({ on: this.on, d: this.list.map(c => [Math.round(c.x), c.face]) })); } catch (e) {} },
+  toggle(v) { this.on = v == null ? !this.on : !!v; this.save(); if (this.on) this.start(); BitGems.report(true); return this.on; },
+  find(id) { return this.list.find(c => c.id === id); },
+  half(c) { return this.S / 2 * (Math.abs(Math.cos(c.a)) + Math.abs(Math.sin(c.a))); },     // how far a turned square reaches down from its middle
+  // the next face when it tips over a quarter turn: one of the four next to it (never the same one or the one opposite)
+  tip(c) { const n = [1, 2, 3, 4, 5, 6].filter(f => f !== c.face && f !== 7 - c.face); c.face = n[Math.floor(Math.random() * n.length)]; },
+  clack(v) { if (!Sound.ctx) return; const t = Sound.ctx.currentTime, k = Math.min(1, v); Sound.burst(t, .04, .05 * k + .01, "bandpass", 3000, 1900); Sound.burst(t + .012, .05, .03 * k, "bandpass", 1500, 900); },
+  // !dice from chat (or the app): shake, then throw
+  roll(who) { if (!this.on) return false; const now = performance.now(); if (now < this.coolUntil || this.list.some(c => c.held || c.st === "air" || c.st === "shake" || c.st === "settle")) return false;
+    this.coolUntil = now + 6000; Sound.init(); if (!MySounds.play("dice")) for (let i = 0; i < 9; i++) setTimeout(() => this.clack(.5 + Math.random() * .5), i * 70 + Math.random() * 30);
+    const mid = (this.lo() + this.hi()) / 2, cx = this.list.reduce((s, c) => s + c.x, 0) / this.list.length, dir = cx < mid ? 1 : -1;
+    this.list.forEach((c, i) => { c.st = "shake"; c.at = now; c.glow = 0; c.ox = c.x; c.dir = dir; c.k = i; });
+    this.start(); return true; },
+  throwIt(c) { const sp = rand(13, 21) + c.k * 2; c.st = "air"; c.vx = c.dir * sp; c.vy = -rand(11, 17); c.va = c.dir * rand(.14, .28); c.q = Math.floor(c.a / (Math.PI / 2)); },
+  // ---- the touchpad
+  grab(id) { const c = this.find(id); if (!c || !this.on) return; c.held = true; c.st = "held"; c.glow = 0; c.tx = c.x; c.ty = c.y; this.start(); },
+  moveTo(id, x, y) { const c = this.find(id); if (!c || !c.held) return; c.tx = Math.max(this.lo(), Math.min(this.hi(), x * this.W)); c.ty = Math.min(this.FLOOR - this.S / 2, y * this.H); },
+  fling(id, vx, vy) { const c = this.find(id); if (!c) return; c.held = false; c.st = "air";
+    c.vx = Math.max(-38, Math.min(38, (vx || 0) * 12)); c.vy = Math.max(-38, Math.min(30, (vy || 0) * 12)); c.va = c.vx * .018 + rand(-.05, .05); c.q = Math.floor(c.a / (Math.PI / 2)); },
+  report() { return this.on ? this.list.map(c => [c.id, +(c.x / this.W).toFixed(4), +(c.y / this.H).toFixed(4), +c.a.toFixed(3), c.face, c.glow > .5 ? 1 : 0, +(this.S / this.W).toFixed(4), c.held ? 1 : 0]) : []; },
+  // ---- drawing
+  pip(g, x, y, r, glow) {
+    if (glow > 0) { const gr = g.createRadialGradient(x, y, r * .6, x, y, r * 2.6);          // a soft green halo spreading round the dot
+      gr.addColorStop(0, `rgba(60,235,110,${.5 * glow})`); gr.addColorStop(1, "rgba(60,235,110,0)"); g.fillStyle = gr; g.beginPath(); g.arc(x, y, r * 2.6, 0, 6.283); g.fill();
+      g.shadowColor = "rgba(40,255,110,1)"; g.shadowBlur = r * 2.2 * glow; }
+    const c = glow > 0 ? `rgb(${Math.round(27 + 30 * glow)},${Math.round(24 + 196 * glow)},${Math.round(32 + 58 * glow)})` : "#1b1820";
+    g.fillStyle = c; g.beginPath(); g.arc(x, y, r, 0, 6.283); g.fill(); g.shadowBlur = 0;
+    if (glow > 0) { const hg = g.createRadialGradient(x, y, 0, x, y, r); hg.addColorStop(0, `rgba(210,255,215,${.85 * glow})`); hg.addColorStop(1, "rgba(120,255,150,0)"); g.fillStyle = hg; g.beginPath(); g.arc(x, y, r, 0, 6.283); g.fill(); } },
+  draw(g, c, now) { const S = this.S, Sp = ChefArt.sprites, gl = c.glow * (.78 + .22 * Math.sin(now / 650 + c.k));
+    g.save(); g.translate(c.x, c.y);
+    // a soft shadow on the floor under it
+    const lift = Math.max(0, this.FLOOR - (c.y + this.half(c))); g.save(); g.translate(0, this.FLOOR - c.y); g.globalAlpha = Math.max(.08, .32 - lift / 900); g.fillStyle = "#000";
+    g.beginPath(); g.ellipse(0, 0, S * .55 * Math.max(.5, 1 - lift / 1200), 7, 0, 0, 6.283); g.fill(); g.restore();
+    g.rotate(c.a);
+    let sp = null, f = 0;
+    if (c.st === "shake" && Sp.dice_shake) { sp = Sp.dice_shake; f = Math.floor(now / (sp.ms || 60)) % (sp.frames || 1); }
+    else if (c.st === "air" && Sp.dice_tumble) { sp = Sp.dice_tumble; f = ((Math.floor(c.roll / (S * .35)) % (sp.frames || 1)) + (sp.frames || 1)) % (sp.frames || 1); }
+    else if (Sp["dice_" + c.face]) sp = Sp["dice_" + c.face];
+    if (sp) { const b = Pirate.figOf(sp), k = S / Math.max(b.x1 - b.x0, b.y1 - b.y0);
+      g.drawImage(sp.img, f * sp.w, 0, sp.w, sp.h, -(b.x0 + b.x1) / 2 * k, -(b.y0 + b.y1) / 2 * k, sp.w * k, sp.h * k); }
+    else { const r = S * .18, h = S / 2, gr = g.createLinearGradient(-h, -h, h, h); gr.addColorStop(0, "#fffdf6"); gr.addColorStop(1, "#d9d2c2");
+      g.fillStyle = gr; g.beginPath(); g.roundRect(-h, -h, S, S, r); g.fill(); g.strokeStyle = "rgba(90,80,70,.55)"; g.lineWidth = 2; g.stroke();
+      g.fillStyle = "rgba(255,255,255,.5)"; g.beginPath(); g.roundRect(-h + 6, -h + 5, S - 12, S * .2, r * .6); g.fill(); }
+    // the dots: drawn on the drawn die; over the art only when they glow (they sit in the same standard places)
+    if (!sp || (gl > .02 && sp === Sp["dice_" + c.face])) { const d = S * .27; this.PIPS[c.face].forEach(([px, py]) => this.pip(g, px * d, py * d, S * .085, gl)); }
+    g.restore(); },
+  start() { if (this.running) return; this.running = true; let last = performance.now();
+    const cv = $("#dicecv"), g = cv.getContext("2d"), Q = Math.PI / 2;
+    const frame = now => { const dt = Math.min(50, now - last) / 16; last = now; g.clearRect(0, 0, this.W, this.H);
+      if (!this.on) { this.running = false; return; }
+      for (const c of this.list) {
+        if (c.st === "held") { const ox = c.x; c.x += (c.tx - c.x) * Math.min(1, .3 * dt); c.y += (c.ty - c.y) * Math.min(1, .3 * dt);
+          c.a += (Math.max(-.5, Math.min(.5, (c.x - ox) * .015)) - c.a) * .2 * dt; }
+        else if (c.st === "shake") { const t = now - c.at; c.x = c.ox + Math.sin(t / 23 + c.k) * 5; c.y = this.FLOOR - this.S / 2 - Math.abs(Math.sin(t / 55 + c.k * 1.3)) * 26; c.a = Math.sin(t / 37 + c.k * 2) * .35;
+          if (Math.floor(t / 90) !== c.fl) { c.fl = Math.floor(t / 90); this.tip(c); }
+          if (t > 750 + c.k * 120) this.throwIt(c); }
+        else if (c.st === "air") { c.vy += .7 * dt; c.vx *= Math.pow(.997, dt); c.x += c.vx * dt; c.y += c.vy * dt; c.a += c.va * dt; c.roll = (c.roll || 0) + Math.hypot(c.vx, c.vy) * dt;
+          const q = Math.floor(c.a / Q); if (q !== c.q) { c.q = q; this.tip(c); }                         // tipping over onto the next face
+          if (c.x < this.lo()) { c.x = this.lo(); c.vx = Math.abs(c.vx) * .5; c.va *= -.6; this.clack(Math.abs(c.vx) / 10); }
+          if (c.x > this.hi()) { c.x = this.hi(); c.vx = -Math.abs(c.vx) * .5; c.va *= -.6; this.clack(Math.abs(c.vx) / 10); }
+          if (c.y < -this.S * 3) { c.y = -this.S * 3; c.vy = Math.abs(c.vy) * .3; }
+          const hf = this.half(c);
+          if (c.y + hf >= this.FLOOR) { c.y = this.FLOOR - hf;
+            if (c.vy > 2.5) { this.clack(c.vy / 12); c.vy = -c.vy * rand(.34, .46); c.vx *= .82; c.va = c.va * .45 + (c.vx / (this.S / 2)) * .55 + rand(-.06, .06);
+              for (let i = 0; i < 5; i++) this.fx.push({ x: c.x + rand(-30, 30), y: this.FLOOR - 3, vx: rand(-1.5, 1.5), vy: rand(-1.5, -.3), life: 1, col: "rgba(210,205,195,1)", s: rand(2, 4) }); }
+            else { c.vy = 0; c.vx *= Math.pow(.9, dt); c.va += ((c.vx / (this.S / 2)) - c.va) * .3 * dt;
+              if (Math.abs(c.vx) < .6) { c.st = "settle"; c.ta = Math.round(c.a / Q) * Q; } } } }
+        else if (c.st === "settle") {     // rocks down flat onto the face that came up
+          c.a += (c.ta - c.a) * Math.min(1, .22 * dt); c.vx *= .8; c.x += c.vx * dt; c.y = this.FLOOR - this.half(c);
+          if (Math.abs(c.ta - c.a) < .01) { c.a = 0; c.st = "rest"; c.y = this.FLOOR - this.S / 2; c.restAt = now; this.clack(.25); this.save();
+            this.PIPS[c.face].forEach(([px, py]) => { for (let i = 0; i < 3; i++) this.fx.push({ x: c.x + px * this.S * .27, y: c.y + py * this.S * .27, vx: rand(-1, 1), vy: rand(-2, -.5), life: 1, col: "#8dffaa", s: rand(1.5, 3) }); }); } }
+        else { c.y = this.FLOOR - this.S / 2; if (c.restAt != null || c.glow > 0) c.glow = Math.min(1, c.glow + .03 * dt); }
+      }
+      // the two dice knock into each other instead of passing through
+      const [a, b] = this.list; if (a && b && !a.held && !b.held) { const dx = b.x - a.x, dy = b.y - a.y, d = Math.hypot(dx, dy) || 1, need = this.S * 1.02;
+        if (d < need) { const nx = dx / d, ny = dy / d, p = (need - d) / 2; a.x -= nx * p; b.x += nx * p; if (a.st === "air" || b.st === "air") { a.y -= ny * p; b.y += ny * p; }
+          const rv = (b.vx - a.vx) * nx + (b.vy - a.vy) * ny; if (rv < 0) { a.vx += rv * nx * .8; a.vy += rv * ny * .8; b.vx -= rv * nx * .8; b.vy -= rv * ny * .8; if (-rv > 2) this.clack(-rv / 12);
+            [a, b].forEach(c => { if (c.st === "rest" || c.st === "settle") { c.st = "air"; c.q = Math.floor(c.a / Q); c.glow = 0; } }); } } }
+      this.list.forEach(c => this.draw(g, c, now));
+      for (let i = this.fx.length - 1; i >= 0; i--) { const p = this.fx[i]; p.x += p.vx * dt; p.y += p.vy * dt; p.vy += .05 * dt; p.life -= .025 * dt; if (p.life <= 0) { this.fx.splice(i, 1); continue; }
+        g.globalAlpha = p.life * .8; g.fillStyle = p.col; g.beginPath(); g.arc(p.x, p.y, p.s, 0, 6.283); g.fill(); g.globalAlpha = 1; }
+      BitGems.report();
+      requestAnimationFrame(frame); };
     requestAnimationFrame(frame); }
 };
 
@@ -5854,9 +5959,11 @@ window.onRemote = c => {
   else if (c.cmd === "soundList") { const list = Object.assign({}, MySounds.names); Object.keys(BUNDLED_SOUNDS).forEach(k => list[k] = "built in"); if (window.remoteSend) window.remoteSend({ cmd: "sounds", list }); }
   else if (c.cmd === "soundTest") { if (!MySounds.urls[c.type] && !BUNDLED_SOUNDS[c.type]) MySounds.report(c.type, "no sound saved for this in OBS"); else { const cur = MySounds.playing[c.type]; if (cur) cur.pause(); MySounds.play(c.type); } }
   else if (c.cmd === "gemWatch") { BitGems.watchUntil = performance.now() + 40000; BitGems.report(true); }
-  else if (c.cmd === "gemGrab") BitGems.grab(c.n);
-  else if (c.cmd === "gemMove") BitGems.moveTo(c.n, +c.x, +c.y);
-  else if (c.cmd === "gemFling") BitGems.fling(c.n, +c.vx, +c.vy);
+  else if (c.cmd === "gemGrab") (String(c.n).startsWith("dice:") ? Dice : BitGems).grab(c.n);            // dice on the touchpad go by "dice:1"/"dice:2"
+  else if (c.cmd === "gemMove") (String(c.n).startsWith("dice:") ? Dice : BitGems).moveTo(c.n, +c.x, +c.y);
+  else if (c.cmd === "gemFling") (String(c.n).startsWith("dice:") ? Dice : BitGems).fling(c.n, +c.vx, +c.vy);
+  else if (c.cmd === "effect" && c.name === "dice") { if (!Dice.on) Dice.toggle(true); setTimeout(() => { Dice.coolUntil = 0; Dice.roll("app"); }, Dice.running ? 0 : 50); }
+  else if (c.cmd === "effect" && c.name === "diceToggle") toast(Dice.toggle() ? "🎲 Dice are on" : "🎲 Dice are off", false, 3000);
   else if (c.cmd === "bitGemsReset") { BitGems.reset(); toast("💎 Bit gems cleared for the next stream", false, 4000); }
   else if (c.cmd === "chatCfg") { ChatBox.cfg(c); if (c.show != null) ChatBox.show(c.show); ChatBox.tell(); }
   else if (c.cmd === "chatShow") { ChatBox.show(!!c.on); ChatBox.tell(); }
@@ -6249,6 +6356,7 @@ const Chat = {
         Lurk.leave(login);
       }
       else if (/^!rain\b/i.test(msg)) { Face.chatRain(); Lurk.leave(login); }
+      else if (/^!dice\b/i.test(msg)) { Dice.roll(login); Lurk.leave(login); }
       else if (/^!snow\b/i.test(msg)) { Face.chatSnow(tags["display-name"] || login, tags.color || chatColors[tags["user-id"]]); Lurk.leave(login); }
       else if (/^!scroopleaderboard\b/i.test(msg)) Scrap.showBoard();
       else if (/^!scroop\b/i.test(msg) || msg.includes("kruuuuCatch1")) Scrap.dig(tags["display-name"] || login, login, tags.color || chatColors[tags["user-id"]]);   // lurkers can scroop without leaving the tower
@@ -6622,6 +6730,7 @@ const ChatBox = {
 };
 ChatBox.init();
 BitGems.load();
+Dice.load();
 // one-off: thebigyin's 100 bits from before the gems existed (drops in once, the first time this version loads)
 try { if (!localStorage.getItem("kzGemSeed1")) { localStorage.setItem("kzGemSeed1", "1"); setTimeout(() => BitGems.add("thebigyin", 100), 1500); } } catch (e) {}
 if (LIVE) Live.init();
@@ -6714,7 +6823,7 @@ window.KZRelay = function (topic, onMessage, servers) {
 (() => {
   const qs = new URLSearchParams(location.search), key = qs.get("ctl");
   if (!key || !window.WebSocket) return;
-  const PAGE = "html3", VERSION = "99a7d4b";
+  const PAGE = "html3", VERSION = "b45099e";
   let said = false;
   const relay = KZRelay("kzctl/" + key, c => {
     if (!c || c.from === "overlay" || (c.to && c.to !== "all" && c.to !== PAGE)) return;
