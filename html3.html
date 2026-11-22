@@ -33,6 +33,7 @@ body.fit{background:#06050c}
 @keyframes cfIn{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
 #chatbox .cf-ic{display:inline-block;vertical-align:-.12em;margin-right:.3em} #chatbox .cf-nm{font-weight:900} #chatbox .cf-nm::after{content:":";color:#d8d0f0}
 #chatbox .cf-em{height:1.35em;vertical-align:middle;margin:0 .05em}
+#chatbox .cf-gif{height:2.7em;border-radius:6px;margin:.15em .1em}
 #chatbox .bar,#chatbox .x,#chatbox .grip{position:absolute;opacity:0;transition:opacity .15s;z-index:2}
 #chatbox:hover .bar,#chatbox:hover .x,#chatbox:hover .grip,#chatbox.drag .bar,#chatbox.drag .grip{opacity:1}
 #chatbox:hover{outline:3px dashed #a3e635;outline-offset:3px}
@@ -6303,9 +6304,15 @@ const ChatFeed = {
       // emotes: "id:start-end,start-end/id:..." (positions count characters, not bytes)
       const chars = Array.from(text), marks = [];
       (tags.emotes || "").split("/").filter(Boolean).forEach(g => { const [id, spots] = g.split(":"); (spots || "").split(",").forEach(r => { const [a, b] = r.split("-").map(Number); marks.push([a, b, id]); }); });
+      // GIFs (Tier 2/3 subs' GIF keyboard): tag "gifs" = "start-end|gifId|url,…" (the url is the picture to show)
+      const unesc = v => v.replace(/\\s/g, " ").replace(/\\:/g, ";").replace(/\\\\/g, "\\");
+      const gifs = []; unesc(tags.gifs || "").split(",").filter(Boolean).forEach(g => { const [range, gid, ...u] = g.split("|"), url = u.join("|"); if (!/^https?:/.test(url)) return;
+        const [a, b] = (range || "").split("-").map(Number); if (a >= 0 && b >= a && b < chars.length) marks.push([a, b, null, url]); else gifs.push(url); });
       marks.sort((a, b) => a[0] - b[0]); const parts = []; let at = 0;
-      marks.forEach(([a, b, id]) => { if (a > at) parts.push({ text: chars.slice(at, a).join("") }); parts.push({ img: "https://static-cdn.jtvnw.net/emoticons/v2/" + id + "/default/dark/2.0", alt: chars.slice(a, b + 1).join("") }); at = b + 1; });
+      marks.forEach(([a, b, id, gif]) => { if (a < at) return; if (a > at) parts.push({ text: chars.slice(at, a).join("") });
+        parts.push(gif ? { img: gif, alt: "GIF", gif: true } : { img: "https://static-cdn.jtvnw.net/emoticons/v2/" + id + "/default/dark/2.0", alt: chars.slice(a, b + 1).join("") }); at = b + 1; });
       if (at < chars.length) parts.push({ text: chars.slice(at).join("") });
+      gifs.forEach(u => parts.push({ img: u, alt: "GIF", gif: true }));
       const badges = (tags.badges || "").split(",").filter(Boolean).map(b => { const [set, v] = b.split("/"); return { set, v }; });
       this.emit({ src: "twitch", name: (tags["display-name"] || m[2]).replace(/\\s/g, " "), color: tags.color || "", parts, badges, t: +tags["tmi-sent-ts"] || Date.now() });
     });
@@ -6370,7 +6377,7 @@ const ChatFeed = {
     const tx = document.createElement("span"); tx.className = "cf-tx";
     const parts = []; m.parts.forEach(p => { if (p.img || !Object.keys(this.EXTRA).length) return parts.push(p);    // words that are 7TV/BTTV/FFZ emotes become pictures
       p.text.split(/(\s+)/).forEach(w => { if (this.EXTRA[w]) parts.push({ img: this.EXTRA[w], alt: w }); else if (w) parts.push({ text: w }); }); });
-    parts.forEach(p => { if (p.img) { const i = document.createElement("img"); i.className = "cf-em"; i.src = p.img; i.alt = p.alt || ""; i.onerror = () => i.replaceWith(document.createTextNode(p.alt || "")); tx.append(i); }
+    parts.forEach(p => { if (p.img) { const i = document.createElement("img"); i.className = p.gif ? "cf-em cf-gif" : "cf-em"; i.src = p.img; i.alt = p.alt || ""; i.onerror = () => i.replaceWith(document.createTextNode(p.alt || "")); tx.append(i); }
       else tx.append(document.createTextNode(p.text)); });
     el.append(ic, ...this.badgeEls(m), nm, document.createTextNode(" "), tx); return el;
   }
@@ -6506,7 +6513,7 @@ window.KZRelay = function (topic, onMessage, servers) {
 (() => {
   const qs = new URLSearchParams(location.search), key = qs.get("ctl");
   if (!key || !window.WebSocket) return;
-  const PAGE = "html3", VERSION = "eb066bd";
+  const PAGE = "html3", VERSION = "d9c3477";
   let said = false;
   const relay = KZRelay("kzctl/" + key, c => {
     if (!c || c.from === "overlay" || (c.to && c.to !== "all" && c.to !== PAGE)) return;
