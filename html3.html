@@ -15,6 +15,22 @@ html,body{margin:0;width:100%;height:100%;overflow:hidden;background:transparent
 body.fit{background:#06050c}
 #view{position:fixed;inset:0;overflow:hidden}
 /* drawn at 2560x1440, scaled to fit the window */
+/* live chat box (top right): 4 lines, draggable / resizable / hideable when you Interact with the source in OBS */
+#chatbox{position:absolute;z-index:30;border-radius:22px;padding:12px 18px;color:#fff;overflow:hidden;
+  background:linear-gradient(160deg,#120d24d9,#07060ed9) padding-box,linear-gradient(150deg,#a3e635,#ffffff18 50%,#a855f7) border-box;border:3px solid transparent;
+  box-shadow:0 10px 30px #0008;font-family:"Segoe UI",system-ui,Roboto,Arial,sans-serif;font-weight:600}
+#chatbox.off{display:none}
+#chatbox .lines{position:absolute;left:18px;right:18px;bottom:12px;display:flex;flex-direction:column;justify-content:flex-end}
+#chatbox .ln{line-height:1.35;word-wrap:break-word;animation:cfIn .35s ease-out;text-shadow:0 2px 4px #000c}
+@keyframes cfIn{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+#chatbox .cf-ic{display:inline-block;vertical-align:-.12em;margin-right:.3em} #chatbox .cf-nm{font-weight:900} #chatbox .cf-nm::after{content:":";color:#d8d0f0}
+#chatbox .cf-em{height:1.35em;vertical-align:middle;margin:0 .05em}
+#chatbox .bar,#chatbox .x,#chatbox .grip{position:absolute;opacity:0;transition:opacity .15s;z-index:2}
+#chatbox:hover .bar,#chatbox:hover .x,#chatbox:hover .grip,#chatbox.drag .bar,#chatbox.drag .grip{opacity:1}
+#chatbox:hover{outline:3px dashed #a3e635;outline-offset:3px}
+#chatbox .bar{left:0;right:0;top:0;height:46px;background:#1a1530ee;cursor:move;font:800 22px/46px sans-serif;text-align:center;color:#fff}
+#chatbox .x{right:8px;top:6px;width:36px;height:36px;border-radius:50%;background:#ef4444;color:#fff;font:900 24px/34px sans-serif;text-align:center;cursor:pointer}
+#chatbox .grip{right:0;bottom:0;width:44px;height:44px;cursor:nwse-resize;background:linear-gradient(135deg,transparent 50%,#a3e635 50%)}
 #stage{position:absolute;left:0;top:0;width:2560px;height:1440px;transform-origin:0 0;overflow:hidden;background:transparent}
 body.fit #stage{background:radial-gradient(1200px 700px at 30% 20%,#1a103322,transparent),radial-gradient(1000px 700px at 80% 90%,#0f261422,transparent);
   outline:2px dashed #ffffff14}
@@ -416,6 +432,7 @@ body.fit #stage{background:radial-gradient(1200px 700px at 30% 20%,#1a103322,tra
 <body>
 <div id="view">
 <div id="stage">
+  <div id="chatbox" class="off"><div class="lines"></div><div class="bar">⠿ drag to move</div><div class="x" title="Hide the chat">×</div><div class="grip" title="Drag to resize"></div></div>
   <div id="scrap"><div id="scrapboard"></div></div>
   <div id="wanted"></div>
   <canvas id="treecv" width="2560" height="1440"></canvas>
@@ -5513,6 +5530,10 @@ const SmokeLap = {
 /* commands from the app's Control screen (see remote.js) */
 window.onRemote = c => {
   if (c.cmd === "stars") Wanted.set(+c.n || 0);
+  else if (c.cmd === "sound") SoundIn.receive(c);
+  else if (c.cmd === "chatCfg") ChatBox.cfg(c);
+  else if (c.cmd === "chatShow") ChatBox.show(!!c.on);
+  else if (c.cmd === "chatReset") ChatBox.reset();
   else if (c.cmd === "firstsReset") { AutoFx.reset(); toast("First-chat effects reset: each viewer's next chat plays theirs again", false, 5000); }
   else if (c.cmd === "effect" && c.name === "bolt") Bolt.run();
   else if (c.cmd === "effect" && c.name === "smokeLap") SmokeLap.run();
@@ -5752,6 +5773,7 @@ const Live = {
       if (missing.length) toast("Token can't read " + missing.map(s => NEED[s]).join(", ") + ". Get a new token in the Connect tab of overlay.html.", true, 600000);
       TwShare.start(this, this.TYPES);
       Chat.connect(this.login);
+      ChatBox.connect();                                              // the on-stream chat box follows this channel unless the app set one
       setInterval(() => this.revalidate(), 3600 * 1000);
     } catch (e) { toast("Can't reach Twitch. Retrying in 15s…", true, 14000); setTimeout(() => this.init(), 15000); }
   },
@@ -6102,6 +6124,117 @@ const Lurk = {
 };
 Lurk.init();
 
+/* a sound sent from the app's YouTube sounds screen, in pieces: put back together and kept as that alert's/effect's sound */
+const SoundIn = {
+  sets: {},
+  receive(c) { const k = c.set + "/" + c.slot, s = this.sets[k] || (this.sets[k] = { parts: [], got: 0 }); if (s.parts[c.part] == null) { s.parts[c.part] = c.data; s.got++; }
+    if (s.got < c.parts) return; delete this.sets[k];
+    try { const bin = atob(s.parts.join("")), u = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i);
+      const f = new File([u], c.name || (c.slot + ".wav"), { type: "audio/wav" }); MySounds.set(c.slot, f).then(() => {
+        toast("🔊 New sound for " + c.slot + ": " + (c.name || ""), false, 4000); if (window.remoteSend) window.remoteSend({ cmd: "soundok", set: c.set, slot: c.slot }); });
+    } catch (e) { toast("Couldn't put that sound together", true); } }
+};
+/* ================= live chat: Twitch + Kick together =================
+   Twitch: read anonymously over Twitch's chat WebSocket (no login needed).
+   Kick: read over the public Pusher WebSocket that kick.com's own chat uses (unofficial; Kick can change it).
+   Each message comes out as { src: "twitch" | "kick", name, color, parts: [{ text } | { img, alt }] }. */
+const ChatFeed = {
+  KICK_WS: "wss://ws-us2.pusher.com/app/32cbd69e4b950bf97679?protocol=7&client=js&version=8.4.0&flash=false",
+  cfg: {}, tw: null, kk: null, onMsg: null, onStatus: null, state: { twitch: "off", kick: "off" },
+  start(cfg, onMsg, onStatus) {
+    if (onMsg) this.onMsg = onMsg; if (onStatus) this.onStatus = onStatus;
+    const old = this.cfg; this.cfg = Object.assign({}, cfg);
+    if (old.twitch !== this.cfg.twitch || !this.tw) this.twitch();
+    if (String(old.kickRoom) !== String(this.cfg.kickRoom) || !this.kk) this.kick();
+  },
+  status(k, v) { this.state[k] = v; if (this.onStatus) this.onStatus(this.state); },
+  emit(m) { if (this.onMsg) try { this.onMsg(m); } catch (e) { console.error(e); } },
+  // ---------- Twitch
+  twitch() {
+    if (this.tw) { this.tw.dead = true; try { this.tw.close(); } catch (e) {} this.tw = null; }
+    const login = (this.cfg.twitch || "").toLowerCase().replace(/^#/, "").trim(); if (!login) return this.status("twitch", "off");
+    const ws = this.tw = new WebSocket("wss://irc-ws.chat.twitch.tv:443"); this.status("twitch", "connecting");
+    ws.onopen = () => { ws.send("CAP REQ :twitch.tv/tags twitch.tv/commands"); ws.send("PASS SCHMOOPIIE"); ws.send("NICK justinfan" + Math.floor(10000 + Math.random() * 80000)); ws.send("JOIN #" + login); };
+    ws.onmessage = e => String(e.data).split("\r\n").forEach(line => {
+      if (!line) return;
+      if (line.startsWith("PING")) return ws.send("PONG :tmi.twitch.tv");
+      if (/ 366 /.test(line) || / JOIN #/.test(line)) this.status("twitch", "live");
+      const m = line.match(/^@(\S+) :([^!]+)!\S+ PRIVMSG #\S+ :(.*)$/); if (!m) return;
+      const tags = {}; m[1].split(";").forEach(kv => { const i = kv.indexOf("="); tags[kv.slice(0, i)] = kv.slice(i + 1); });
+      let text = m[3]; const action = /^\u0001ACTION (.*)\u0001$/.exec(text); if (action) text = action[1];
+      // emotes: "id:start-end,start-end/id:..." (positions count characters, not bytes)
+      const chars = Array.from(text), marks = [];
+      (tags.emotes || "").split("/").filter(Boolean).forEach(g => { const [id, spots] = g.split(":"); (spots || "").split(",").forEach(r => { const [a, b] = r.split("-").map(Number); marks.push([a, b, id]); }); });
+      marks.sort((a, b) => a[0] - b[0]); const parts = []; let at = 0;
+      marks.forEach(([a, b, id]) => { if (a > at) parts.push({ text: chars.slice(at, a).join("") }); parts.push({ img: "https://static-cdn.jtvnw.net/emoticons/v2/" + id + "/default/dark/2.0", alt: chars.slice(a, b + 1).join("") }); at = b + 1; });
+      if (at < chars.length) parts.push({ text: chars.slice(at).join("") });
+      this.emit({ src: "twitch", name: (tags["display-name"] || m[2]).replace(/\\s/g, " "), color: tags.color || "", parts });
+    });
+    ws.onclose = () => { if (ws.dead) return; this.status("twitch", "reconnecting"); setTimeout(() => { if (this.tw === ws) this.twitch(); }, 4000); };
+  },
+  // ---------- Kick
+  kick() {
+    if (this.kk) { this.kk.dead = true; try { this.kk.close(); } catch (e) {} this.kk = null; }
+    const room = String(this.cfg.kickRoom || "").trim(); if (!/^\d+$/.test(room)) return this.status("kick", room ? "bad room" : "off");
+    const ws = this.kk = new WebSocket(this.KICK_WS); this.status("kick", "connecting");
+    ws.onmessage = e => { let m; try { m = JSON.parse(e.data); } catch (x) { return; }
+      if (m.event === "pusher:connection_established") ws.send(JSON.stringify({ event: "pusher:subscribe", data: { auth: "", channel: "chatrooms." + room + ".v2" } }));
+      else if (m.event === "pusher_internal:subscription_succeeded") this.status("kick", "live");
+      else if (m.event === "pusher:ping") ws.send(JSON.stringify({ event: "pusher:pong", data: {} }));
+      else if (/ChatMessageEvent$/.test(m.event || "")) { let d; try { d = typeof m.data === "string" ? JSON.parse(m.data) : m.data; } catch (x) { return; }
+        const s = d.sender || {}, parts = [], re = /\[emote:(\d+):([^\]]*)\]/g, text = String(d.content || ""); let at = 0, x;
+        while ((x = re.exec(text))) { if (x.index > at) parts.push({ text: text.slice(at, x.index) }); parts.push({ img: "https://files.kick.com/emotes/" + x[1] + "/fullsize", alt: x[2] }); at = x.index + x[0].length; }
+        if (at < text.length) parts.push({ text: text.slice(at) });
+        this.emit({ src: "kick", name: s.username || "someone", color: (s.identity && s.identity.color) || "", parts }); } };
+    ws.onclose = () => { if (ws.dead) return; this.status("kick", "reconnecting"); setTimeout(() => { if (this.kk === ws) this.kick(); }, 5000); };
+  },
+  // ---------- one message as page elements (never as HTML text, so chat can't inject anything)
+  ICONS: {
+    twitch: '<svg viewBox="0 0 24 24" width="1em" height="1em"><path fill="#a970ff" d="M4.3 3 3 6.4v13.1h4.5V22h2.5l2.5-2.5h3.6L21 14.6V3H4.3Zm15 10.8-2.8 2.8H12l-2.5 2.5v-2.5H5.7V4.7h13.6v9.1ZM16.6 7.9v4.8h-1.7V7.9h1.7Zm-4.5 0v4.8h-1.7V7.9h1.7Z"/></svg>',
+    kick: '<svg viewBox="0 0 24 24" width="1em" height="1em"><rect width="24" height="24" rx="5" fill="#53fc18"/><path fill="#000" d="M6 5h4v4h2V7h2V5h4v6h-2v2h2v6h-4v-2h-2v-2h-2v4H6V5Z"/></svg>'
+  },
+  render(m, el) {
+    const ic = document.createElement("span"); ic.className = "cf-ic"; ic.innerHTML = this.ICONS[m.src] || "";
+    const nm = document.createElement("span"); nm.className = "cf-nm"; nm.textContent = m.name; nm.style.color = m.color || (m.src === "kick" ? "#53fc18" : "#c9a7ff");
+    const tx = document.createElement("span"); tx.className = "cf-tx";
+    m.parts.forEach(p => { if (p.img) { const i = document.createElement("img"); i.className = "cf-em"; i.src = p.img; i.alt = p.alt || ""; i.onerror = () => i.replaceWith(document.createTextNode(p.alt || "")); tx.append(i); }
+      else tx.append(document.createTextNode(p.text)); });
+    el.append(ic, nm, document.createTextNode(" "), tx); return el;
+  }
+};
+
+/* ================= the live chat box on stream (Twitch + Kick) =================
+   Shows the newest chat in the top right corner, 4 lines tall. Its settings (which channels, shown or hidden) come from
+   the app's Control screen. When you Interact with this source in OBS and hover the box: drag the top bar to move it,
+   drag the corner to resize it (the text grows with it), or × to hide it. Where it sits is remembered. */
+const ChatBox = {
+  KEY: "kzChatBox", el: null,
+  get() { let v = {}; try { v = JSON.parse(localStorage.getItem(this.KEY)) || {}; } catch (e) {} return v; },
+  put(o) { const v = Object.assign(this.get(), o); try { localStorage.setItem(this.KEY, JSON.stringify(v)); } catch (e) {} return v; },
+  DEF: { x: 2560 - 640 - 30, y: 30, w: 640, h: 196 },
+  init() {
+    const el = this.el = $("#chatbox"), lines = el.querySelector(".lines"); this.lines = lines; this.layout();
+    el.querySelector(".x").onclick = e => { e.stopPropagation(); this.show(false); if (window.remoteSend) window.remoteSend({ cmd: "chatShown", on: false }); };
+    const drag = (e, mode) => { e.preventDefault(); e.stopPropagation(); const sc = scaleNow(), b = this.box(), sx = e.clientX, sy = e.clientY; el.classList.add("drag");
+      const mv = ev => { const dx = (ev.clientX - sx) / sc, dy = (ev.clientY - sy) / sc;
+        if (mode === "move") this.box({ x: Math.max(0, Math.min(2560 - b.w, b.x + dx)), y: Math.max(0, Math.min(1440 - b.h, b.y + dy)) }, true);
+        else this.box({ w: Math.max(260, Math.min(2560 - b.x, b.w + dx)), h: Math.max(110, Math.min(1440 - b.y, b.h + dy)) }, true); };
+      const up = () => { removeEventListener("pointermove", mv); removeEventListener("pointerup", up); el.classList.remove("drag"); this.put(this.cur); };
+      addEventListener("pointermove", mv); addEventListener("pointerup", up); };
+    el.querySelector(".bar").onpointerdown = e => drag(e, "move"); el.querySelector(".grip").onpointerdown = e => drag(e, "size");
+    const c = this.get(); this.show(c.show !== false); this.connect();
+  },
+  box(o, live) { const c = Object.assign({}, this.DEF, this.get(), this.cur || {}, o || {}); if (o) { this.cur = c; this.layout(c); } return c; },
+  layout(c) { c = c || Object.assign({}, this.DEF, this.get()); this.cur = c; const el = this.el;
+    el.style.left = c.x + "px"; el.style.top = c.y + "px"; el.style.width = c.w + "px"; el.style.height = c.h + "px";
+    el.style.fontSize = Math.max(14, (c.h - 30) / (4 * 1.35)) + "px"; },            // 4 lines fill the box
+  show(on) { this.put({ show: !!on }); this.el.classList.toggle("off", !on); },
+  reset() { this.put({ x: this.DEF.x, y: this.DEF.y, w: this.DEF.w, h: this.DEF.h }); this.cur = null; this.layout(); this.show(true); },
+  connect() { const c = this.get(); ChatFeed.start({ twitch: c.twitch || (Live && Live.login) || "", kickRoom: c.kickRoom || "" }, m => this.add(m)); },
+  add(m) { const d = document.createElement("div"); d.className = "ln"; ChatFeed.render(m, d); this.lines.append(d); while (this.lines.children.length > 12) this.lines.firstChild.remove(); },
+  cfg(c) { this.put({ twitch: c.twitch || "", kickRoom: c.kickRoom || "" }); if (c.show != null && this.get().show == null) this.show(c.show); this.connect(); }
+};
+ChatBox.init();
 if (LIVE) Live.init();
 </script>
 <script>
@@ -6192,7 +6325,7 @@ window.KZRelay = function (topic, onMessage, servers) {
 (() => {
   const qs = new URLSearchParams(location.search), key = qs.get("ctl");
   if (!key || !window.WebSocket) return;
-  const PAGE = "html3", VERSION = "5ca5119";
+  const PAGE = "html3", VERSION = "1a7e8b8";
   let said = false;
   const relay = KZRelay("kzctl/" + key, c => {
     if (!c || c.from === "overlay" || (c.to && c.to !== "all" && c.to !== PAGE)) return;
