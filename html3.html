@@ -6148,13 +6148,14 @@ const SoundIn = {
    Kick: read over the public Pusher WebSocket that kick.com's own chat uses (unofficial; Kick can change it).
    Each message comes out as { src: "twitch" | "kick", name, color, parts: [{ text } | { img, alt }] }. */
 const ChatFeed = {
-  KICK_WS: "wss://ws-us2.pusher.com/app/32cbd69e4b950bf97679?protocol=7&client=js&version=8.4.0&flash=false",
+  // Kick retired its old chat key in October 2026; the app asks Kick for the current one (kickKey/kickCluster), this is the fallback
+  KICK_KEY: "34bf7a0ff419a2a775b9", KICK_CLUSTER: "us2",
   cfg: {}, tw: null, kk: null, onMsg: null, onStatus: null, state: { twitch: "off", kick: "off" },
   start(cfg, onMsg, onStatus) {
     if (onMsg) this.onMsg = onMsg; if (onStatus) this.onStatus = onStatus;
     const old = this.cfg; this.cfg = Object.assign({}, cfg);
     if (old.twitch !== this.cfg.twitch || !this.tw) this.twitch();
-    if (String(old.kickRoom) !== String(this.cfg.kickRoom) || !this.kk) this.kick();
+    if (String(old.kickRoom) !== String(this.cfg.kickRoom) || old.kickKey !== this.cfg.kickKey || !this.kk) this.kick();
   },
   status(k, v) { this.state[k] = v; if (this.onStatus) this.onStatus(this.state); },
   emit(m) { if (this.onMsg) try { this.onMsg(m); } catch (e) { console.error(e); } },
@@ -6185,10 +6186,12 @@ const ChatFeed = {
   kick() {
     if (this.kk) { this.kk.dead = true; try { this.kk.close(); } catch (e) {} this.kk = null; }
     const room = String(this.cfg.kickRoom || "").trim(); if (!/^\d+$/.test(room)) return this.status("kick", room ? "bad room" : "off");
-    const ws = this.kk = new WebSocket(this.KICK_WS); this.status("kick", "connecting");
+    const key = /^[a-z0-9]{10,40}$/i.test(this.cfg.kickKey || "") ? this.cfg.kickKey : this.KICK_KEY, cl = /^[a-z0-9-]{2,12}$/i.test(this.cfg.kickCluster || "") ? this.cfg.kickCluster : this.KICK_CLUSTER;
+    const ws = this.kk = new WebSocket("wss://ws-" + cl + ".pusher.com/app/" + key + "?protocol=7&client=js&version=8.4.0&flash=false"); this.status("kick", "connecting");
     ws.onmessage = e => { let m; try { m = JSON.parse(e.data); } catch (x) { return; }
       if (m.event === "pusher:connection_established") ws.send(JSON.stringify({ event: "pusher:subscribe", data: { auth: "", channel: "chatrooms." + room + ".v2" } }));
       else if (m.event === "pusher_internal:subscription_succeeded") this.status("kick", "live");
+      else if (m.event === "pusher:error") { let d = m.data; try { d = typeof d === "string" ? JSON.parse(d) : d; } catch (x) {} this.status("kick", "Kick refused: " + ((d && d.message) || "error")); }
       else if (m.event === "pusher:ping") ws.send(JSON.stringify({ event: "pusher:pong", data: {} }));
       else if (/ChatMessageEvent$/.test(m.event || "")) { let d; try { d = typeof m.data === "string" ? JSON.parse(m.data) : m.data; } catch (x) { return; }
         const s = d.sender || {}, parts = [], re = /\[emote:(\d+):([^\]]*)\]/g, text = String(d.content || ""); let at = 0, x;
@@ -6239,9 +6242,9 @@ const ChatBox = {
     el.style.fontSize = Math.max(14, (c.h - 30) / (4 * 1.35)) + "px"; },            // 4 lines fill the box
   show(on) { this.put({ show: !!on }); this.el.classList.toggle("off", !on); },
   reset() { this.put({ x: this.DEF.x, y: this.DEF.y, w: this.DEF.w, h: this.DEF.h }); this.cur = null; this.layout(); this.show(true); },
-  connect() { const c = this.get(); ChatFeed.start({ twitch: c.twitch || (Live && Live.login) || "", kickRoom: c.kickRoom || "" }, m => this.add(m)); },
+  connect() { const c = this.get(); ChatFeed.start({ twitch: c.twitch || (Live && Live.login) || "", kickRoom: c.kickRoom || "", kickKey: c.kickKey || "", kickCluster: c.kickCluster || "" }, m => this.add(m)); },
   add(m) { const d = document.createElement("div"); d.className = "ln"; ChatFeed.render(m, d); this.lines.append(d); while (this.lines.children.length > 12) this.lines.firstChild.remove(); },
-  cfg(c) { this.put({ twitch: c.twitch || "", kickRoom: c.kickRoom || "" }); if (c.show != null && this.get().show == null) this.show(c.show); this.connect(); }
+  cfg(c) { this.put({ twitch: c.twitch || "", kickRoom: c.kickRoom || "", kickKey: c.kickKey || "", kickCluster: c.kickCluster || "" }); if (c.show != null && this.get().show == null) this.show(c.show); this.connect(); }
 };
 ChatBox.init();
 if (LIVE) Live.init();
@@ -6334,7 +6337,7 @@ window.KZRelay = function (topic, onMessage, servers) {
 (() => {
   const qs = new URLSearchParams(location.search), key = qs.get("ctl");
   if (!key || !window.WebSocket) return;
-  const PAGE = "html3", VERSION = "c971108";
+  const PAGE = "html3", VERSION = "9ed35ca";
   let said = false;
   const relay = KZRelay("kzctl/" + key, c => {
     if (!c || c.from === "overlay" || (c.to && c.to !== "all" && c.to !== PAGE)) return;
