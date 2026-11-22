@@ -598,6 +598,14 @@ const hs = new URLSearchParams(location.hash.replace(/^#/, ""));
 // everything is), makes no sound, and doesn't listen to Twitch or the relay itself.
 const MIRROR = qs.has("mirror");
 if (MIRROR) document.head.insertAdjacentHTML("beforeend", "<style>#testbar,#tapzone{display:none!important}html,body,#view{background:transparent!important}</style>");
+// the copy is tiny on the phone, so its full-screen canvases are drawn at the touchpad's own resolution instead of
+// 2560x1440 (about 10 times less work every frame). The drawing code still works in 2560x1440 numbers: every canvas
+// context is scaled down to match, including when the code resets its transform.
+if (MIRROR) { const k = Math.max(.2, Math.min(1, (innerWidth || 400) * (devicePixelRatio || 1) / 2560)), C2 = CanvasRenderingContext2D.prototype, st = C2.setTransform, gc = HTMLCanvasElement.prototype.getContext;
+  document.querySelectorAll("canvas").forEach(cv => { if (cv.width === 2560 && cv.height === 1440) { cv._k = k; cv.width = Math.round(2560 * k); cv.height = Math.round(1440 * k); } });
+  HTMLCanvasElement.prototype.getContext = function (t, o) { const x = gc.call(this, t, o); if (x && this._k && !x._k) { x._k = this._k; st.call(x, x._k, 0, 0, x._k, 0, 0); } return x; };
+  C2.setTransform = function (a, b, c, d, e, f) { const k = this._k; if (!k || typeof a === "object") return st.apply(this, arguments); return st.call(this, a * k, b * k, c * k, d * k, e * k, f * k); };
+  C2.resetTransform = function () { this.setTransform(1, 0, 0, 1, 0, 0); }; }
 const TOKEN = qs.get("token") || hs.get("token") || "";
 const LIVE = !!TOKEN;
 const FONT = '"Segoe UI",system-ui,-apple-system,Roboto,"Helvetica Neue",Arial,sans-serif';
@@ -1451,7 +1459,7 @@ function bigCrack(x, y) {
 /* the whole pane breaks into real shards (radial pieces around an impact point) that fall away, carrying the holes with them */
 function shatter(cx = 1280, cy = 700) {
   const snap = document.createElement("canvas"); snap.width = 2560; snap.height = 1440;
-  const sc = snap.getContext("2d"); sc.drawImage($("#holes"), 0, 0);
+  const sc = snap.getContext("2d"); sc.drawImage($("#holes"), 0, 0, 2560, 1440);
   hx.clearRect(0, 0, 2560, 1440); $("#pane").classList.remove("on");
   const rays = 18, radii = [0, 90, 230, 430, 700, 1050, 1500, 2300];
   const ang = Array.from({ length: rays }, (_, i) => i / rays * 6.283 + rand(-.12, .12));
@@ -3929,7 +3937,7 @@ const Face = {
       // while (20 seconds to a minute) before it starts wandering again. !snow still takes priority.
       if (this.steerTo && !this.tank && !wasTank && !this.leaving && !snowing && snowTo === null) {
         const tx = Math.max(0, Math.min(W, this.steerTo[0])), ty = Math.max(0, Math.min(LOW, this.steerTo[1] + 36 * this.sizeM)), s = dt / 16;     // goes exactly where the touchpad dot is: at the very top (or a side) half the cloud is off screen
-        const vx = Math.max(-12, Math.min(12, (tx - px) * .05)), vy = Math.max(-10, Math.min(10, (ty - py) * .05));
+        const vx = Math.max(-70, Math.min(70, (tx - px) * .2)), vy = Math.max(-60, Math.min(60, (ty - py) * .2));      // keeps right under your finger
         px += vx * s; py += vy * s; route = []; moveAt = 0; hoverUntil = t + rand(20000, 60000); this.padUntil = hoverUntil;
         if (Math.hypot(tx - px, ty - py) < 2 && performance.now() - this.steerAt > 400) this.steerTo = null;
       }
@@ -6911,7 +6919,7 @@ window.KZRelay = function (topic, onMessage, servers) {
 (() => {
   const qs = new URLSearchParams(location.search), key = qs.get("ctl");
   if (!key || !window.WebSocket) return;
-  const PAGE = "html3", VERSION = "e086c20";
+  const PAGE = "html3", VERSION = "1998d99";
   let said = false;
   const relay = KZRelay("kzctl/" + key, c => {
     if (!c || c.from === "overlay" || (c.to && c.to !== "all" && c.to !== PAGE)) return;
