@@ -703,7 +703,7 @@ window.KZRelay = function (topic, onMessage, servers) {
       c.ws = ws; ws.binaryType = "arraybuffer";
       ws.onopen = () => {
         const id = "kz" + Math.random().toString(36).slice(2, 12);
-        ws.send(packet(0x10, [...str("MQTT"), 4, 0x02, 0, 60, ...str(id)]));          // CONNECT, clean session, keepalive 60 s
+        ws.send(packet(0x10, [...str("MQTT"), 4, 0x02, 0, 180, ...str(id)]));          // CONNECT, clean session, keepalive 3 min (pages in the background only get to ping about once a minute)
       };
       ws.onmessage = e => {
         let b = new Uint8Array(e.data);
@@ -759,7 +759,7 @@ window.KZRelay = function (topic, onMessage, servers) {
 (() => {
   const qs = new URLSearchParams(location.search), key = qs.get("ctl");
   if (!key || !window.WebSocket) return;
-  const PAGE = "html2", VERSION = "3665105";
+  const PAGE = "html2", VERSION = "c86aad7";
   let said = false;
   const relay = KZRelay("kzctl/" + key, c => {
     if (!c || c.from === "overlay" || (c.to && c.to !== "all" && c.to !== PAGE)) return;
