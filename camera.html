@@ -205,8 +205,8 @@ async function findCameras() { $("#st").textContent = "Looking for your cameras�
   const ds = (await listDevices()).filter(d => d.kind === "videoinput");
   $("#st").innerHTML = ds.length ? '<span class="ok">Found ' + ds.length + " camera" + (ds.length > 1 ? "s" : "") + ": pick one, then ▶ Start</span>" : '<span class="bad">No cameras found</span>'; }
 $("#find").onclick = findCameras;
-// Firefox can't see OBS Virtual Camera on Windows (and hides camera names): say so straight away
-if (/firefox/i.test(navigator.userAgent)) $("#st").innerHTML = '<span class="bad">⚠ This is Firefox, which can\'t use OBS Virtual Camera. Copy this page\'s address and open it in Chrome or Edge instead.</span>';
+// Firefox doesn't tell pages your cameras' names: there the camera is chosen in Firefox's own permission pop-up
+if (/firefox/i.test(navigator.userAgent)) $("#st").innerHTML = '<span class="muted">In Firefox you pick the camera in Firefox\'s own pop-up when you press ▶ Start: choose <b>OBS Virtual Camera</b> there. If it doesn\'t ask (it remembered your webcam), click the camera icon at the left of the address bar, remove the camera permission, and press ▶ Start again.</span>';
 listDevices().then(ds => { if (ds.some(d => d.kind === "videoinput" && d.label)) return;                    // names already known
   if (navigator.permissions) navigator.permissions.query({ name: "camera" }).then(p => { if (p.state === "granted") listDevices(); }).catch(() => {}); }).catch(() => {});
 
