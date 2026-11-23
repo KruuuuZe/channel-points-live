@@ -6446,7 +6446,7 @@ window.onRemote = c => {
 };
 
 /* ================= mystory2d's train (his first chat of the day) =================
-   A brick wall pops up on the left side of the screen; a steam train (engine, 10 cars and a caboose, from the bottom
+   A brick wall pops up on the left side of the screen; a steam train (engine, 6 cars and a caboose, from the bottom
    of the screen up to about 800 px) smashes through it from the left, bricks and dust flying, and runs across to the
    right and off. While it crosses, the smokestack pours out thick black coal smoke and MYSTORY2D, one letter of it at a time; the letters
    rise into a line across the sky and drift apart.
@@ -6457,7 +6457,7 @@ window.onRemote = c => {
 const COALPUFF = (() => { const c = document.createElement("canvas"); c.width = c.height = 64; const g = c.getContext("2d");
   const gr = g.createRadialGradient(32, 32, 2, 32, 32, 32); gr.addColorStop(0, "rgba(22,21,19,.95)"); gr.addColorStop(.45, "rgba(22,21,19,.75)"); gr.addColorStop(1, "rgba(22,21,19,0)"); g.fillStyle = gr; g.fillRect(0, 0, 64, 64); return c; })();
 const Train = {
-  busy: false, NAME: "MYSTORY2D", EH: 800, CH: 640, KH: 680, GAP: 18, CARS: 10, V: .85, WALLX: 360,
+  busy: false, NAME: "MYSTORY2D", EH: 800, CH: 640, KH: 680, GAP: 18, CARS: 6, V: .85, WALLX: 360,
   run() { if (this.busy) return; this.busy = true; try { MySounds.play("train"); } catch (e) {}
     const cv = $("#traincv"), g = cv.getContext("2d"), W = 2560, H = 1440, S = ChefArt.sprites, t0 = performance.now();
     const sp = k => { const a = S[k]; return a && a.img && a.img.complete && a.img.naturalWidth ? a : null; };
@@ -6481,7 +6481,7 @@ const Train = {
       for (let i = 0; i < 46; i++) dust.push({ x: this.WALLX + (Math.random() - .5) * WW, y: H - Math.random() * WH, vx: 2 + Math.random() * 9, vy: -Math.random() * 3, r: 40 + Math.random() * 90, a: .7, born: now }); };
     // the smokestack: marked on the engine's art (Art screen), or the stand-in's
     const stack = (x0, y0, w, h) => { const a = sp("train_engine"), n = a && a.nozzle || [.25, .04]; return [x0 + n[0] * w, y0 + n[1] * h]; };
-    let last = t0;
+    let last = t0, goneAt = 0;
     const frame = now => { const t = now - t0, dt = Math.min(50, now - last); last = now;
       g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, W, H); if (shake > .5) { g.translate((Math.random() - .5) * shake, (Math.random() - .5) * shake * .6); shake *= Math.pow(.04, dt / 1000); }
       // the wall rises out of the ground first
@@ -6504,9 +6504,10 @@ const Train = {
       g.save(); for (let i = puffs.length - 1; i >= 0; i--) { const p = puffs[i], a = (now - p.born) / 2600; if (a > 1) { puffs.splice(i, 1); continue; }      // thick black coal smoke, billowing out and thinning as it rises
         p.x += p.vx * dt / 16; p.y += p.vy * dt / 16; p.vy *= .99; g.globalAlpha = .9 * (1 - a) * (1 - a * .3); const r = p.r * (1 + a * 2.8); g.drawImage(COALPUFF, p.x - r, p.y - r, r * 2, r * 2); } g.restore();
       // the letters: grow out of the stack, rise to a line across the sky, hold, then billow apart and fade
-      let lettersLeft = false;
-      letters.forEach(L => { const a = now - L.born; if (a > 6200) return; lettersLeft = true;
-        const k = Math.min(1, a / 1300), e2 = 1 - Math.pow(1 - k, 3), y = L.y + (L.ty - L.y) * e2 - Math.sin(k * Math.PI) * 120, s = .25 + .75 * e2, fade = a > 4400 ? 1 - (a - 4400) / 1800 : 1, grow = a > 4400 ? 1 + (a - 4400) / 1800 * .35 : 1;
+      let lettersLeft = false; const out = front - len > W + 40;
+      if (out && !goneAt) goneAt = now;                                       // the caboose has left: the name billows apart and fades now
+      letters.forEach(L => { const a = now - L.born, f = goneAt ? (now - goneAt) / 1800 : 0; if (f > 1) return; lettersLeft = true;
+        const k = Math.min(1, a / 1300), e2 = 1 - Math.pow(1 - k, 3), y = L.y + (L.ty - L.y) * e2 - Math.sin(k * Math.PI) * 120, s = .25 + .75 * e2, fade = 1 - f, grow = 1 + f * .35;
         const x = L.x + (L.tx - L.x) * e2 + Math.sin(a / 700 + L.wob) * 8, h = 300 * s * grow, art = sp("train_L_" + L.ch);
         if (a < 1500 && Math.random() < .5) puffs.push({ x: x + (Math.random() - .5) * h * .5, y: y + h * .3, vx: (Math.random() - .5), vy: -1 - Math.random(), r: 22 + Math.random() * 20, born: now });
         g.save(); g.globalAlpha = Math.max(0, Math.min(1, a / 250)) * fade; g.translate(x, y); g.rotate(Math.sin(a / 900 + L.wob) * .05);
@@ -6515,11 +6516,14 @@ const Train = {
           g.fillStyle = "rgba(10,10,10,.95)"; g.fillText(L.ch, 0, 0); g.filter = "none"; g.fillStyle = "rgba(40,38,36,.9)"; g.fillText(L.ch, 0, 0); g.fillStyle = "rgba(90,86,80,.35)"; g.fillText(L.ch, -h * .02, -h * .025); }
         g.restore(); });
       // the wall in pieces
-      for (const c of chunks) { c.vy += .55 * dt / 16; c.x += c.vx * dt / 16; c.y += c.vy * dt / 16; c.r += c.vr * dt / 16; if (c.y > H - c.h / 2) { c.y = H - c.h / 2; c.vy *= -.3; c.vx *= .7; c.vr *= .6; }
-        g.save(); g.translate(c.x + c.w / 2, c.y + c.h / 2); g.rotate(c.r); g.drawImage(wall, c.sx, c.sy, c.w, c.h, -c.w / 2, -c.h / 2, c.w, c.h); g.restore(); }
+      // (the bricks clear away: each fades out a moment after it lands)
+      for (let i = chunks.length - 1; i >= 0; i--) { const c = chunks[i]; c.vy += .55 * dt / 16; c.x += c.vx * dt / 16; c.y += c.vy * dt / 16; c.r += c.vr * dt / 16;
+        if (c.y > H - c.h / 2) { c.y = H - c.h / 2; c.vy *= -.3; c.vx *= .7; c.vr *= .6; c.landed = c.landed || now; }
+        const fa = c.landed ? 1 - (now - c.landed - 600) / 700 : 1; if (fa <= 0 || c.x > W + 200) { chunks.splice(i, 1); continue; }
+        g.save(); g.globalAlpha = Math.min(1, fa); g.translate(c.x + c.w / 2, c.y + c.h / 2); g.rotate(c.r); g.drawImage(wall, c.sx, c.sy, c.w, c.h, -c.w / 2, -c.h / 2, c.w, c.h); g.restore(); }
       g.save(); for (let i = dust.length - 1; i >= 0; i--) { const d = dust[i], a = (now - d.born) / 2200; if (a > 1) { dust.splice(i, 1); continue; } d.x += d.vx * dt / 16; d.y += d.vy * dt / 16; d.vx *= .985;
         g.globalAlpha = d.a * (1 - a); g.filter = "sepia(1) saturate(.6) brightness(.9)"; const r = d.r * (1 + a); g.drawImage(PUFF, d.x - r, d.y - r, r * 2, r * 2); } g.filter = "none"; g.restore();
-      const gone = front - len > W + 40;
+      const gone = out;
       if (gone && !lettersLeft && !puffs.length && !dust.length && t > 4000 || t > 45000) { g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, W, H); this.busy = false; return; }
       requestAnimationFrame(frame); };
     requestAnimationFrame(frame); },
@@ -7630,7 +7634,7 @@ window.KZDirect = function (opt) {
 (() => {
   const qs = new URLSearchParams(location.search), key = qs.get("ctl");
   if (!key || !window.WebSocket) return;
-  const PAGE = "html3", VERSION = "bc476d2", INST = Math.random().toString(36).slice(2, 8);
+  const PAGE = "html3", VERSION = "913560c", INST = Math.random().toString(36).slice(2, 8);
   const QUICK = { mir: 1, rtt: 1 };                                 // sent many times a second: only the newest matters
   let said = false, direct = null;
   const seen = new Set(), seenList = [], fresh = id => { if (!id) return true; if (seen.has(id)) return false; seen.add(id); seenList.push(id); if (seenList.length > 800) seen.delete(seenList.shift()); return true; };
