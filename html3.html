@@ -3020,6 +3020,13 @@ const ChefArt = {
       const step = () => { todo.splice(0, first(todo[0] || "") ? 6 : 40).forEach(get); if (todo.length) setTimeout(step, 60); }; step();
     } catch (e) {}
   },
+  // waits (up to ms) until these pictures, if they've been made, are loaded and ready to draw. An effect that starts
+  // right after the page has (re)loaded would otherwise find its art not there yet and play with stand-ins.
+  async ready(names, ms = 4000) { const end = Date.now() + ms;
+    let have = null; try { const db = await this.open(); have = await new Promise(ok => { const r = db.transaction("a").objectStore("a").getAllKeys(); r.onsuccess = () => ok(new Set(r.result)); r.onerror = () => ok(null); }); } catch (e) {}
+    const want = names.filter(n => !have || have.has(n)), ok = n => { const a = this.sprites[n]; return a && a.img && a.img.complete && a.img.naturalWidth; };
+    if (have) want.forEach(n => { if (!this.sprites[n]) { const db = this.db; db.then(d => { const r = d.transaction("a").objectStore("a").get(n); r.onsuccess = () => { if (r.result && !this.sprites[n]) this.use(n, r.result); }; }); } });
+    while (Date.now() < end && !want.every(ok)) await new Promise(r => setTimeout(r, 80)); },
   // a piece of art arriving from the app (sent in parts)
   async receive(c) {
     const k = c.name + "/" + c.set, p = this.parts[k] || (this.parts[k] = { got: [], n: c.parts });
@@ -6458,7 +6465,10 @@ const COALPUFF = (() => { const c = document.createElement("canvas"); c.width = 
   const gr = g.createRadialGradient(32, 32, 2, 32, 32, 32); gr.addColorStop(0, "rgba(22,21,19,.95)"); gr.addColorStop(.45, "rgba(22,21,19,.75)"); gr.addColorStop(1, "rgba(22,21,19,0)"); g.fillStyle = gr; g.fillRect(0, 0, 64, 64); return c; })();
 const Train = {
   busy: false, NAME: "MYSTORY2D", EH: 800, CH: 640, KH: 680, GAP: 18, CARS: 4, V: .85, WALLX: 360,
-  run() { if (this.busy) return; this.busy = true; try { MySounds.play("train"); } catch (e) {}
+  run() { if (this.busy) return; this.busy = true;
+    // its art first (just after OBS has loaded the page, the pictures may still be on their way in)
+    ChefArt.ready(ChefArt.NAMES.filter(n => /^train_/.test(n))).then(() => this.go(), () => this.go()); },
+  go() { try { MySounds.play("train"); } catch (e) {}
     const cv = $("#traincv"), g = cv.getContext("2d"), W = 2560, H = 1440, S = ChefArt.sprites, t0 = performance.now();
     const sp = k => { const a = S[k]; return a && a.img && a.img.complete && a.img.naturalWidth ? a : null; };
     const wOf = (k, h, fb) => { const a = sp(k); return a ? h * (a.w || a.img.width) / (a.h || a.img.height) : fb; };
@@ -7631,7 +7641,7 @@ window.KZDirect = function (opt) {
 (() => {
   const qs = new URLSearchParams(location.search), key = qs.get("ctl");
   if (!key || !window.WebSocket) return;
-  const PAGE = "html3", VERSION = "9da17b1", INST = Math.random().toString(36).slice(2, 8);
+  const PAGE = "html3", VERSION = "e33ddfa", INST = Math.random().toString(36).slice(2, 8);
   const QUICK = { mir: 1, rtt: 1 };                                 // sent many times a second: only the newest matters
   let said = false, direct = null;
   const seen = new Set(), seenList = [], fresh = id => { if (!id) return true; if (seen.has(id)) return false; seen.add(id); seenList.push(id); if (seenList.length > 800) seen.delete(seenList.shift()); return true; };
