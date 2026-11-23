@@ -1056,7 +1056,7 @@ window.KZDirect = function (opt) {
 (() => {
   const qs = new URLSearchParams(location.search), key = qs.get("ctl");
   if (!key || !window.WebSocket) return;
-  const PAGE = "overlay", VERSION = "2ab9477", INST = Math.random().toString(36).slice(2, 8);
+  const PAGE = "overlay", VERSION = "5710699", INST = Math.random().toString(36).slice(2, 8);
   const QUICK = { mir: 1, rtt: 1 };                                 // sent many times a second: only the newest matters
   let said = false, direct = null;
   const seen = new Set(), seenList = [], fresh = id => { if (!id) return true; if (seen.has(id)) return false; seen.add(id); seenList.push(id); if (seenList.length > 800) seen.delete(seenList.shift()); return true; };
@@ -1079,6 +1079,17 @@ window.KZDirect = function (opt) {
   };
   const relay = KZRelay("kzctl/" + key, handle);
   if (PAGE === "html3" && window.KZDirect) direct = KZDirect({ role: "overlay", signal: o => relay.send(Object.assign({ from: "overlay", page: PAGE, cmd: "rtc" }, o)), onMessage: handle });
+  // Updates by itself: every few minutes it checks whether a newer version has been published, and if so it reloads
+  // with it as soon as nothing is playing (the page can say it's busy with window.kzBusy). Only for the published
+  // pages that OBS loads; never the app's own touchpad copy.
+  if (/github\.io$/.test(location.hostname) && !new URLSearchParams(location.search).has("mirror")) {
+    let newer = false, calm = 0;
+    const look = () => fetch(location.origin + location.pathname.replace(/[^/]*$/, "") + "version.json?_=" + Date.now(), { cache: "no-store" })
+      .then(r => r.json()).then(v => { if (v && v.version && v.version !== VERSION && VERSION !== "dev") newer = true; }).catch(() => {});
+    setTimeout(look, 20000); setInterval(look, 180000);
+    setInterval(() => { if (!newer) return; let busy = false; try { busy = !!(window.kzBusy && window.kzBusy()); } catch (e) {}
+      calm = busy ? 0 : calm + 1;
+      if (calm >= 10) { const u = new URL(location.href); u.searchParams.set("_v", Date.now()); location.replace(u.toString()); } }, 1000); }
   // lets the page answer the app itself (e.g. "the art arrived and is saved")
   window.remoteSend = out;
   window.remoteDirect = () => !!(direct && direct.up);              // is the direct link to the app up?
