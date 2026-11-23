@@ -6459,13 +6459,14 @@ window.onRemote = c => {
    A soldier runs in from the left to the middle of the screen and falls over. A medic runs in from the right, picks
    him up, rummages in his pockets and pulls out a piece of meat (his kidney), throws the soldier straight up off the
    top of the screen, then holds the meat up in triumph: NEEDYOUMOREE bursts out above it, each letter wrapped in
-   bandages with green medic crosses, and he says "My Kidney!" in a speech bubble as he runs off to the left with it.
+   bandages with green medic crosses; he tucks it into his pocket and runs off to the left saying "My Kidney!" in a
+   speech bubble.
    Art: 🎨 Art › NEEDYOUMOREE MEDIC ART (soldier running / lying down / limp, medic running / reaching / throwing, the
    meat, and one bandaged letter each). Until made, drawn stand-ins. Sound: the "NeedYouMoree medic" slot. */
 const Medic = {
   busy: false, NAME: "NEEDYOUMOREE", SH: 420, MH: 440,
   run() { if (this.busy) return; this.busy = true; ChefArt.ready(ChefArt.NAMES.filter(n => /^med_/.test(n))).then(() => this.go(), () => this.go()); },
-  go() { try { MySounds.play("medic"); } catch (e) {}
+  go() { this.patted = 0; try { MySounds.play("medic"); } catch (e) {}
     { const miss = ChefArt.NAMES.filter(n => /^med_/.test(n) && !ChefArt.sprites[n]); if (miss.length && window.remoteSend) window.remoteSend({ cmd: "artMissing", what: "🩹 NeedYouMoree medic", names: miss }); }
     const cv = $("#mediccv"), g = cv.getContext("2d"), W = 2560, H = 1440, GY = H - 6, S = ChefArt.sprites, t0 = performance.now();
     const sp = k => { const a = S[k]; return a && a.img && a.img.complete && a.img.naturalWidth ? a : null; };
@@ -6493,8 +6494,9 @@ const Medic = {
       if (t < 1900) mx = MX0 + 400;
       else if (t < 3000) mx = lerp(MX0, MSTOP, out((t - 1900) / 1100) * .4 + (t - 1900) / 1100 * .6);
       else if (t < 4500) { mx = MSTOP; pose = "med_medic_reach"; }
-      else if (t < 6700) { mx = MSTOP; pose = "med_medic_throw"; }
-      else { mx = MSTOP - (t - 6700) * 1.25; }
+      else if (t < 6300) { mx = MSTOP; pose = "med_medic_throw"; }
+      else if (t < 7000) { mx = MSTOP; pose = "med_medic_reach"; }                // tucks the meat into his pocket
+      else { mx = MSTOP - (t - 7000) * 1.25; }
       const big = t >= 4500 ? 1.3 : 1, MHt = this.MH * big;                    // once he has the meat he's 30% bigger
       if (mx > -400 && mx < W + 300) draw(pose, mx, GY + (pose === "med_medic_run" ? Math.abs(Math.sin(t / 65)) * -6 : 0), MHt, { t });
       // ---- the meat: out of his pocket into the medic's hand, then thrown up, where it bursts into the name
@@ -6502,15 +6504,18 @@ const Medic = {
       const hand = (k, h, def) => { const a = sp(k), n = a && a.nozzle || def, w = a ? h * (a.w || a.img.width / (a.frames || 1)) / (a.h || a.img.height) : h * .5; return [mx + (n[0] - .5) * w, GY - h + n[1] * h]; };
       // the meat stays in his hand: out of the pocket into his reaching hand, held up high while he celebrates (the name
       // bursts out above it), then carried off as he runs away
-      if (t > 3900) { let x, y; const h = 110;
+      if (t > 3900) { let x, y, sz = 1; const h = 110;
         if (t < 4300) { const k = out((t - 3900) / 400), hd = hand("med_medic_reach", this.MH, sp("med_medic_reach") ? [.15, .5] : [.04, .4]); x = lerp(MSTOP - 170, hd[0], k); y = lerp(GY - 250, hd[1], k) - Math.sin(k * Math.PI) * 60;
           if (t < 3960) spark.push(...Array.from({ length: 10 }, () => ({ x, y, vx: (Math.random() - .5) * 8, vy: -Math.random() * 7, born: now }))); }
         else if (t < 4500) [x, y] = hand("med_medic_reach", this.MH, sp("med_medic_reach") ? [.15, .5] : [.04, .4]);
-        else if (t < 6700) { [x, y] = hand("med_medic_throw", MHt, sp("med_medic_throw") ? [.5, .06] : [.3, -.1]); y -= Math.abs(Math.sin((t - 4500) / 160)) * 14; }       // raised in triumph, bouncing a little
-        else { [x, y] = hand("med_medic_run", MHt, [.3, .45]); y += Math.abs(Math.sin(t / 65)) * -6; }
+        else if (t < 6300) { [x, y] = hand("med_medic_throw", MHt, sp("med_medic_throw") ? [.5, .06] : [.3, -.1]); y -= Math.abs(Math.sin((t - 4500) / 160)) * 14; }       // raised in triumph, bouncing a little
+        else if (t < 6850) { const k = ease((t - 6300) / 550), up = [MSTOP + (.3 - .5) * MHt * .5, GY - MHt * 1.1], a = sp("med_medic_reach"), w = a ? MHt * (a.w || a.img.width) / (a.h || a.img.height) : MHt * .5;
+          const pocket = [MSTOP + .08 * w, GY - MHt * .5]; x = lerp(up[0], pocket[0], k); y = lerp(up[1], pocket[1], k) - Math.sin(k * Math.PI) * 40; sz = 1 - k * .55; }   // down into his pocket
+        else if (t < 6950) { x = MSTOP; y = GY - MHt * .5; sz = 0; if (!this.patted) { this.patted = 1; puff(MSTOP, GY - MHt * .45, 5); } }
+        else { sz = 0; }
         if (t > 5200 && !meatBurst) { meatBurst = true; for (let i = 0; i < 40; i++) spark.push({ x, y, vx: (Math.random() - .5) * 22, vy: -Math.random() * 18, born: now, plus: Math.random() < .6 });
           [...this.NAME].forEach((ch, i) => letters.push({ ch, i, born: now + i * 40, fx: x, fy: y })); bubbleAt = now + 500; }
-        if (mx > -400) draw("med_meat", x, y, h, { mid: true }); }
+        if (sz > 0 && mx > -400) draw("med_meat", x, y, h * sz, { mid: true }); }
       // ---- the name, in bandaged letters spread out from where the meat burst
       const N = this.NAME.length, LH = 230, GAP = Math.min(205, (W - 300) / N);
       letters.forEach(L => { const a = now - L.born; if (a < 0) return; const k = out(a / 800), tx = W / 2 + (L.i - (N - 1) / 2) * GAP, ty = 470 + (L.i % 2 ? 18 : -18);
@@ -7741,7 +7746,7 @@ window.KZDirect = function (opt) {
 (() => {
   const qs = new URLSearchParams(location.search), key = qs.get("ctl");
   if (!key || !window.WebSocket) return;
-  const PAGE = "html3", VERSION = "fee6655", INST = Math.random().toString(36).slice(2, 8);
+  const PAGE = "html3", VERSION = "e0335cd", INST = Math.random().toString(36).slice(2, 8);
   const QUICK = { mir: 1, rtt: 1 };                                 // sent many times a second: only the newest matters
   let said = false, direct = null;
   const seen = new Set(), seenList = [], fresh = id => { if (!id) return true; if (seen.has(id)) return false; seen.add(id); seenList.push(id); if (seenList.length > 800) seen.delete(seenList.shift()); return true; };
