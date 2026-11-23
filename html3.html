@@ -367,7 +367,7 @@ body.fit #stage{background:radial-gradient(1200px 700px at 30% 20%,#1a103322,tra
 #smokelapcv{position:absolute;inset:0;width:2560px;height:1440px;pointer-events:none;z-index:9}
 #scrapcv{position:absolute;inset:0;width:2560px;height:1440px;pointer-events:none;z-index:9}
 #vtcv{position:absolute;inset:0;width:2560px;height:1440px;pointer-events:none;z-index:9}
-#customcv{position:absolute;inset:0;width:2560px;height:1440px;pointer-events:none;z-index:9}
+#customcv,.cxcv{position:absolute;inset:0;width:2560px;height:1440px;pointer-events:none;z-index:9}
 #gemcv{position:absolute;inset:0;width:2560px;height:1440px;pointer-events:none;z-index:8}
 #dicecv{position:absolute;inset:0;width:2560px;height:1440px;pointer-events:none;z-index:8}
 /* ---------- Kazul123: artillery from every side ---------- */
@@ -6131,7 +6131,7 @@ const Mirror = {
   slow() { const F = Face;
     return { cb: ChatBox.get(), wl: Wanted.level, lk: Lurk.list.map(x => [x.k, x.name, x.color]), mt: Mountain.list.map(x => [x.k, x.name, x.color, x.value]),
       sp: Scrap.piles.map(p => [p.state === "up" ? 1 : p.state === "none" ? 0 : 2, p.x]), dz: Disco.on ? 1 : 0, sm: Smoke.on && Smoke.offAt == null ? 1 : 0,
-      sw: F.snowmen.map(m => [Math.round(m.x), m.name, m.color, m.born || 0]), nt: F.neutralTalk || "" }; },
+      sw: F.snowmen.map(m => [Math.round(m.x), m.name, m.color, m.born || 0]), nt: F.neutralTalk || "", cx: CustomFx.onIds() }; },
   // called very often; sends at most 33 times a second over the direct link, 10 through the internet relay
   send(force) { if (!this.watched()) return; const now = performance.now();
     if (!force && now - this.lastRep < (this.far ? 480 : this.direct() ? 30 : 95)) return; this.lastRep = now;
@@ -6216,6 +6216,7 @@ const Mirror = {
     if (s.dz != null && !!s.dz !== Disco.on) Disco.toggle();
     if (s.sm != null && !!s.sm !== (Smoke.on && Smoke.offAt == null)) Smoke.run();
     if (s.nt) Face.neutralTalk = s.nt;
+    if (s.cx) CustomFx.match(s.cx);
     this.later = { mt: s.mt, sw: s.sw && s.sw.length ? { list: s.sw, t: o.t, got: performance.now() } : null }; this.applyLater(); },
   // (two of them can't always be matched straight away: the streak mountain's climbers while it is on screen, and snowmen)
   applyLater() { const L = this.later; if (!L) return;
@@ -6365,9 +6366,11 @@ window.onRemote = c => {
   else if (c.cmd === "effect" && c.name === "dice") { if (!Dice.on) Dice.toggle(true); setTimeout(() => { Dice.coolUntil = 0; Dice.roll("app"); }, Dice.running ? 0 : 50); }
   else if (c.cmd === "effect" && c.name === "diceToggle") toast(Dice.toggle() ? "🎲 Dice are on" : "🎲 Dice are off", false, 3000);
   else if (c.cmd === "customFx") { const err = CustomFx.install(c.def); if (window.remoteSend) window.remoteSend({ cmd: "customOk", id: c.def && c.def.id, err }); }
-  else if (c.cmd === "customSync") { CustomFx.setAll(c.defs); if (window.remoteSend) window.remoteSend({ cmd: "customOk", id: "*", n: Object.keys(CustomFx.defs).length }); }
+  else if (c.cmd === "customSync") { CustomFx.setAll(c.defs); if (window.remoteSend) window.remoteSend({ cmd: "customOk", id: "*", n: Object.keys(CustomFx.defs).length }); CustomFx.tell(); }
   else if (c.cmd === "customDel") CustomFx.remove(c.id);
   else if (c.cmd === "customRun") CustomFx.run(c.id, c.user || "");
+  else if (c.cmd === "customSet") CustomFx.set(c.id, !!c.on);
+  else if (c.cmd === "customTouch") CustomFx.touch(+c.x, +c.y);
   else if (c.cmd === "bitGemsReset") { BitGems.reset(); toast("💎 Bit gems cleared for the next stream", false, 4000); }
   else if (c.cmd === "chatCfg") { ChatBox.cfg(c); if (c.show != null) ChatBox.show(c.show); ChatBox.tell(); }
   else if (c.cmd === "chatShow") { ChatBox.show(!!c.on); ChatBox.tell(); }
@@ -6440,11 +6443,20 @@ window.onRemote = c => {
    one object, fx, that has everything it needs to draw on its own full-screen canvas (see FX_API below; the app gives
    the AI the same description). An effect that throws an error simply ends, and the app is told what went wrong. */
 const CustomFx = {
-  KEY: "kzCustomFx", defs: {}, busy: false, run0: null, origFirst: {}, origRedeem: {},
+  KEY: "kzCustomFx", defs: {}, busy: false, runs: new Map(), origFirst: {}, origRedeem: {},
+  // toggle effects (mode "toggle"): switched on, they stay on (alongside everything else) until switched off, and the
+  // touchpad's taps go to them (fx.onTouch). Once effects play in their turn and end by themselves.
+  onIds() { return [...this.runs.values()].filter(r => r.toggle && !r.stopping).map(r => r.id); },
+  touchOn() { return [...this.runs.values()].some(r => r.toggle && !r.stopping && r.taps.length); },
+  set(id, on) { const r = this.runs.get(id); if (on) { if (!r || r.stopping) this.play(id, "", null, true); } else if (r && r.toggle) r.stop(); this.tell(); },
+  match(ids) { const want = new Set(ids || []); this.onIds().forEach(id => { if (!want.has(id)) this.set(id, false); }); want.forEach(id => { if (this.defs[id] && !this.onIds().includes(id)) this.set(id, true); }); },
+  tell() { if (MIRROR) return; Mirror.fwd("cx.set", [this.onIds()]); if (window.remoteSend) window.remoteSend({ cmd: "customOn", ids: this.onIds() }); },
+  // a tap on the app's touchpad (0..1 across and down the screen)
+  touch(x, y) { this.runs.forEach(r => { if (!r.stopping) r.taps.forEach(f => { try { f(x * 2560, y * 1440); } catch (e) { r.end(e.message || String(e)); } }); }); },
   load() { if (MIRROR) return; try { this.defs = JSON.parse(localStorage.getItem(this.KEY)) || {}; } catch (e) { this.defs = {}; } Object.values(this.defs).forEach(d => this.hook(d)); },
   save() { if (MIRROR) return; try { localStorage.setItem(this.KEY, JSON.stringify(this.defs)); } catch (e) {} },
   // a viewer's first chat of the day (and their "Play my Effect" redeem) plays it, if it's made for someone
-  hook(d) { const u = ((d.trigger && d.trigger.user) || "").toLowerCase().replace(/^@/, ""); if (!u) return;
+  hook(d) { if (d.mode === "toggle") return; const u = ((d.trigger && d.trigger.user) || "").toLowerCase().replace(/^@/, ""); if (!u) return;
     if (!(u in this.origFirst)) this.origFirst[u] = AutoFx.FIRST_OF_DAY[u] || null;
     AutoFx.FIRST_OF_DAY[u] = () => this.run(d.id, u); },
   unhook(d) { const u = ((d.trigger && d.trigger.user) || "").toLowerCase().replace(/^@/, ""); if (!u || !(u in this.origFirst)) return;
@@ -6452,21 +6464,27 @@ const CustomFx = {
     if (this.origFirst[u]) AutoFx.FIRST_OF_DAY[u] = this.origFirst[u]; else delete AutoFx.FIRST_OF_DAY[u]; delete this.origFirst[u]; },
   check(d) { if (!d || !/^[a-z0-9_]{1,40}$/.test(d.id || "") || typeof d.code !== "string") return "not a valid effect"; try { new Function("fx", d.code); } catch (e) { return "code: " + e.message; } return null; },
   install(d) { const bad = this.check(d); if (bad) return bad; const old = this.defs[d.id]; if (old) this.unhook(old); this.defs[d.id] = d; this.save(); this.hook(d); return null; },
-  remove(id) { const d = this.defs[id]; if (!d) return; delete this.defs[id]; this.unhook(d); this.save(); },
+  remove(id) { const d = this.defs[id]; if (!d) return; const r = this.runs.get(id); if (r) r.end("stopped"); delete this.defs[id]; this.unhook(d); this.save(); },
   setAll(list) { const want = {}; (list || []).forEach(d => { if (!this.check(d)) want[d.id] = d; });
     Object.values(this.defs).forEach(d => { if (!want[d.id]) this.remove(d.id); }); Object.values(want).forEach(d => { const o = this.defs[d.id]; if (!o || o.v !== d.v) this.install(d); }); },
   // plays in its turn with the other viewer effects (never two at once), and in the app's touchpad copy too
-  run(id, who) { if (!this.defs[id]) return; FxLine.push(() => { FxLine.cur = Mirror.began2("fx", ["Custom", id, who || ""], e => FxLine.cur === e); this.play(id, who); }); },
+  run(id, who) { const d = this.defs[id]; if (!d) return; if (d.mode === "toggle") return this.set(id, !this.onIds().includes(id)); FxLine.push(() => { FxLine.cur = Mirror.began2("fx", ["Custom", id, who || ""], e => FxLine.cur === e); this.play(id, who); }); },
   report(id, err) { if (window.remoteSend) window.remoteSend({ cmd: "customErr", id, err: String(err).slice(0, 400), copy: MIRROR ? 1 : 0 }); if (MIRROR && window.parent && window.parent.customErr) try { window.parent.customErr(id, String(err)); } catch (e) {} },
-  stop() { if (this.run0) this.run0.end("stopped"); },
-  play(id, who, def) {
-    const d = def || this.defs[id]; if (!d) return; if (this.run0) this.run0.end("replaced");
-    const cv = $("#customcv"), g = cv.getContext("2d"), W = 2560, H = 1440, t0 = performance.now(), parts = [], timers = [];
-    let loopFn = null, last = t0, shake = null, ended = false, maxMs = Math.max(1000, Math.min(30000, +d.dur || 15000));
+  stop() { this.runs.forEach(r => r.end("stopped")); },
+  play(id, who, def, toggle) {
+    const d = def || this.defs[id]; if (!d) return; const was = this.runs.get(id); if (was) was.end("replaced");
+    toggle = !!(toggle || d.mode === "toggle");
+    const cv = document.createElement("canvas"); cv.width = 2560; cv.height = 1440; cv.className = "cxcv"; if (MIRROR && Low.shrink) Low.shrink(cv, 2560, 1440); $("#customcv").after(cv);
+    const g = cv.getContext("2d"), W = 2560, H = 1440, t0 = performance.now(), parts = [], timers = [];
+    let loopFn = null, last = t0, shake = null, ended = false, stopAt = 0, maxMs = toggle ? 4 * 3600e3 : Math.max(1000, Math.min(30000, +d.dur || 15000));
     try { Sound.init(); } catch (e) {}
-    const end = why => { if (ended) return; ended = true; timers.forEach(clearTimeout); g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, W, H); cv.style.transform = "";
-      if (this.run0 === run) this.run0 = null; this.busy = !!this.run0; if (why && why !== "done" && why !== "replaced" && why !== "stopped") this.report(id, why); };
-    const run = { end }; this.run0 = run; this.busy = true;
+    const end = why => { if (ended) return; ended = true; timers.forEach(clearTimeout); cv.remove();
+      if (this.runs.get(id) === run) this.runs.delete(id); this.busy = [...this.runs.values()].some(r => !r.toggle);
+      if (toggle && why !== "replaced") this.tell();
+      if (why && why !== "done" && why !== "replaced" && why !== "stopped") this.report(id, why); };
+    // switched off: fx.stopping turns true, and the effect has 3 seconds to finish (return false from fx.loop)
+    const run = { id, toggle, taps: [], stopping: false, end, stop() { if (run.stopping) return; run.stopping = fx.stopping = true; stopAt = performance.now(); run.offs.forEach(f => { try { f(); } catch (e) {} }); }, offs: [] };
+    this.runs.set(id, run); this.busy = [...this.runs.values()].some(r => !r.toggle);
     const S = k => ChefArt.sprites["cx_" + id + "_" + k] || null;
     const ease = { in: k => k * k, out: k => 1 - (1 - k) * (1 - k), inOut: k => k < .5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2,
       outBack: k => { const c = 1.70158; return 1 + (c + 1) * Math.pow(k - 1, 3) + c * Math.pow(k - 1, 2); }, outBounce: k => { const n = 7.5625, d1 = 2.75; if (k < 1 / d1) return n * k * k; if (k < 2 / d1) return n * (k -= 1.5 / d1) * k + .75; if (k < 2.5 / d1) return n * (k -= 2.25 / d1) * k + .9375; return n * (k -= 2.625 / d1) * k + .984375; } };
@@ -6486,7 +6504,7 @@ const CustomFx = {
       burst(x, y, o = {}) { const n = Math.min(300, o.n || 30); for (let i = 0; i < n; i++) { const a = Math.random() * 6.283, v = (o.speed || 8) * (.3 + Math.random() * .9);
         parts.push({ x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v - (o.up || 0), g: o.gravity == null ? .15 : o.gravity, life: 0, max: (o.life || 1200) * (.6 + Math.random() * .6), s: (o.size || 6) * (.5 + Math.random()), c: Array.isArray(o.color) ? fx.pick(o.color) : o.color || fx.pick(["#a3e635", "#a855f7", "#ffffff"]) }); } },
       shake(px, ms) { shake = { px: px || 12, until: performance.now() + (ms || 500) }; },
-      loop(fn) { loopFn = fn; }, after(ms, fn) { timers.push(setTimeout(() => { if (!ended) try { fn(); } catch (e) { end(e.message || String(e)); } }, ms)); },
+      loop(fn) { loopFn = fn; }, onTouch(fn) { run.taps.push(fn); }, onStop(fn) { run.offs.push(fn); }, stopping: false, toggle, after(ms, fn) { timers.push(setTimeout(() => { if (!ended) try { fn(); } catch (e) { end(e.message || String(e)); } }, ms)); },
       done() { end("done"); },
       sound: { tone(f0, dur, vol, f1, type) { try { if (Sound.ctx) Sound.tone(Sound.ctx.currentTime, dur || .2, Math.min(.3, vol || .08), f0 || 440, f1 || f0 || 440, type || "sine"); } catch (e) {} },
         noise(dur, vol, kind, f0, f1) { try { if (Sound.ctx) Sound.burst(Sound.ctx.currentTime, dur || .2, Math.min(.3, vol || .08), kind || "bandpass", f0 || 1200, f1); } catch (e) {} } } };
@@ -6497,7 +6515,7 @@ const CustomFx = {
       let more = true; try { if (loopFn) more = loopFn(t, dt) !== false; else more = t < maxMs; } catch (e) { return end(e.message || String(e)); }
       for (let i = parts.length - 1; i >= 0; i--) { const p = parts[i]; p.life += dt; if (p.life > p.max) { parts.splice(i, 1); continue; } p.vy += p.g * dt / 16; p.x += p.vx * dt / 16; p.y += p.vy * dt / 16;
         g.globalAlpha = 1 - p.life / p.max; g.fillStyle = p.c; g.beginPath(); g.arc(p.x, p.y, p.s, 0, 6.283); g.fill(); } g.globalAlpha = 1;
-      if ((!more && !parts.length) || t > maxMs) return end("done");
+      if ((!more && !parts.length) || t > maxMs || (stopAt && now - stopAt > 3000) || (stopAt && !loopFn)) return end(stopAt ? "stopped" : "done");
       requestAnimationFrame(frame); };
     requestAnimationFrame(frame); }
 };
@@ -7254,6 +7272,7 @@ Mirror.ON = {
   toast: (...a) => toast(...a),
   "gem.sp": (who, x, y, n, col) => { const g = BitGems.find(who); if (g && g.local) return; BitGems.sparkle(x, y, n, col); BitGems.start(); },
   "gem.dust": (who, x, w) => { const g = BitGems.find(who); if (g && g.local) return; BitGems.dust(x, w); BitGems.start(); },
+  "cx.set": ids => CustomFx.match(ids),
   "dice.fx": (kind, i, x, y, face) => { const c = Dice.list[i]; if (c && c.local) return; Dice.puff(kind, { x, y, face }, true); }
 };
 // the app's own chat reader feeds the copy's chat box (the copy doesn't connect to chat itself)
@@ -7434,7 +7453,7 @@ window.KZDirect = function (opt) {
 (() => {
   const qs = new URLSearchParams(location.search), key = qs.get("ctl");
   if (!key || !window.WebSocket) return;
-  const PAGE = "html3", VERSION = "c896e4d", INST = Math.random().toString(36).slice(2, 8);
+  const PAGE = "html3", VERSION = "bd6ca4b", INST = Math.random().toString(36).slice(2, 8);
   const QUICK = { mir: 1, rtt: 1 };                                 // sent many times a second: only the newest matters
   let said = false, direct = null;
   const seen = new Set(), seenList = [], fresh = id => { if (!id) return true; if (seen.has(id)) return false; seen.add(id); seenList.push(id); if (seenList.length > 800) seen.delete(seenList.shift()); return true; };
