@@ -6580,10 +6580,15 @@ const LiveLook = {
     this.tiles.forEach((t, k) => { if (!keep.has(k)) { this.tiles.delete(k); t.el.style.opacity = 0; t.el.style.transform = "scale(.6)"; Float.remove(t.fl); setTimeout(() => { try { t.player && t.player.destroy && t.player.destroy(); } catch (e) {} t.el.remove(); }, 800); } });
     // where each one goes
     const rects = []; const cur = Math.max(0, Math.min(n - 1, S.cur | 0));
-    if (S.mode === "grid") { const cols = Math.ceil(Math.sqrt(n * 1.3)) || 1, rows = Math.ceil(n / cols) || 1, AW = 2300, AH = 1180, gap = 60;
-      const tw = Math.min((AW - gap * (cols - 1)) / cols, ((AH - gap * (rows - 1)) / rows) * 16 / 9), th = tw * 9 / 16, ox = (W - (tw * cols + gap * (cols - 1))) / 2, oy = 190 + (AH - (th * rows + gap * (rows - 1))) / 2;
-      want.forEach((x, i) => { const r = Math.floor(i / cols), c = i % cols, inRow = Math.min(cols, n - r * cols), rx = ox + ((cols - inRow) * (tw + gap)) / 2;
-        rects.push({ l: rx + c * (tw + gap), t: oy + r * (th + gap), w: tw, h: th, o: 1, s: 1, small: tw < 900 }); }); }
+    if (S.mode === "grid") { const cols = Math.ceil(Math.sqrt(n * 1.3)) || 1, rows = Math.ceil(n / cols) || 1, AW = 2380, AH = 1140;
+      // room between them for each frame (which sticks out around its video) and the name plate under it, so a video
+      // never covers a neighbour's frame or name (the videos sit on top of everything else)
+      const out = w => art ? w * .06 : 18, PLATE = 78;
+      let tw = 900, gx = 0, gy = 0; for (let k = 0; k < 6; k++) { gx = out(tw) * 2 + 24; gy = Math.max(out(tw), PLATE) + out(tw) + 20;
+        tw = Math.min((AW - gx * (cols - 1)) / cols, ((AH - PLATE - gy * (rows - 1)) / rows) * 16 / 9); }
+      const th = tw * 9 / 16, ox = (W - (tw * cols + gx * (cols - 1))) / 2, oy = 170 + out(tw) + (AH - PLATE - out(tw) - (th * rows + gy * (rows - 1))) / 2;
+      want.forEach((x, i) => { const r = Math.floor(i / cols), c = i % cols, inRow = Math.min(cols, n - r * cols), rx = ox + ((cols - inRow) * (tw + gx)) / 2;
+        rects.push({ l: rx + c * (tw + gx), t: oy + r * (th + gy), w: tw, h: th, o: 1, s: 1, small: tw < 900 }); }); }
     else { const tw = 1960, th = tw * 9 / 16, l = (W - tw) / 2, t = 210;
       want.forEach((x, i) => { const d = i - cur; rects.push({ l: l + d * (tw + 260), t: t + Math.abs(d) * 40, w: tw, h: th, o: d === 0 ? 1 : 0, s: d === 0 ? 1 : .86, small: false }); }); }
     want.forEach((x, i) => { const k = x.login.toLowerCase(), r = rects[i]; let t = this.tiles.get(k);
@@ -6594,7 +6599,7 @@ const LiveLook = {
       const fr = t.el.querySelector(".fr"); if (art) { if (!fr.classList.contains("art")) { fr.className = "fr art"; fr.innerHTML = '<img alt="">'; } fr.querySelector("img").src = art; }
       t.el.querySelector(".nm").textContent = x.name || x.login; t.el.querySelector(".v").textContent = x.viewers != null ? "👁 " + (+x.viewers).toLocaleString() : "";
       const loud = (S.loud || []).map(z => z.toLowerCase()).includes(k); t.el.classList.toggle("loud", loud); t.el.querySelector(".m").textContent = loud ? "🔊" : "🔇"; t.el.classList.toggle("small", !!r.small);
-      this.mute(t, !loud); }); },
+      t.vol = Math.max(0, Math.min(1, +((S.vol || {})[k] ?? 1))); this.mute(t, !loud); }); },
   place(t, r) { const s = t.el.style; s.left = r.l + "px"; s.top = r.t + "px"; s.width = r.w + "px"; s.height = r.h + "px"; s.opacity = r.o; s.transform = `scale(${r.s})`; },
   load(t, x) { const vid = t.el.querySelector(".vid");
     if (MIRROR || !/github\.io$|^localhost$|^127\./.test(location.hostname)) { if (x.thumb) { const im = document.createElement("img"); im.src = String(x.thumb).replace("{width}", "640").replace("{height}", "360"); vid.append(im); } return; }    // the touchpad copy: a picture, not the video
@@ -6609,7 +6614,7 @@ const LiveLook = {
         if (Twitch.Player.PAUSE) t.player.addEventListener(Twitch.Player.PAUSE, () => setTimeout(go, 400));
         if (!this.keepT) this.keepT = setInterval(() => { if (!this.st.on) return; this.tiles.forEach(x => { if (x.ready && x.player) try { if (x.player.isPaused()) x.player.play(); } catch (e) {} }); }, 2500);
       } catch (e) {} }); },
-  mute(t, m) { t.wantMuted = m; if (!t.player || !t.ready) return; try { t.player.setMuted(m); if (!m) t.player.setVolume(1); } catch (e) {} }
+  mute(t, m) { t.wantMuted = m; if (!t.player || !t.ready) return; try { t.player.setMuted(m); if (!m) t.player.setVolume(t.vol == null ? 1 : t.vol); } catch (e) {} }
 };
 window.LiveLook = LiveLook;
 
@@ -7904,7 +7909,7 @@ window.KZDirect = function (opt) {
 (() => {
   const qs = new URLSearchParams(location.search), key = qs.get("ctl");
   if (!key || !window.WebSocket) return;
-  const PAGE = "html3", VERSION = "5aa24c4", INST = Math.random().toString(36).slice(2, 8);
+  const PAGE = "html3", VERSION = "0fb3923", INST = Math.random().toString(36).slice(2, 8);
   const QUICK = { mir: 1, rtt: 1 };                                 // sent many times a second: only the newest matters
   let said = false, direct = null;
   const seen = new Set(), seenList = [], fresh = id => { if (!id) return true; if (seen.has(id)) return false; seen.add(id); seenList.push(id); if (seenList.length > 800) seen.delete(seenList.shift()); return true; };
