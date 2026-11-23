@@ -6446,7 +6446,7 @@ window.onRemote = c => {
 };
 
 /* ================= mystory2d's train (his first chat of the day) =================
-   A brick wall pops up on the left side of the screen; a steam train (engine, 6 cars and a caboose, from the bottom
+   A brick wall pops up on the left side of the screen; a steam train (engine, 4 cars and a caboose, from the bottom
    of the screen up to about 800 px) smashes through it from the left, bricks and dust flying, and runs across to the
    right and off. While it crosses, the smokestack pours out thick black coal smoke and MYSTORY2D, one letter of it at a time; the letters
    rise into a line across the sky and drift apart.
@@ -6457,7 +6457,7 @@ window.onRemote = c => {
 const COALPUFF = (() => { const c = document.createElement("canvas"); c.width = c.height = 64; const g = c.getContext("2d");
   const gr = g.createRadialGradient(32, 32, 2, 32, 32, 32); gr.addColorStop(0, "rgba(22,21,19,.95)"); gr.addColorStop(.45, "rgba(22,21,19,.75)"); gr.addColorStop(1, "rgba(22,21,19,0)"); g.fillStyle = gr; g.fillRect(0, 0, 64, 64); return c; })();
 const Train = {
-  busy: false, NAME: "MYSTORY2D", EH: 800, CH: 640, KH: 680, GAP: 18, CARS: 6, V: .85, WALLX: 360,
+  busy: false, NAME: "MYSTORY2D", EH: 800, CH: 640, KH: 680, GAP: 18, CARS: 4, V: .85, WALLX: 360,
   run() { if (this.busy) return; this.busy = true; try { MySounds.play("train"); } catch (e) {}
     const cv = $("#traincv"), g = cv.getContext("2d"), W = 2560, H = 1440, S = ChefArt.sprites, t0 = performance.now();
     const sp = k => { const a = S[k]; return a && a.img && a.img.complete && a.img.naturalWidth ? a : null; };
@@ -7631,7 +7631,7 @@ window.KZDirect = function (opt) {
 (() => {
   const qs = new URLSearchParams(location.search), key = qs.get("ctl");
   if (!key || !window.WebSocket) return;
-  const PAGE = "html3", VERSION = "f7d9faf", INST = Math.random().toString(36).slice(2, 8);
+  const PAGE = "html3", VERSION = "9da17b1", INST = Math.random().toString(36).slice(2, 8);
   const QUICK = { mir: 1, rtt: 1 };                                 // sent many times a second: only the newest matters
   let said = false, direct = null;
   const seen = new Set(), seenList = [], fresh = id => { if (!id) return true; if (seen.has(id)) return false; seen.add(id); seenList.push(id); if (seenList.length > 800) seen.delete(seenList.shift()); return true; };
