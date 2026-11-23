@@ -308,6 +308,7 @@ function render(list, isNew) {
   const cnt = { follows: D.n.follows, subs: D.n.subs, gifts: D.n.gifted, bits: D.n.bits, raids: D.n.raids, streaks: D.n.streaks }[list];
   p.querySelector(".cnt").textContent = fmt(cnt);
   if (isNew) { ul.scrollTop = 0; ul._hold = 3; }
+  clearTimeout(render.lt); render.lt = setTimeout(layout, 30);
 }
 function renderTiles() {
   $("#since").textContent = "Tracking since " + new Date(D.since).toLocaleString([], { weekday: "short", hour: "numeric", minute: "2-digit" });
@@ -352,17 +353,32 @@ setInterval(() => Scroop.refresh(), 3000);
 const COLS = [["follows", "subs", "gifts"], ["bits", "raids", "streaks", "scroop"]];
 PANELS.scroop = "#pScroop";
 const shown = l => l === "scroop" ? Scroop.top.length : D[l].length;
+/* Each column's height is shared out by what's in each panel, so none has empty space: a panel with only a few
+   entries is made just tall enough for them, and the room it doesn't need goes to the panels with more than fits
+   (those scroll). Panels that still have more than fits are cut to whole rows, so no row is shown half. */
+const ROWH = 66;                                                         // one entry: 58 px row + 8 px gap
+function need(l) { const p = $(PANELS[l]), ul = p.querySelector(".list"), hd = p.querySelector("header"), sub = p.querySelector(".sub"), em = p.querySelector(".empty");
+  const head = 40 + (hd ? hd.offsetHeight + 12 : 0) + (sub && sub.offsetParent ? sub.offsetHeight + 4 : 0);
+  const body = ul && ul.style.display !== "none" ? ul.scrollHeight : em ? em.offsetHeight : 0;
+  return { head, full: head + body, min: head + Math.min(body, ROWH) }; }
 function layout() {
   const TOP = 124, BOTTOM = 1380, GAP = 24;
   COLS.forEach(col => {
-    const on = col.filter(l => shown(l));
-    const h = on.length ? (BOTTOM - TOP - GAP * (on.length - 1)) / on.length : 0;
+    const on = col.filter(l => shown(l)), N = on.map(need), h = {};
+    let left = BOTTOM - TOP - GAP * Math.max(0, on.length - 1), todo = on.slice();
+    // the ones that fit in a fair share get exactly what they need; the rest share what's left (again and again)
+    for (let changed = true; changed && todo.length;) { changed = false; const share = left / todo.length;
+      for (const l of todo.slice()) { const n = N[on.indexOf(l)]; if (n.full <= share) { h[l] = n.full; left -= n.full; todo.splice(todo.indexOf(l), 1); changed = true; } } }
+    if (todo.length) { const share = left / todo.length; let spare = 0;
+      todo.forEach(l => { const n = N[on.indexOf(l)], rows = Math.max(1, Math.floor((share - n.head + 8) / ROWH)); h[l] = Math.max(n.min, n.head + rows * ROWH - 8); spare += share - h[l]; });
+      // what whole rows left over goes to the fullest panel(s), a row at a time
+      for (let guard = 0; spare >= ROWH && guard < 50; guard++) { const l = todo.slice().sort((a, b) => (N[on.indexOf(b)].full - h[b]) - (N[on.indexOf(a)].full - h[a]))[0]; if (N[on.indexOf(l)].full - h[l] < 8) break; h[l] += ROWH; spare -= ROWH; } }
     let y = TOP;
     col.forEach(l => {
       const p = $(PANELS[l]);
       if (!shown(l)) { p.classList.add("off"); return; }
       p.classList.remove("off");
-      p.style.top = y + "px"; p.style.height = h + "px"; y += h + GAP;
+      p.style.top = y + "px"; p.style.height = Math.round(h[l]) + "px"; y += h[l] + GAP;
     });
   });
 }
@@ -836,7 +852,7 @@ window.KZDirect = function (opt) {
 (() => {
   const qs = new URLSearchParams(location.search), key = qs.get("ctl");
   if (!key || !window.WebSocket) return;
-  const PAGE = "html2", VERSION = "d2b452a", INST = Math.random().toString(36).slice(2, 8);
+  const PAGE = "html2", VERSION = "92f61d5", INST = Math.random().toString(36).slice(2, 8);
   const QUICK = { mir: 1, rtt: 1 };                                 // sent many times a second: only the newest matters
   let said = false, direct = null;
   const seen = new Set(), seenList = [], fresh = id => { if (!id) return true; if (seen.has(id)) return false; seen.add(id); seenList.push(id); if (seenList.length > 800) seen.delete(seenList.shift()); return true; };
