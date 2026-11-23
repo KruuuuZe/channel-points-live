@@ -6516,11 +6516,8 @@ const Train = {
           g.fillStyle = "rgba(10,10,10,.95)"; g.fillText(L.ch, 0, 0); g.filter = "none"; g.fillStyle = "rgba(40,38,36,.9)"; g.fillText(L.ch, 0, 0); g.fillStyle = "rgba(90,86,80,.35)"; g.fillText(L.ch, -h * .02, -h * .025); }
         g.restore(); });
       // the wall in pieces
-      // (the bricks clear away: each fades out a moment after it lands)
-      for (let i = chunks.length - 1; i >= 0; i--) { const c = chunks[i]; c.vy += .55 * dt / 16; c.x += c.vx * dt / 16; c.y += c.vy * dt / 16; c.r += c.vr * dt / 16;
-        if (c.y > H - c.h / 2) { c.y = H - c.h / 2; c.vy *= -.3; c.vx *= .7; c.vr *= .6; c.landed = c.landed || now; }
-        const fa = c.landed ? 1 - (now - c.landed - 600) / 700 : 1; if (fa <= 0 || c.x > W + 200) { chunks.splice(i, 1); continue; }
-        g.save(); g.globalAlpha = Math.min(1, fa); g.translate(c.x + c.w / 2, c.y + c.h / 2); g.rotate(c.r); g.drawImage(wall, c.sx, c.sy, c.w, c.h, -c.w / 2, -c.h / 2, c.w, c.h); g.restore(); }
+      for (const c of chunks) { c.vy += .55 * dt / 16; c.x += c.vx * dt / 16; c.y += c.vy * dt / 16; c.r += c.vr * dt / 16; if (c.y > H - c.h / 2) { c.y = H - c.h / 2; c.vy *= -.3; c.vx *= .7; c.vr *= .6; }
+        g.save(); g.translate(c.x + c.w / 2, c.y + c.h / 2); g.rotate(c.r); g.drawImage(wall, c.sx, c.sy, c.w, c.h, -c.w / 2, -c.h / 2, c.w, c.h); g.restore(); }
       g.save(); for (let i = dust.length - 1; i >= 0; i--) { const d = dust[i], a = (now - d.born) / 2200; if (a > 1) { dust.splice(i, 1); continue; } d.x += d.vx * dt / 16; d.y += d.vy * dt / 16; d.vx *= .985;
         g.globalAlpha = d.a * (1 - a); g.filter = "sepia(1) saturate(.6) brightness(.9)"; const r = d.r * (1 + a); g.drawImage(PUFF, d.x - r, d.y - r, r * 2, r * 2); } g.filter = "none"; g.restore();
       const gone = out;
@@ -7634,7 +7631,7 @@ window.KZDirect = function (opt) {
 (() => {
   const qs = new URLSearchParams(location.search), key = qs.get("ctl");
   if (!key || !window.WebSocket) return;
-  const PAGE = "html3", VERSION = "913560c", INST = Math.random().toString(36).slice(2, 8);
+  const PAGE = "html3", VERSION = "f7d9faf", INST = Math.random().toString(36).slice(2, 8);
   const QUICK = { mir: 1, rtt: 1 };                                 // sent many times a second: only the newest matters
   let said = false, direct = null;
   const seen = new Set(), seenList = [], fresh = id => { if (!id) return true; if (seen.has(id)) return false; seen.add(id); seenList.push(id); if (seenList.length > 800) seen.delete(seenList.shift()); return true; };
