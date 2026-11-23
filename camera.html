@@ -211,13 +211,19 @@ async function start() {
   const files = await FilesetResolver.forVisionTasks(BASE + "/wasm");
   const pl = await PoseLandmarker.createFromOptions(files, { baseOptions: { modelAssetPath: "https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task", delegate: "GPU" },
     runningMode: "VIDEO", numPoses: 1, minPoseDetectionConfidence: .5, minTrackingConfidence: .5 });
-  const vid = $("#vid"), open = id => navigator.mediaDevices.getUserMedia({ video: { deviceId: id ? { exact: id } : undefined, width: { ideal: 1280 }, height: { ideal: 720 }, frameRate: { ideal: 60 } } });
+  // (asks nicely first; some cameras, the Virtual Camera among them, only start without size wishes)
+  const vid = $("#vid"), open = async id => { const dev = id ? { exact: id } : undefined;
+    try { return await navigator.mediaDevices.getUserMedia({ video: { deviceId: dev, width: { ideal: 1280 }, height: { ideal: 720 }, frameRate: { ideal: 60 } } }); }
+    catch (e) { if (e.name === "NotAllowedError") throw e; return await navigator.mediaDevices.getUserMedia({ video: { deviceId: dev } }); } };
   let stream = null, firstErr = null;
   // OBS's Virtual Camera first if "whole stream" is picked and no camera was chosen
   if (!$("#cam").value && $("#mode").value === "program") { const ds = await listDevices(); const v = ds.find(d => d.kind === "videoinput" && /obs/i.test(d.label)); if (v) $("#cam").value = v.deviceId; }
   try { stream = await open($("#cam").value); } catch (e) { firstErr = e; }
-  if (!stream) { const ds = (await listDevices()).filter(d => d.kind === "videoinput"); for (const d of [...ds.filter(d => /obs/i.test(d.label)), ...ds]) { try { stream = await open(d.deviceId); $("#cam").value = d.deviceId; break; } catch (e) {} } }
-  if (!stream) throw new Error((firstErr && firstErr.message || "no camera") + ". If OBS is using your webcam, start OBS's Virtual Camera and press Start again.");
+  const tried = [];
+  if (!stream) { const ds = (await listDevices()).filter(d => d.kind === "videoinput"); for (const d of [...ds.filter(d => /obs/i.test(d.label)), ...ds.filter(d => !/obs/i.test(d.label))]) { tried.push(d.label || "a camera"); try { stream = await open(d.deviceId); $("#cam").value = d.deviceId; break; } catch (e) {} } }
+  if (!stream) { const why = firstErr && firstErr.name === "NotAllowedError" ? "the browser isn't allowed to use the camera (click the camera icon in the address bar and allow it)" : "every camera is busy or off (tried: " + (tried.join(", ") || "none found") + ")";
+    const vc = tried.some(t => /obs/i.test(t));
+    throw new Error(why + ". " + (vc ? "OBS Virtual Camera is there but isn't running: in OBS press Start Virtual Camera (Controls dock), then press Start here." : "OBS is probably using your webcam. In OBS press Start Virtual Camera (Controls dock; the first time, OBS installs it), then press Start here and pick OBS Virtual Camera.")); }
   await listDevices(); ls.set("pb_cam", $("#cam").value);
   vid.srcObject = stream; await vid.play(); $("#view").hidden = false;
   const cv = $("#cv"), g = cv.getContext("2d"), hist = { l: [], r: [] }, cool = { l: 0, r: 0 }, ARM = { l: [11, 13, 15], r: [12, 14, 16] };
