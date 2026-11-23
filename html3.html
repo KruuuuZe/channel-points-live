@@ -367,6 +367,10 @@ body.fit #stage{background:radial-gradient(1200px 700px at 30% 20%,#1a103322,tra
 #smokelapcv{position:absolute;inset:0;width:2560px;height:1440px;pointer-events:none;z-index:9}
 #scrapcv{position:absolute;inset:0;width:2560px;height:1440px;pointer-events:none;z-index:9}
 #vtcv{position:absolute;inset:0;width:2560px;height:1440px;pointer-events:none;z-index:9}
+/* 🔗 shared links: a video in the left 3/4 of the screen */
+#svid{position:absolute;left:0;top:0;width:1920px;height:1080px;z-index:7;pointer-events:none;opacity:0;transition:opacity .5s}
+#svid.on{opacity:1} #svid .box{position:absolute;left:0;top:0;background:#000;overflow:hidden;transition:width .5s,height .5s}
+#svid .box iframe,#svid .box > div,#svid .box img{width:100%;height:100%;border:0;display:block;object-fit:contain}
 /* 📺 live look-in */
 #lli{position:absolute;inset:0;z-index:6;pointer-events:none;opacity:0;transform:scale(1.04);transition:opacity .6s,transform .7s cubic-bezier(.2,.8,.2,1)}
 #lli.on{opacity:1;transform:none}
@@ -492,6 +496,7 @@ body.fit #stage{background:radial-gradient(1200px 700px at 30% 20%,#1a103322,tra
   <canvas id="bagcv" width="2560" height="1440"></canvas>
   <canvas id="traincv" width="2560" height="1440"></canvas>
   <canvas id="mediccv" width="2560" height="1440"></canvas>
+  <div id="svid"><div class="box"></div></div>
   <div id="lli"><div class="bd"></div><div class="hd"><i></i>LIVE LOOK-IN</div></div>
   <canvas id="gemcv" width="2560" height="1440"></canvas>
   <canvas id="dicecv" width="2560" height="1440"></canvas>
@@ -6167,7 +6172,7 @@ const Mirror = {
   slow() { const F = Face;
     return { cb: ChatBox.get(), wl: Wanted.level, lk: Lurk.list.map(x => [x.k, x.name, x.color]), mt: Mountain.list.map(x => [x.k, x.name, x.color, x.value]),
       sp: Scrap.piles.map(p => [p.state === "up" ? 1 : p.state === "none" ? 0 : 2, p.x]), dz: Disco.on ? 1 : 0, sm: Smoke.on && Smoke.offAt == null ? 1 : 0,
-      sw: F.snowmen.map(m => [Math.round(m.x), m.name, m.color, m.born || 0]), nt: F.neutralTalk || "", cx: CustomFx.onIds(), pb: PunchBag.on ? 1 : 0, ll: LiveLook.st }; },
+      sw: F.snowmen.map(m => [Math.round(m.x), m.name, m.color, m.born || 0]), nt: F.neutralTalk || "", cx: CustomFx.onIds(), pb: PunchBag.on ? 1 : 0, ll: LiveLook.st, sv: SharedVid.st }; },
   // called very often; sends at most 33 times a second over the direct link, 10 through the internet relay
   send(force) { if (!this.watched()) return; const now = performance.now();
     if (!force && now - this.lastRep < (this.far ? 480 : this.direct() ? 30 : 95)) return; this.lastRep = now;
@@ -6255,6 +6260,7 @@ const Mirror = {
     if (s.cx) CustomFx.match(s.cx);
     if (s.pb != null && !!s.pb !== PunchBag.on) PunchBag.toggle(!!s.pb);
     if (s.ll && JSON.stringify(s.ll) !== JSON.stringify(LiveLook.st)) LiveLook.set(s.ll);
+    if (s.sv && JSON.stringify(s.sv) !== JSON.stringify(SharedVid.st)) SharedVid.set(s.sv);
     this.later = { mt: s.mt, sw: s.sw && s.sw.length ? { list: s.sw, t: o.t, got: performance.now() } : null }; this.applyLater(); },
   // (two of them can't always be matched straight away: the streak mountain's climbers while it is on screen, and snowmen)
   applyLater() { const L = this.later; if (!L) return;
@@ -6409,7 +6415,8 @@ window.onRemote = c => {
   else if (c.cmd === "customRun") CustomFx.run(c.id, c.user || "");
   else if (c.cmd === "customSet") CustomFx.set(c.id, !!c.on);
   else if (c.cmd === "punch") PunchBag.punch(c.dx, c.power);
-  else if (c.cmd === "lli") LiveLook.set(c.st);                                // 📺 live look-in, from the app                  // from the Camera page (or a tap on the bag on the touchpad)
+  else if (c.cmd === "lli") LiveLook.set(c.st);
+  else if (c.cmd === "svid") SharedVid.set(c.st);                              // 🔗 a shared link's video, from the app                                // 📺 live look-in, from the app                  // from the Camera page (or a tap on the bag on the touchpad)
   else if (c.cmd === "effect" && c.name === "punchbag") toast(PunchBag.toggle() ? "🥊 Punching bag is out" : "🥊 Punching bag put away", false, 2500);
   else if (c.cmd === "customTouch") CustomFx.touch(+c.x, +c.y);
   else if (c.cmd === "bitGemsReset") { BitGems.reset(); toast("💎 Bit gems cleared for the next stream", false, 4000); }
@@ -6479,6 +6486,43 @@ window.onRemote = c => {
     }
   }
 };
+
+/* ================= 🔗 shared links =================
+   A video someone linked in chat (YouTube, YouTube Shorts, Twitch clips, Twitch videos, a live Twitch channel), picked
+   in the app's 🔗 SHARED LINKS box, plays in the left three quarters of the screen (its top left corner in the
+   screen's top left corner: 1920x1080; a Short stands upright, 1080 tall). When it ends the space simply goes empty
+   (no "watch next" videos: the player is removed the moment it ends). The app sends { on, item }; off closes it.
+   The touchpad copy shows the video's picture instead of the video. */
+const SharedVid = {
+  st: { on: false, item: null }, key: "", player: null, endT: 0, ytWait: null, twWait: null,
+  set(st) { this.st = Object.assign({ on: false, item: null }, st || {}); const it = this.st.on && this.st.item, k = it ? it.kind + ":" + it.id + ":" + (it.n || 0) : "";
+    $("#svid").classList.toggle("on", !!it); if (k === this.key) return; this.key = k; this.close(); if (it) this.open(it); Mirror.send(true); },
+  close() { clearTimeout(this.endT); try { this.player && this.player.destroy && this.player.destroy(); } catch (e) {} this.player = null; $("#svid .box").innerHTML = ""; },
+  ended(why) { const k = this.key; this.close(); $("#svid").classList.remove("on"); if (window.remoteSend && !MIRROR) window.remoteSend({ cmd: "svidEnded", key: k, why }); },
+  open(it) { const box = $("#svid .box"), tall = it.kind === "yt" && it.short; box.style.width = (tall ? 608 : 1920) + "px"; box.style.height = "1080px";
+    const host = location.hostname, real = !MIRROR && /github\.io$|^localhost$|^127\./.test(host), key = this.key;
+    if (!real) { if (it.thumb) { const im = document.createElement("img"); im.src = it.thumb; box.append(im); } return; }
+    const div = document.createElement("div"); div.id = "svidP" + Date.now(); box.append(div);
+    const fail = () => { if (this.key === key) this.ended("error"); };
+    if (it.kind === "yt") this.yt().then(() => { if (this.key !== key || !window.YT || !YT.Player) return;
+      this.player = new YT.Player(div.id, { videoId: it.id, width: "100%", height: "100%", playerVars: { autoplay: 1, controls: 0, rel: 0, modestbranding: 1, playsinline: 1, iv_load_policy: 3, fs: 0, disablekb: 1, start: it.start || 0 },
+        events: { onReady: e => { try { e.target.unMute(); e.target.setVolume(100); e.target.playVideo(); } catch (x) {} },
+          onStateChange: e => { if (e.data === 0 && this.key === key) this.ended("done"); }, onError: fail } }); });
+    else if (it.kind === "clip") {          // a clip has no "ended" signal: it's closed when its length has played
+      const f = document.createElement("iframe"); f.allow = "autoplay; encrypted-media"; f.src = "https://clips.twitch.tv/embed?clip=" + encodeURIComponent(it.id) + "&parent=" + host + "&autoplay=true&muted=false"; box.replaceChildren(f);
+      this.endT = setTimeout(() => { if (this.key === key) this.ended("done"); }, ((+it.dur || 60) + 2) * 1000); }
+    else this.tw().then(() => { if (this.key !== key || !window.Twitch || !Twitch.Player) return;
+      const o = { parent: [host], autoplay: true, muted: false, width: "100%", height: "100%", controls: false }; if (it.kind === "vod") o.video = it.id; else o.channel = it.id;
+      this.player = new Twitch.Player(div.id, o);
+      this.player.addEventListener(Twitch.Player.READY, () => { try { this.player.setMuted(false); this.player.setVolume(1); this.player.play(); } catch (x) {} });
+      this.player.addEventListener(Twitch.Player.ENDED, () => { if (this.key === key) this.ended("done"); });
+      if (Twitch.Player.OFFLINE) this.player.addEventListener(Twitch.Player.OFFLINE, () => { if (this.key === key && it.kind === "live") this.ended("offline"); }); }); },
+  yt() { if (window.YT && YT.Player) return Promise.resolve(); if (this.ytWait) return this.ytWait;
+    return this.ytWait = new Promise(ok => { const prev = window.onYouTubeIframeAPIReady; window.onYouTubeIframeAPIReady = () => { try { prev && prev(); } catch (e) {} ok(); };
+      const sc = document.createElement("script"); sc.src = "https://www.youtube.com/iframe_api"; sc.onerror = ok; document.head.append(sc); setTimeout(ok, 15000); }); },
+  tw() { return LiveLook.ready(); }
+};
+window.SharedVid = SharedVid;
 
 /* ================= 📺 live look-in =================
    Other Foxhole streamers, live, on the stream: the app (Control › 📺 LIVE LOOK-IN) picks who and sends the whole
@@ -7827,7 +7871,7 @@ window.KZDirect = function (opt) {
 (() => {
   const qs = new URLSearchParams(location.search), key = qs.get("ctl");
   if (!key || !window.WebSocket) return;
-  const PAGE = "html3", VERSION = "92f61d5", INST = Math.random().toString(36).slice(2, 8);
+  const PAGE = "html3", VERSION = "c2b7804", INST = Math.random().toString(36).slice(2, 8);
   const QUICK = { mir: 1, rtt: 1 };                                 // sent many times a second: only the newest matters
   let said = false, direct = null;
   const seen = new Set(), seenList = [], fresh = id => { if (!id) return true; if (seen.has(id)) return false; seen.add(id); seenList.push(id); if (seenList.length > 800) seen.delete(seenList.shift()); return true; };
