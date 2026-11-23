@@ -6525,7 +6525,13 @@ const LiveLook = {
     const id = "lliP_" + t.login + "_" + Date.now(); vid.id = id;
     this.ready().then(() => { if (!this.tiles.has(t.login) || !window.Twitch || !Twitch.Player) return;
       try { t.player = new Twitch.Player(id, { channel: t.login, parent: [location.hostname], muted: true, autoplay: true, controls: false, width: "100%", height: "100%" });
-        t.player.addEventListener(Twitch.Player.READY, () => { t.ready = true; this.mute(t, t.wantMuted !== false); }); } catch (e) {} }); },
+        // it should just play: as soon as the player is ready, if the browser blocked autoplay, and whenever it's found paused
+        const go = () => { try { if (t.player.isPaused && t.player.isPaused()) t.player.play(); } catch (e) {} };
+        t.player.addEventListener(Twitch.Player.READY, () => { t.ready = true; this.mute(t, t.wantMuted !== false); go(); setTimeout(go, 800); });
+        if (Twitch.Player.PLAYBACK_BLOCKED) t.player.addEventListener(Twitch.Player.PLAYBACK_BLOCKED, () => { try { t.player.setMuted(true); t.player.play(); } catch (e) {} });
+        if (Twitch.Player.PAUSE) t.player.addEventListener(Twitch.Player.PAUSE, () => setTimeout(go, 400));
+        if (!this.keepT) this.keepT = setInterval(() => { if (!this.st.on) return; this.tiles.forEach(x => { if (x.ready && x.player) try { if (x.player.isPaused()) x.player.play(); } catch (e) {} }); }, 2500);
+      } catch (e) {} }); },
   mute(t, m) { t.wantMuted = m; if (!t.player || !t.ready) return; try { t.player.setMuted(m); if (!m) t.player.setVolume(1); } catch (e) {} }
 };
 window.LiveLook = LiveLook;
@@ -7821,7 +7827,7 @@ window.KZDirect = function (opt) {
 (() => {
   const qs = new URLSearchParams(location.search), key = qs.get("ctl");
   if (!key || !window.WebSocket) return;
-  const PAGE = "html3", VERSION = "e4489aa", INST = Math.random().toString(36).slice(2, 8);
+  const PAGE = "html3", VERSION = "d2b452a", INST = Math.random().toString(36).slice(2, 8);
   const QUICK = { mir: 1, rtt: 1 };                                 // sent many times a second: only the newest matters
   let said = false, direct = null;
   const seen = new Set(), seenList = [], fresh = id => { if (!id) return true; if (seen.has(id)) return false; seen.add(id); seenList.push(id); if (seenList.length > 800) seen.delete(seenList.shift()); return true; };
