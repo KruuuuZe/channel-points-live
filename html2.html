@@ -92,6 +92,8 @@ body.fit{background:#020205}
 #pStreaks{--a:var(--flame);--b:var(--purple)}
 #pScroop{--a:#e2b26b;--b:#8b6b3d}
 #pScroop .row .rk{font-size:22px;font-weight:900;color:var(--a);width:34px;flex:none}
+#pScroop .gold{list-style:none;display:flex;align-items:center;justify-content:center;gap:12px;margin:0 0 10px;padding:8px 14px;border-radius:14px;background:linear-gradient(90deg,#3a2a0a,#5a4210,#3a2a0a);border:2px solid #d4a017}
+#pScroop .gold .gi{font-size:30px;filter:sepia(1) saturate(4) hue-rotate(-8deg) brightness(1.15) drop-shadow(0 0 6px #fde047)} #pScroop .gold b{font-size:28px;color:#fde68a;text-shadow:0 0 10px #f59e0b;margin-right:14px}
 #pScroop .sec{font-size:18px;font-weight:900;letter-spacing:.18em;color:var(--a);padding:6px 6px 8px;list-style:none}
 
 /* ---------- settings gear ---------- */
@@ -339,6 +341,9 @@ const Scroop = {
         ul.append(li);
       });
     };
+    { let g = null; try { g = JSON.parse(localStorage.getItem("scroopGold")); } catch (e) {}       // the golden fruit running total (counted by HTML3)
+      if (!g) { g = { gmango: 0, gban: 0 }; try { Object.values((JSON.parse(localStorage.getItem(this.ALLKEY)) || {}).users || {}).forEach(u => { g.gmango += u.gmango || 0; g.gban += u.gban || 0; }); } catch (e) {} }
+      const li = el("li", "gold"); li.append(el("span", "gi", "🥭"), el("b", null, fmt(g.gmango || 0)), el("span", "gi", "🍌"), el("b", null, fmt(g.gban || 0))); ul.append(li); }
     section("DAILY", r.daily); section("ALL TIME", r.all);
     const any = r.all.length || r.daily.length;
     p.querySelector(".empty").style.display = any ? "none" : "";
@@ -852,7 +857,7 @@ window.KZDirect = function (opt) {
 (() => {
   const qs = new URLSearchParams(location.search), key = qs.get("ctl");
   if (!key || !window.WebSocket) return;
-  const PAGE = "html2", VERSION = "8324654", INST = Math.random().toString(36).slice(2, 8);
+  const PAGE = "html2", VERSION = "5aa24c4", INST = Math.random().toString(36).slice(2, 8);
   const QUICK = { mir: 1, rtt: 1 };                                 // sent many times a second: only the newest matters
   let said = false, direct = null;
   const seen = new Set(), seenList = [], fresh = id => { if (!id) return true; if (seen.has(id)) return false; seen.add(id); seenList.push(id); if (seenList.length > 800) seen.delete(seenList.shift()); return true; };

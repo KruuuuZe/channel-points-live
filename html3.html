@@ -309,6 +309,9 @@ body.fit #stage{background:radial-gradient(1200px 700px at 30% 20%,#1a103322,tra
 #scrapboard .r b{color:var(--uc);text-shadow:0 0 10px var(--uc);max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 #scrapboard .r span{color:#e2b26b}
 #scrapboard .none{color:#7d7699;font-size:18px}
+#scrapboard .gold{display:flex;align-items:center;justify-content:center;gap:12px;margin:0 0 10px;padding:6px 14px;border-radius:12px;background:linear-gradient(90deg,#3a2a0a,#5a4210,#3a2a0a);border:2px solid #d4a017;box-shadow:0 0 16px #fbbf2455}
+#scrapboard .gold span{font-size:30px;filter:sepia(1) saturate(4) hue-rotate(-8deg) brightness(1.15) drop-shadow(0 0 6px #fde047)} #scrapboard .gold b{font-size:26px;color:#fde68a;text-shadow:0 0 10px #f59e0b;min-width:28px}
+#scrapboard .gold b:nth-of-type(1){margin-right:18px}
 
 /* ---------- GTA-style wanted level: up to six stars, top-right ---------- */
 #wanted{position:absolute;right:240px;top:24px;display:flex;gap:9px;pointer-events:none;opacity:0;transform:translateY(-14px);
@@ -2242,10 +2245,19 @@ const Scrap = {
   /* Stream Avatars team for a viewer: "green", "blue" or "" (no team) */
   setTeam(login, team) { const k = (login || "").toLowerCase(); if (!k) return; if (team) this.teams[k] = team; else delete this.teams[k];
     try { localStorage.setItem(this.TEAMKEY, JSON.stringify(this.teams)); } catch (e) {} },
+  // golden mangoes and golden bananas scrooped, all together, ever (kept in its own count; the first time, started
+  // from what the all-time board already knows)
+  GOLDKEY: "scroopGold",
+  gold() { let g = null; try { g = JSON.parse(localStorage.getItem(this.GOLDKEY)); } catch (e) {}
+    if (!g) { g = { gmango: 0, gban: 0 }; Object.values((this.all && this.all.users) || {}).forEach(u => { g.gmango += u.gmango || 0; g.gban += u.gban || 0; }); try { localStorage.setItem(this.GOLDKEY, JSON.stringify(g)); } catch (e) {} }
+    return g; },
+  goldAdd(k, n) { const g = this.gold(); g[k] = (g[k] || 0) + n; try { localStorage.setItem(this.GOLDKEY, JSON.stringify(g)); } catch (e) {} },
   board() {
     this.load();
     const b = $("#scrapboard"); b.innerHTML = "";
     b.append(el("h4", null, "TOP SCROOPERS"));
+    { const g = this.gold(), bar = el("div", "gold");
+      bar.append(el("span", "gm", "🥭"), el("b", null, fmt(g.gmango || 0)), el("span", "gb", "🍌"), el("b", null, fmt(g.gban || 0))); bar.title = "Golden mangoes and golden bananas scrooped"; b.append(bar); }
     const cols = el("div", "cols");
     [["DAILY", this.data.users], ["ALL TIME", this.all.users]].forEach(([title, users]) => {
       const c = el("div"); c.append(el("h5", null, title));
@@ -2401,6 +2413,7 @@ const Scrap = {
     for (const book of [this.data.users, this.all.users]) {
       const u = book[job.k] || (book[job.k] = { name: job.name, color: job.color, pts: 0, salv: 0, comp: 0, sulf: 0, rare: 0 });
       u.name = job.name; u.color = job.color; u[l.k] = (u[l.k] || 0) + n; u.pts += n * l.pts;
+      if (l.gold && !MIRROR) this.goldAdd(l.k, n);                         // the running total of golden fruit scrooped
     }
     this.save();
     const sx = ox + 95, sy = 1440 - 90, ex = ox + 40, ey = 1440 - (l.rare ? 400 : 330);
@@ -7891,7 +7904,7 @@ window.KZDirect = function (opt) {
 (() => {
   const qs = new URLSearchParams(location.search), key = qs.get("ctl");
   if (!key || !window.WebSocket) return;
-  const PAGE = "html3", VERSION = "8324654", INST = Math.random().toString(36).slice(2, 8);
+  const PAGE = "html3", VERSION = "5aa24c4", INST = Math.random().toString(36).slice(2, 8);
   const QUICK = { mir: 1, rtt: 1 };                                 // sent many times a second: only the newest matters
   let said = false, direct = null;
   const seen = new Set(), seenList = [], fresh = id => { if (!id) return true; if (seen.has(id)) return false; seen.add(id); seenList.push(id); if (seenList.length > 800) seen.delete(seenList.shift()); return true; };
