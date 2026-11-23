@@ -3889,9 +3889,17 @@ const Face = {
       o.connect(f); f.connect(g); g.connect(c.destination); o.start(t0 + d); o.stop(t0 + d + .15); });
     Sound.burst(t0, .1, .06, "bandpass", 1200); },
   fire() { if (this.tank && this.kind === "tank" && this.tankM > .7 && performance.now() - this.fireAt > 450) { this.fireAt = performance.now(); this.wantFire = true; this.playAct(); } },
+  // the cloud floats toward your finger at an easy cloud pace: it picks up speed gently, drifts along at most
+  // about 7 px a frame (across the whole screen in about 6 seconds), and slows down softly as it arrives.
+  // Used the same way by OBS and by the touchpad copy, so both move alike.
+  sv: [0, 0],
+  floatTo(px, py, tx, ty, s) { const dx = tx - px, dy = ty - py, d = Math.hypot(dx, dy), v = this.sv;
+    const want = Math.min(7, d * .035), wx = d > .5 ? dx / d * want : 0, wy = d > .5 ? dy / d * want : 0, k = Math.min(1, .05 * s);
+    v[0] += (wx - v[0]) * k; v[1] += (wy - v[1]) * k;
+    return [px + v[0] * s, py + v[1] * s, d < 3 && Math.hypot(v[0], v[1]) < .3]; },
   goTo(nx, ny) { const p = [Math.max(0, Math.min(1, nx)) * 2560, Math.max(0, Math.min(1, ny)) * 1440];
     const now = performance.now(); this.steerGap = now - (this.steerAt || 0);
-    if (this.tank) this.tankTo = p; else { this.steerTo = p; this.steerAt = now; } },
+    if (this.tank) this.tankTo = p; else { if (!this.steerTo) this.sv = [0, 0]; this.steerTo = p; this.steerAt = now; } },
   rain: false,
   toggleRain() { this.rain = !this.rain; if (this.rain && !this.on) this.toggle(); },     // rain brings the cloud out if it's away
   /* anyone in chat can type !rain: if the cloud is out, it rains for 5 to 15 seconds (more !rain while it's raining
@@ -4002,17 +4010,17 @@ const Face = {
           if (this.on && !m.on) { if (this.a > .3) poof(px, py, t); this.on = false; this.a = 0; }        // it has gone in OBS: the same poof here
           this.leaving = false;
           const since = nowP - Mirror.touchAt;
-          if (!this.tank && this.steerTo && since < 3000) {                                  // right under your finger
-            const tx = Math.max(0, Math.min(W, this.steerTo[0])), ty = Math.max(0, Math.min(LOW, this.steerTo[1] + 36 * this.sizeM)), f = Math.min(1, .7 * s);
-            px += (tx - px) * f; py += (ty - py) * f;
-            if (Math.hypot(tx - px, ty - py) < 2 && since > 500) this.steerTo = null;
+          if (!this.tank && this.steerTo && since < 9000) {                                  // right under your finger
+            const tx = Math.max(0, Math.min(W, this.steerTo[0])), ty = Math.max(0, Math.min(LOW, this.steerTo[1] + 36 * this.sizeM));
+            const r = this.floatTo(px, py, tx, ty, s); px = r[0]; py = r[1];
+            if (r[2] && since > 500) { this.steerTo = null; this.sv = [0, 0]; }
           } else if (this.tank && this.tankTo && since < 9000) {                             // a shape walks or drives to where you touched, exactly as OBS's does
             const tx = Math.max(300, Math.min(W - 300, this.tankTo[0])), ty = Math.max(170, Math.min(H - 140, this.tankTo[1]));
             const vx = Math.max(-13, Math.min(13, (tx - px) * .05)), vy = Math.max(-10, Math.min(10, (ty - py) * .05));
             px += vx * s; py += vy * s; if (Math.abs(vx) > .6) this.angTo = vx > 0 ? 0 : Math.PI;
             this.speed = Math.hypot(vx, vy); this.walk = (this.walk || 0) + this.speed * .028 * s;
             if (this.speed < .3 && since > 700) this.tankTo = null;
-          } else { this.steerTo = null; this.tankTo = null;
+          } else { this.steerTo = null; this.tankTo = null; this.sv = [0, 0];
             if (Mirror.jump) { px = m.x; py = m.y; Mirror.jump = false; }
             else { const k = Math.min(1, .3 * s); if (Math.abs(m.x - px) > 6) { moving = 1; fromX = px; toX = m.x; } px += (m.x - px) * k; py += (m.y - py) * k; }
             if (this.tank) { this.angTo = m.ang; this.speed = m.spd; this.walk = (this.walk || 0) + this.speed * .028 * s; } }
@@ -4061,10 +4069,9 @@ const Face = {
       // while (20 seconds to a minute) before it starts wandering again. !snow still takes priority.
       if (this.steerTo && !this.tank && !wasTank && !this.leaving && !snowing && snowTo === null) {
         const tx = Math.max(0, Math.min(W, this.steerTo[0])), ty = Math.max(0, Math.min(LOW, this.steerTo[1] + 36 * this.sizeM)), s = dt / 16;     // goes exactly where the touchpad dot is: at the very top (or a side) half the cloud is off screen
-        const f = this.steerGap < 50 ? .4 : .2;                                                    // touches arriving thick and fast (the direct link): it can keep tighter under your finger
-        const vx = Math.max(-140, Math.min(140, (tx - px) * f)), vy = Math.max(-120, Math.min(120, (ty - py) * f));
-        px += vx * s; py += vy * s; route = []; moveAt = 0; hoverUntil = t + rand(20000, 60000); this.padUntil = hoverUntil;
-        if (Math.hypot(tx - px, ty - py) < 2 && performance.now() - this.steerAt > 400) this.steerTo = null;
+        const r = this.floatTo(px, py, tx, ty, s); px = r[0]; py = r[1];                   // floats over at an easy pace (see floatTo)
+        route = []; moveAt = 0; hoverUntil = t + rand(20000, 60000); this.padUntil = hoverUntil;
+        if (r[2] && performance.now() - this.steerAt > 400) { this.steerTo = null; this.sv = [0, 0]; }
       }
       if (this.snowQ.length && !snowing && snowTo === null && !this.leaving && !this.tank && !wasTank) {
         const free = sx => this.snowmen.every(m => Math.abs(m.x - sx) > 220);
@@ -7347,7 +7354,7 @@ window.KZDirect = function (opt) {
 (() => {
   const qs = new URLSearchParams(location.search), key = qs.get("ctl");
   if (!key || !window.WebSocket) return;
-  const PAGE = "html3", VERSION = "44dba59", INST = Math.random().toString(36).slice(2, 8);
+  const PAGE = "html3", VERSION = "85031b3", INST = Math.random().toString(36).slice(2, 8);
   const QUICK = { mir: 1, rtt: 1 };                                 // sent many times a second: only the newest matters
   let said = false, direct = null;
   const seen = new Set(), seenList = [], fresh = id => { if (!id) return true; if (seen.has(id)) return false; seen.add(id); seenList.push(id); if (seenList.length > 800) seen.delete(seenList.shift()); return true; };
