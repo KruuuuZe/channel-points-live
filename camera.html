@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Channel Points · Camera (punching bag)</title>
+<link rel="icon" href="data:image/webp;base64,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">
+<style>
+body{margin:0;min-height:100vh;display:flex;flex-direction:column;align-items:center;gap:14px;font-family:"Segoe UI",system-ui,Roboto,sans-serif;color:#f5f2ff;background:#05040a;padding:20px;box-sizing:border-box}
+h1{margin:0;font-size:22px;letter-spacing:.06em;display:flex;align-items:center;gap:10px} h1 img{width:40px;height:40px;border-radius:50%}
+p{color:#a59cc4;max-width:640px;text-align:center;line-height:1.45;margin:0}
+button{font:inherit;font-weight:800;font-size:18px;color:#0b0a12;background:#a3e635;border:0;border-radius:14px;padding:14px 22px;cursor:pointer} button:disabled{opacity:.6}
+select{font:inherit;color:#f5f2ff;background:#1a1530;border:1px solid #2a2342;border-radius:10px;padding:8px 10px;max-width:420px}
+label{display:flex;gap:8px;align-items:center;color:#d9d2f5}
+.row{display:flex;gap:12px;flex-wrap:wrap;justify-content:center;align-items:center}
+#view{position:relative;width:min(720px,94vw);aspect-ratio:16/9;border-radius:14px;overflow:hidden;background:#111;border:2px solid #2a2342}
+#view video,#view canvas{position:absolute;inset:0;width:100%;height:100%;object-fit:contain}
+#pow{position:absolute;left:50%;top:40%;transform:translate(-50%,-50%) scale(.6);font:900 64px/1 "Segoe UI",sans-serif;color:#ff3b3b;text-shadow:0 0 18px #ff3b3b,0 4px 0 #000;opacity:0;transition:opacity .25s,transform .25s;pointer-events:none}
+#pow.on{opacity:1;transform:translate(-50%,-50%) scale(1);transition:none}
+#st{font-weight:700;text-align:center} .ok{color:#a3e635}.bad{color:#ff8fc8}.muted{color:#a59cc4}
+#count{font-weight:800;font-size:18px}
+</style>
+</head>
+<body>
+<h1><img src="data:image/webp;base64,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" alt=""> 🥊 Camera for the punching bag</h1>
+<p>Keep this page open in Chrome or Edge on your PC (not in OBS) while the punching bag is on. It watches you through the camera and tells the overlay when you throw a punch at the bag. Only "a punch happened, this hard, this way" is sent, never any video.</p>
+<div class="row">
+  <label>Camera <select id="cam"><option value="">Default camera</option></select></label>
+  <label>The camera shows <select id="mode"><option value="program">my whole stream (OBS Virtual Camera, Program)</option><option value="cam">just me (my webcam)</option></select></label>
+</div>
+<div class="row"><label>Sensitivity <input id="sens" type="range" min="1" max="10" value="5"></label><span class="muted" id="sensV"></span></div>
+<div class="row"><button id="go">▶ Start</button></div>
+<div id="st" class="muted">Not started</div>
+<div id="view" hidden><video id="vid" playsinline muted></video><canvas id="cv" width="1280" height="720"></canvas><div id="pow">POW!</div></div>
+<div id="count"></div>
+<p><b>Whole stream:</b> in OBS, click the ⚙ next to Start Virtual Camera, set Output Type to <b>Program</b>, OK, then Start Virtual Camera. The camera picture is then exactly what viewers see, so a punch only counts when your fist reaches the bag on screen (the box drawn on the picture above). <b>Just me:</b> pick your webcam (or set the Virtual Camera to your webcam source); then any real punch counts.</p>
+<script>
+/* ================= KZRelay: instant messages between the app and the overlays =================
+   A tiny MQTT client over WebSockets. It connects to two free public MQTT servers at once and sends every
+   message through both, so if one is slow or down the other still delivers; duplicates are dropped.
+   Connections stay open (with a ping every 25 s) and reconnect within a few seconds if they drop. */
+window.KZRelay = function (topic, onMessage, servers) {
+  const SERVERS = servers || ["wss://broker.hivemq.com:8884/mqtt", "wss://broker.emqx.io:8084/mqtt"];
+  const enc = new TextEncoder(), dec = new TextDecoder();
+  const str = s => { const b = enc.encode(s); return [b.length >> 8, b.length & 255, ...b]; };
+  const packet = (type, body) => {
+    const len = []; let n = body.length;
+    do { let d = n % 128; n = Math.floor(n / 128); if (n > 0) d |= 128; len.push(d); } while (n > 0);
+    return new Uint8Array([type, ...len, ...body]);
+  };
+  const seen = new Set(), seenList = [];
+  const fresh = id => { if (!id || seen.has(id)) return false; seen.add(id); seenList.push(id); if (seenList.length > 500) seen.delete(seenList.shift()); return true; };
+  const conns = [], waiting = [];
+  let up = 0;
+  const openCount = () => conns.filter(c => c.ready).length;
+  function connect(url) {
+    const c = { url, ready: false, ws: null, back: 1000, ping: 0, buf: new Uint8Array(0) };
+    conns.push(c);
+    const start = () => {
+      let ws; try { ws = new WebSocket(url, "mqtt"); } catch (e) { return setTimeout(start, c.back); }
+      c.ws = ws; ws.binaryType = "arraybuffer";
+      ws.onopen = () => {
+        const id = "kz" + Math.random().toString(36).slice(2, 12);
+        ws.send(packet(0x10, [...str("MQTT"), 4, 0x02, 0, 180, ...str(id)]));          // CONNECT, clean session, keepalive 3 min (pages in the background only get to ping about once a minute)
+      };
+      ws.onmessage = e => {
+        let b = new Uint8Array(e.data);
+        if (c.buf.length) { const j = new Uint8Array(c.buf.length + b.length); j.set(c.buf); j.set(b, c.buf.length); b = j; c.buf = new Uint8Array(0); }
+        let i = 0;
+        while (i < b.length) {
+          const type = b[i] >> 4; let mult = 1, len = 0, k = i + 1, d;
+          do { if (k >= b.length) { c.buf = b.slice(i); return; } d = b[k++]; len += (d & 127) * mult; mult *= 128; } while (d & 128);
+          if (k + len > b.length) { c.buf = b.slice(i); return; }
+          const body = b.subarray(k, k + len);
+          if (type === 2) {                                                               // CONNACK: subscribe
+            ws.send(packet(0x82, [0, 1, ...str(topic), 0]));
+          } else if (type === 9) {                                                        // SUBACK: ready
+            c.ready = true; c.back = 1000; up++;
+            while (waiting.length) { const p = waiting.shift(); conns.forEach(x => x.ready && x.ws.send(p)); }
+            clearInterval(c.ping); c.ping = setInterval(() => { try { ws.send(new Uint8Array([0xC0, 0])); } catch (x) {} }, 25000);
+            if (typeof api.onUp === "function") api.onUp(openCount());
+          } else if (type === 3) {                                                        // PUBLISH
+            const tl = (body[0] << 8) | body[1], qos = (b[i] >> 1) & 3;
+            const msg = dec.decode(body.subarray(2 + tl + (qos ? 2 : 0)));
+            let o; try { o = JSON.parse(msg); } catch (x) { o = null; }
+            if (o && fresh(o._id)) { try { onMessage(o); } catch (x) { console.error(x); } }
+          }
+          i = k + len;
+        }
+      };
+      ws.onclose = ws.onerror = () => {
+        if (c.ws !== ws) return; c.ws = null;
+        if (c.ready) { c.ready = false; up--; } clearInterval(c.ping);
+        setTimeout(start, c.back); c.back = Math.min(8000, c.back * 2);                    // back within 1-8 seconds
+        if (typeof api.onDown === "function") api.onDown(openCount());
+      };
+    };
+    start();
+  }
+  const api = {
+    send(o) {
+      o = Object.assign({ _id: Math.random().toString(36).slice(2) + Date.now().toString(36) }, o);
+      fresh(o._id);                                                                      // don't hear our own message back
+      const p = packet(0x30, [...str(topic), ...enc.encode(JSON.stringify(o))]);
+      const live = conns.filter(c => c.ready);
+      if (live.length) live.forEach(c => { try { c.ws.send(p); } catch (x) {} });
+      else { waiting.push(p); setTimeout(() => { const i = waiting.indexOf(p); if (i >= 0) waiting.splice(i, 1); }, 15000); }
+      return o._id;
+    },
+    connected: () => openCount(),
+    onUp: null, onDown: null
+  };
+  SERVERS.forEach(connect);
+  return api;
+};
+
+/* ================= KZDirect: a direct link between the app and an overlay page =================
+   The relay above goes out to the internet and back. When the phone and the PC can reach each other directly (they
+   are on the same Wi-Fi), this opens a direct connection between the two pages (WebRTC data channels, the same thing
+   video calls use), set up by passing two short messages through the relay. Messages then take a few milliseconds.
+   If it can't connect, or drops, nothing is lost: everything simply keeps going through the relay, and the app tries
+   again now and then.
+   Two channels: "sure" (everything arrives, in order) and "fast" (for things sent many times a second where only the
+   newest matters: if one is lost it is simply skipped, so they can never pile up).
+     opt.role      "app" (asks for the link) or "overlay" (answers)
+     opt.signal    o => send a set-up message to the other side through the relay
+     opt.onMessage o => a message arrived over the direct link
+     opt.onState   (up, why) => the link came up or went down
+     opt.ips       () => this device's own network addresses, if the app knows them (see withIps) */
+window.KZDirect = function (opt) {
+  const RTC = window.RTCPeerConnection, app = opt.role === "app", me = Math.random().toString(36).slice(2, 10);   // (me: which open copy of the app this is)
+  const api = { up: false, ok: !!RTC, tries: 0, lastWhy: "", since: 0 };
+  let pc = null, sure = null, fast = null, sid = "", timer = 0, retry = 0, busy = false, lastIn = 0, beat = 0, peer = "";
+  const say = (up, why) => { if (up === api.up && !why) return; api.up = up; api.lastWhy = why || ""; api.since = Date.now(); try { opt.onState && opt.onState(up, why || ""); } catch (e) {} };
+  const close = () => { clearTimeout(timer); clearInterval(beat); const p = pc; pc = sure = fast = null; sid = "";
+    if (p) { try { p.onconnectionstatechange = p.ondatachannel = null; p.close(); } catch (e) {} } };
+  const fail = why => { const was = api.up; close(); say(false, why);
+    // try again: straight away if it had been working, otherwise after 8 s, 16 s, 32 s, then once a minute, and after a few of those every 5 minutes
+    if (app) { clearTimeout(retry); const wait = was ? 1500 : api.tries > 6 ? 300000 : Math.min(60000, 4000 * Math.pow(2, Math.min(4, api.tries))); retry = setTimeout(() => api.start(), wait); } };
+  const gathered = (p, ms) => new Promise(ok => { if (p.iceGatheringState === "complete") return ok(); const t = setTimeout(ok, ms);
+    p.addEventListener("icegatheringstatechange", () => { if (p.iceGatheringState === "complete") { clearTimeout(t); ok(); } }); });
+  // Browsers hide the device's own network address behind a made-up name (xxxx.local) that the other side often can't
+  // look up. Where the app knows the phone's real address, it is added alongside, so the PC can find the phone.
+  const withIps = sdp => { let ips = []; try { ips = (opt.ips && opt.ips()) || []; } catch (e) {} if (!ips.length) return sdp; let n = 0;
+    return sdp.split("\r\n").map(l => { const m = /^a=candidate:\S+ (\d) udp (\d+) (\S+\.local) (\d+) typ host(.*)$/i.exec(l); if (!m) return l;
+      return [l].concat(ips.filter(ip => /^\d+\.\d+\.\d+\.\d+$/.test(ip)).map(ip => "a=candidate:" + (9000 + (++n)) + " " + m[1] + " udp " + m[2] + " " + ip + " " + m[4] + " typ host" + m[5])).join("\r\n"); }).join("\r\n"); };
+  const wire = (p, mySid) => {
+    const check = () => { if (sid !== mySid || api.up || !sure || !fast || sure.readyState !== "open" || fast.readyState !== "open") return;
+      clearTimeout(timer); api.tries = 0; lastIn = Date.now(); say(true);
+      // the overlay side hangs up if the app has gone quiet (the app sends a little "are you there" every 2 seconds)
+      clearInterval(beat); if (!app) beat = setInterval(() => { if (api.up && Date.now() - lastIn > 12000) fail("the app went quiet"); }, 3000); };
+    const on = ch => { ch.onopen = check; ch.onclose = () => { if (sid === mySid && api.up) fail("closed"); };
+      ch.onmessage = e => { if (sid !== mySid) return; lastIn = Date.now(); let o; try { o = JSON.parse(e.data); } catch (x) { return; } try { opt.onMessage(o); } catch (x) { console.error(x); } }; if (ch.readyState === "open") check(); };
+    p.onconnectionstatechange = () => { if (sid !== mySid) return; const st = p.connectionState; if (st === "failed" || st === "closed") fail(st); };
+    if (sure) on(sure); if (fast) on(fast);
+    p.ondatachannel = e => { if (sid !== mySid) return; if (e.channel.label === "sure") sure = e.channel; else if (e.channel.label === "fast") fast = e.channel; else return; on(e.channel); };
+  };
+  // the app: ask the overlay for a direct link
+  api.start = async () => { if (!RTC || !app || busy) return; clearTimeout(retry); close(); busy = true; api.tries++; const mine = sid = Math.random().toString(36).slice(2, 10);
+    try { const p = pc = new RTC({ iceServers: [] });
+      sure = p.createDataChannel("sure"); fast = p.createDataChannel("fast", { ordered: false, maxRetransmits: 0 }); wire(p, mine);
+      await p.setLocalDescription(await p.createOffer()); await gathered(p, 1200); if (sid !== mine) return;
+      opt.signal({ rtc: "offer", sid: mine, cid: me, sdp: withIps(p.localDescription.sdp) });
+      timer = setTimeout(() => { if (sid === mine && !api.up) fail("no direct path"); }, 9000);
+    } catch (e) { if (sid === mine) fail("couldn't start: " + (e && e.message || e)); } finally { busy = false; } };
+  // a set-up message from the other side
+  api.signal = async m => { if (!RTC || !m) return;
+    try {
+      if (m.rtc === "answer" && app) { if (m.sid !== sid || !pc || pc.signalingState !== "have-local-offer") return; await pc.setRemoteDescription({ type: "answer", sdp: m.sdp }); }
+      else if (m.rtc === "busy" && app) { if (m.sid === sid) { api.tries = Math.max(api.tries, 4); fail("another phone or tab has the direct link"); } }
+      else if (m.rtc === "offer" && !app) {
+        // one direct link at a time: if another open copy of the app is using it right now, this one keeps to the relay
+        if (api.up && peer && m.cid && m.cid !== peer && Date.now() - lastIn < 6000) { opt.signal({ rtc: "busy", sid: m.sid }); return; }
+        close(); if (api.up) say(false, "new link"); peer = m.cid || ""; const mine = sid = m.sid, p = pc = new RTC({ iceServers: [] }); wire(p, mine);
+        await p.setRemoteDescription({ type: "offer", sdp: m.sdp }); await p.setLocalDescription(await p.createAnswer()); await gathered(p, 1200); if (sid !== mine) return;
+        opt.signal({ rtc: "answer", sid: mine, sdp: p.localDescription.sdp });
+        timer = setTimeout(() => { if (sid === mine && !api.up) { close(); say(false, "no direct path"); } }, 12000); }
+    } catch (e) { if (app) fail("set-up failed: " + (e && e.message || e)); else { close(); say(false, "set-up failed"); } } };
+  // send one message; false if the link isn't up (the caller then uses the relay)
+  api.send = (o, quick) => { const ch = quick ? fast : sure; if (!api.up || !ch || ch.readyState !== "open") return false;
+    try { if (quick && ch.bufferedAmount > 65536) return true;        // the fast channel never queues up: skip this one
+      ch.send(JSON.stringify(o)); return true; } catch (e) { return false; } };
+  api.heard = () => { lastIn = Date.now(); };
+  api.quiet = () => Date.now() - lastIn;                      // how long since anything arrived
+  api.drop = why => { if (pc) fail(why || "dropped"); };
+  api.stop = () => { clearTimeout(retry); close(); say(false, "stopped"); };
+  return api;
+};
+
+const $ = s => document.querySelector(s), key = new URLSearchParams(location.search).get("ctl");
+if (!key) { $("#st").innerHTML = '<span class="bad">This link is missing your pairing key. Copy it from the app (Control › CONNECT OBS TO THIS APP › Camera page).</span>'; $("#go").disabled = true; }
+const relay = key ? KZRelay("kzctl/" + key, () => {}) : null;
+const send = o => relay && relay.send(Object.assign({ from: "app", to: "html3", noack: true, t: Date.now() }, o));
+const ls = { get: (k, d) => { try { const v = localStorage.getItem(k); return v == null ? d : v; } catch (e) { return d; } }, set: (k, v) => { try { localStorage.setItem(k, v); } catch (e) {} } };
+$("#mode").value = ls.get("pb_mode", "program"); $("#mode").onchange = () => ls.set("pb_mode", $("#mode").value);
+$("#sens").value = ls.get("pb_sens", "5"); const sensText = () => $("#sensV").textContent = ["", "needs a hard punch", "", "", "", "normal", "", "", "", "", "light jabs count"][+$("#sens").value] || "";
+$("#sens").oninput = () => { ls.set("pb_sens", $("#sens").value); sensText(); }; sensText();
+async function listDevices() { const ds = await navigator.mediaDevices.enumerateDevices(), el = $("#cam"), keep = el.value || ls.get("pb_cam", "");
+  el.innerHTML = '<option value="">Default camera</option>';
+  ds.filter(d => d.kind === "videoinput").forEach((d, i) => { const o = document.createElement("option"); o.value = d.deviceId; o.textContent = d.label || "Camera " + (i + 1); el.append(o); });
+  if ([...el.options].some(o => o.value === keep)) el.value = keep; el.onchange = () => ls.set("pb_cam", el.value); return ds; }
+listDevices().catch(() => {});
+
+// where the bag hangs on the stream (0..1 across and down), the same numbers as the overlay's PunchBag, plus some room
+const BAG = { x0: (1280 - 230) / 2560, x1: (1280 + 230) / 2560, y0: 120 / 1440, y1: 1060 / 1440 };
+const VER = "0.10.14", BASE = `https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@${VER}`;
+let punches = 0;
+async function start() {
+  $("#st").textContent = "Loading the body tracker…";
+  const { PoseLandmarker, FilesetResolver } = await import(BASE + "/vision_bundle.mjs");
+  const files = await FilesetResolver.forVisionTasks(BASE + "/wasm");
+  const pl = await PoseLandmarker.createFromOptions(files, { baseOptions: { modelAssetPath: "https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task", delegate: "GPU" },
+    runningMode: "VIDEO", numPoses: 1, minPoseDetectionConfidence: .5, minTrackingConfidence: .5 });
+  const vid = $("#vid"), open = id => navigator.mediaDevices.getUserMedia({ video: { deviceId: id ? { exact: id } : undefined, width: { ideal: 1280 }, height: { ideal: 720 }, frameRate: { ideal: 60 } } });
+  let stream = null, firstErr = null;
+  // OBS's Virtual Camera first if "whole stream" is picked and no camera was chosen
+  if (!$("#cam").value && $("#mode").value === "program") { const ds = await listDevices(); const v = ds.find(d => d.kind === "videoinput" && /obs/i.test(d.label)); if (v) $("#cam").value = v.deviceId; }
+  try { stream = await open($("#cam").value); } catch (e) { firstErr = e; }
+  if (!stream) { const ds = (await listDevices()).filter(d => d.kind === "videoinput"); for (const d of [...ds.filter(d => /obs/i.test(d.label)), ...ds]) { try { stream = await open(d.deviceId); $("#cam").value = d.deviceId; break; } catch (e) {} } }
+  if (!stream) throw new Error((firstErr && firstErr.message || "no camera") + ". If OBS is using your webcam, start OBS's Virtual Camera and press Start again.");
+  await listDevices(); ls.set("pb_cam", $("#cam").value);
+  vid.srcObject = stream; await vid.play(); $("#view").hidden = false;
+  const cv = $("#cv"), g = cv.getContext("2d"), hist = { l: [], r: [] }, cool = { l: 0, r: 0 }, ARM = { l: [11, 13, 15], r: [12, 14, 16] };
+  const d3 = (a, b) => Math.hypot(a.x - b.x, a.y - b.y, a.z - b.z);
+  const angle = (a, b, c) => { const u = [a.x - b.x, a.y - b.y, a.z - b.z], v = [c.x - b.x, c.y - b.y, c.z - b.z], d = Math.hypot(...u) * Math.hypot(...v) || 1; return Math.acos(Math.max(-1, Math.min(1, (u[0] * v[0] + u[1] * v[1] + u[2] * v[2]) / d))) * 180 / Math.PI; };
+  let lastT = -1, seen = 0, missUntil = 0;
+  const tick = () => {
+    const now = performance.now();
+    if (vid.readyState >= 2 && vid.currentTime !== lastT) { lastT = vid.currentTime;
+      const r = pl.detectForVideo(vid, now), lm = r.landmarks && r.landmarks[0], wl = r.worldLandmarks && r.worldLandmarks[0];
+      g.clearRect(0, 0, cv.width, cv.height);
+      // where the picture really is inside the box (the video keeps its shape)
+      const vw = vid.videoWidth || 16, vh = vid.videoHeight || 9, sc = Math.min(cv.width / vw, cv.height / vh), ox = (cv.width - vw * sc) / 2, oy = (cv.height - vh * sc) / 2, P = p => [ox + p.x * vw * sc, oy + p.y * vh * sc];
+      if ($("#mode").value === "program") { g.strokeStyle = "#ff3b3b"; g.setLineDash([10, 8]); g.lineWidth = 3; g.strokeRect(ox + BAG.x0 * vw * sc, oy + BAG.y0 * vh * sc, (BAG.x1 - BAG.x0) * vw * sc, (BAG.y1 - BAG.y0) * vh * sc); g.setLineDash([]); }
+      if (lm && wl) { seen = now;
+        const s = +$("#sens").value, need = 2.6 - s * .17;                    // how fast the fist must shoot out (metres a second): 2.4 (hard) .. 0.9 (light)
+        for (const h of ["l", "r"]) { const [S, E, W] = ARM[h], ok = lm[W].visibility > .4 && lm[E].visibility > .4;
+          g.strokeStyle = h === "l" ? "#a3e635" : "#a855f7"; g.lineWidth = 6; g.beginPath(); [S, E, W].forEach((i, k) => { const [x, y] = P(lm[i]); k ? g.lineTo(x, y) : g.moveTo(x, y); }); g.stroke();
+          const [wx, wy] = P(lm[W]); g.fillStyle = g.strokeStyle; g.beginPath(); g.arc(wx, wy, 12, 0, 6.283); g.fill();
+          if (!ok) { hist[h] = []; continue; }
+          const H = hist[h]; H.push({ t: now, ext: d3(wl[S], wl[W]), w: { x: wl[W].x, y: wl[W].y, z: wl[W].z }, sx: lm[W].x, sy: lm[W].y, el: angle(wl[S], wl[E], wl[W]) });
+          while (H.length && now - H[0].t > 220) H.shift(); if (H.length < 3) continue;
+          const a = H[0], b = H[H.length - 1], dt = (b.t - a.t) / 1000; if (dt < .05) continue;
+          const extSpeed = (b.ext - a.ext) / dt, speed = d3(a.w, b.w) / dt;
+          // a punch: the fist shoots away from the shoulder, fast, and the arm ends up (nearly) straight
+          if (extSpeed > need && speed > need * 1.1 && b.el > 125 && b.el - a.el > 20 && now > cool[h]) {
+            let hit = true;
+            if ($("#mode").value === "program") { const m = .04; hit = H.some(q => q.sx > BAG.x0 - m && q.sx < BAG.x1 + m && q.sy > BAG.y0 - m && q.sy < BAG.y1 + m); }
+            cool[h] = now + 380;
+            if (hit) { const dx = Math.max(-1, Math.min(1, (b.sx - a.sx) / dt / 1.5)), power = Math.max(.35, Math.min(1.6, speed / 4));
+              send({ cmd: "punch", hand: h, dx: +dx.toFixed(2), power: +power.toFixed(2), x: +b.sx.toFixed(3), y: +b.sy.toFixed(3) });
+              punches++; $("#count").textContent = "🥊 Punches landed: " + punches; const pw = $("#pow"); pw.textContent = power > 1.1 ? "POW!!" : "POW!"; pw.classList.add("on"); setTimeout(() => pw.classList.remove("on"), 120); }
+            else { $("#st").innerHTML = '<span class="muted">Swing and a miss: punch at the bag (inside the red box)</span>'; missUntil = now + 1500; }
+          } } }
+      if (now > missUntil) $("#st").innerHTML = now - seen < 800 ? '<span class="ok">🙂 I can see you. Throw a punch!</span>' : '<span class="bad">I can\'t see you (your shoulders and arms need to be in the picture)</span>';
+    }
+    requestAnimationFrame(tick);
+  };
+  tick();
+}
+$("#go").onclick = async () => { $("#go").disabled = true; $("#go").textContent = "Running…";
+  try { await start(); } catch (e) { $("#st").innerHTML = '<span class="bad">Couldn\'t start: ' + e.message + "</span>"; $("#go").disabled = false; $("#go").textContent = "▶ Start"; } };
+</script>
+</body>
+</html>
