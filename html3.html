@@ -696,7 +696,7 @@ if (MIRROR) {
       Raf.frames++; Raf.ms += performance.now() - a;
       const M = window.Mirror; Raf.eco = !!(M && M.calm && M.calm(a, run.length));
       if (q.length && !Raf.paused) arm(); else last = lastReal = 0; };
-    window.requestAnimationFrame = cb => { q.push(cb); arm(); return 0; };
+    let rid = 0; window.requestAnimationFrame = cb => { q.push(cb); arm(); return ++rid; };      // (a number that's never 0, like the real one: something that keeps it to tell "my loop is running" still works here)
     Raf.pause = p => { Raf.paused = !!p; wake(); };
     Raf.back = b => { b = !!b; if (Raf.bg === b) return; Raf.bg = b; wake(); }; }             // the touchpad has scrolled out of view (true) or back into it (false)
   // (3) The copy's full-screen canvases are drawn at the touchpad's own size in real screen pixels instead of
@@ -3160,8 +3160,8 @@ const ChefArt = {
   sprites: {}, parts: {},
   db: null,
   open() { return this.db || (this.db = new Promise((ok, no) => { const r = indexedDB.open("kzArt", 1); r.onupgradeneeded = () => r.result.createObjectStore("a"); r.onsuccess = () => ok(r.result); r.onerror = () => no(r.error); })); },
-  use(name, a) { const img = new Image(); img.onload = () => { this.sprites[name] = Object.assign({ img }, a); if (name === "tower" && Lurk.up) Lurk.paint(); }; img.src = a.url; },
-  NAMES: ["lli_frame", "lli_backdrop", "plane_fly", "plane_climb", "plane_dive", "plane_turn", "plane_roll", "vin_anim", "yo_flag", "yo_F_UM", "yo_F_ly", "yo_F_UF", "yo_F_lr", "yo_F_li", "yo_F_le", "yo_F_ln", "yo_F_ld", "yo_F_lo", "yo_F_bang", "yo_F_UY", "yo_F_UL", "yo_F_UG", "yo_F_la", "yo_F_lm", "yo_F_under", "yo_F_UW", "yo_F_UP", "ufo_ship", "ufo_beam", "med_soldier_run", "med_soldier_down", "med_soldier_limp", "med_medic_run", "med_medic_reach", "med_medic_throw", "med_meat", "med_L_N", "med_L_E", "med_L_D", "med_L_Y", "med_L_O", "med_L_U", "med_L_M", "med_L_R", "train_engine", "train_car", "train_caboose", "train_wall", "train_L_M", "train_L_Y", "train_L_S", "train_L_T", "train_L_O", "train_L_R", "train_L_2", "train_L_D", "pb_bag", "pirate_ship", "pirate_wave", "pirate_fall", "pirate_slide", "pirate_waving", "scrap_truck", "scrap_truck_empty", "scrap_truck_dump", "scrap_pile", "scrap_guy", "scrap_guy_pop", "scrap_guy_cheer", "scrap_guy_run", "scrap_harvester", "scrap_harvester_go", "vt_L_v", "vt_L_UT", "vt_L_e", "vt_L_r", "vt_L_i", "vt_L_b", "vt_L_l", "vt_boma", "vt_soldier", "vt_soldier_cheer", "vt_soldier_throw", "vt_soldier_salute", "vt_soldier_flip", "gem_base", "gem_sparkle", "gem_pulse", "gem_fire", "gem_glint", "gem_turn", "gem_power", "gem_topspin", "gem_dizzy", "gem_bounce", "gem_twirl", "gem_sway", "gem_shiver", "gem_heart", "gem_bubbles", "gem_orbit", "gem_snow", "gem_galaxy", "gem_jelly", "dice_1", "dice_2", "dice_3", "dice_4", "dice_5", "dice_6", "dice_tumble", "dice_shake", "cs__base", "cs_tank", "cs_tank_form", "cs_tank_idle", "cs_tank_act", "cs_tank_turn", "cs_dog", "cs_dog_form", "cs_dog_idle", "cs_dog_act", "cs_dog_turn", "cs_cat", "cs_cat_form", "cs_cat_idle", "cs_cat_act", "cs_cat_turn", "cs_fish", "cs_fish_form", "cs_fish_idle", "cs_fish_act", "cs_fish_turn", "cs_whale", "cs_whale_form", "cs_whale_idle", "cs_whale_act", "cs_whale_turn", "cs_bunny", "cs_bunny_form", "cs_bunny_idle", "cs_bunny_act", "cs_bunny_turn", "cs_turtle", "cs_turtle_form", "cs_turtle_idle", "cs_turtle_act", "cs_turtle_turn", "cs_duck", "cs_duck_form", "cs_duck_idle", "cs_duck_act", "cs_duck_turn", "cs_elephant", "cs_elephant_form", "cs_elephant_idle", "cs_elephant_act", "cs_elephant_turn", "cs_dino", "cs_dino_form", "cs_dino_idle", "cs_dino_act", "cs_dino_turn", "cs_dragon", "cs_dragon_form", "cs_dragon_idle", "cs_dragon_act", "cs_dragon_turn", "cs_butterfly", "cs_butterfly_form", "cs_butterfly_idle", "cs_butterfly_act", "cs_bird", "cs_bird_form", "cs_bird_idle", "cs_bird_act", "cs_bird_turn", "cs_snail", "cs_snail_form", "cs_snail_idle", "cs_snail_turn", "cs_octopus", "cs_octopus_form", "cs_octopus_idle", "cs_octopus_act", "cs_crab", "cs_crab_form", "cs_crab_idle", "cs_crab_act", "cs_plane", "cs_plane_form", "cs_plane_idle", "cs_plane_act", "cs_plane_turn", "cs_rocket", "cs_rocket_form", "cs_rocket_idle", "cs_rocket_act", "cs_car", "cs_car_form", "cs_car_idle", "cs_car_act", "cs_car_turn", "cs_train", "cs_train_form", "cs_train_idle", "cs_train_act", "cs_train_turn", "cs_boat", "cs_boat_form", "cs_boat_idle", "cs_heli", "cs_heli_form", "cs_heli_idle", "cs_heli_turn", "cs_ufo", "cs_ufo_form", "cs_ufo_idle", "cs_ufo_act", "cs_ufo_turn", "cs_heart", "cs_heart_form", "cs_heart_idle", "cs_heart_act", "cs_star", "cs_star_form", "cs_star_idle", "cs_star_act", "cs_moon", "cs_moon_form", "cs_moon_idle", "cs_mushroom", "cs_mushroom_form", "cs_mushroom_idle", "cs_tree", "cs_tree_form", "cs_tree_idle", "cs_castle", "cs_castle_form", "cs_castle_idle", "cs_ghost", "cs_ghost_form", "cs_ghost_idle", "cs_ghost_act", "cs_pig", "cs_pig_form", "cs_pig_idle", "cs_pig_act", "cs_pig_turn", "cs_sheep", "cs_sheep_form", "cs_sheep_idle", "cs_sheep_act", "cs_sheep_turn", "cs_lion", "cs_lion_form", "cs_lion_idle", "cs_lion_act", "cs_lion_turn", "cs_giraffe", "cs_giraffe_form", "cs_giraffe_idle", "cs_giraffe_turn", "cs_horse", "cs_horse_form", "cs_horse_idle", "cs_horse_act", "cs_horse_turn", "cs_cow", "cs_cow_form", "cs_cow_idle", "cs_cow_act", "cs_cow_turn", "cs_penguin", "cs_penguin_form", "cs_penguin_idle", "cs_penguin_act", "cs_owl", "cs_owl_form", "cs_owl_idle", "cs_owl_act", "cs_frog", "cs_frog_form", "cs_frog_idle", "cs_frog_act", "cs_frog_turn", "cs_snake", "cs_snake_form", "cs_snake_idle", "cs_snake_act", "cs_snake_turn", "cs_shark", "cs_shark_form", "cs_shark_idle", "cs_shark_act", "cs_shark_turn", "cs_dolphin", "cs_dolphin_form", "cs_dolphin_idle", "cs_dolphin_act", "cs_dolphin_turn", "cs_bee", "cs_bee_form", "cs_bee_idle", "cs_bee_act", "cs_bee_turn", "cs_spider", "cs_spider_form", "cs_spider_idle", "cs_mouse", "cs_mouse_form", "cs_mouse_idle", "cs_mouse_act", "cs_mouse_turn", "cs_fox", "cs_fox_form", "cs_fox_idle", "cs_fox_act", "cs_fox_turn", "cs_bear", "cs_bear_form", "cs_bear_idle", "cs_bear_act", "cs_bear_turn", "cs_kangaroo", "cs_kangaroo_form", "cs_kangaroo_idle", "cs_kangaroo_act", "cs_kangaroo_turn", "cs_flamingo", "cs_flamingo_form", "cs_flamingo_idle", "cs_flamingo_turn", "cs_seahorse", "cs_seahorse_form", "cs_seahorse_idle", "cs_seahorse_turn", "cs_jellyfish", "cs_jellyfish_form", "cs_jellyfish_idle", "cs_jellyfish_act", "cs_unicorn", "cs_unicorn_form", "cs_unicorn_idle", "cs_unicorn_act", "cs_unicorn_turn", "cs_guitar", "cs_guitar_form", "cs_guitar_idle", "cs_guitar_act", "cs_umbrella", "cs_umbrella_form", "cs_umbrella_idle", "cs_umbrella_act", "cs_balloon", "cs_balloon_form", "cs_balloon_idle", "cs_balloon_act", "cs_lighthouse", "cs_lighthouse_form", "cs_lighthouse_idle", "cs_lighthouse_act", "cs_house", "cs_house_form", "cs_house_idle", "cs_house_act", "cs_robot", "cs_robot_form", "cs_robot_idle", "cs_robot_act", "cs_skull", "cs_skull_form", "cs_skull_idle", "cs_skull_act", "cs_crown", "cs_crown_form", "cs_crown_idle", "cs_crown_act", "cs_anchor", "cs_anchor_form", "cs_anchor_idle", "cs_sword", "cs_sword_form", "cs_sword_idle", "cs_sword_act", "cs_trophy", "cs_trophy_form", "cs_trophy_idle", "cs_trophy_act", "cs_cupcake", "cs_cupcake_form", "cs_cupcake_idle", "cs_icecream", "cs_icecream_form", "cs_icecream_idle", "cs_pizza", "cs_pizza_form", "cs_pizza_idle", "cs_pizza_turn", "cs_apple", "cs_apple_form", "cs_apple_idle", "cs_bell", "cs_bell_form", "cs_bell_idle", "cs_bell_act", "cs_kite", "cs_kite_form", "cs_kite_idle", "cs_submarine", "cs_submarine_form", "cs_submarine_idle", "cs_submarine_act", "cs_submarine_turn", "cs_bicycle", "cs_bicycle_form", "cs_bicycle_idle", "cs_bicycle_act", "cs_bicycle_turn", "cs_gamepad", "cs_gamepad_form", "cs_gamepad_idle", "cs_gamepad_act", "cf_e_none", "disco_glint", "cf_x_talk_me", "sm_hat", "sm_face", "sm_nose", "sm_arm", "sm_ball", "sm_ball_melt", "sm_puddle", "cf_ref", "cf_x_talk", "cf_x_wide", "cf_x_look_l", "cf_x_look_r", "cf_x_smile", "cf_x_grin", "cf_x_oo", "cf_x_blink", "cf_v_smile_talk", "cf_v_smile_l", "cf_v_smile_r", "cf_v_grin_talk", "cf_v_grin_l", "cf_v_grin_r", "cf_v_oo_talk", "cf_v_oo_l", "cf_v_oo_r", "cf_v_closed_talk", "cf_e_smirk", "cf_v_smirk_talk", "cf_v_smirk_l", "cf_v_smirk_r", "cf_e_wink", "cf_v_wink_talk", "cf_e_laugh", "cf_v_laugh_talk", "cf_e_shocked", "cf_v_shocked_talk", "cf_v_shocked_l", "cf_v_shocked_r", "cf_e_sleepy", "cf_v_sleepy_talk", "cf_v_sleepy_l", "cf_v_sleepy_r", "cf_e_sideeye", "cf_v_sideeye_talk", "cf_v_sideeye_l", "cf_v_sideeye_r", "cf_e_sad", "cf_v_sad_talk", "cf_v_sad_l", "cf_v_sad_r", "cf_e_tongue", "cf_v_tongue_talk", "cf_v_tongue_l", "cf_v_tongue_r", "cf_e_puffed", "cf_v_puffed_talk", "cf_v_puffed_l", "cf_v_puffed_r", "cf_e_determined", "cf_v_determined_talk", "cf_v_determined_l", "cf_v_determined_r", "cf_e_evil", "cf_v_evil_talk", "cf_v_evil_l", "cf_v_evil_r", "cf_e_smug", "cf_v_smug_talk", "cf_v_smug_l", "cf_v_smug_r", "cf_e_confused", "cf_v_confused_talk", "cf_v_confused_l", "cf_v_confused_r", "cf_e_disgusted", "cf_v_disgusted_talk", "cf_v_disgusted_l", "cf_v_disgusted_r", "cf_e_nervous", "cf_v_nervous_talk", "cf_v_nervous_l", "cf_v_nervous_r", "cf_e_kissy", "cf_v_kissy_talk", "cf_v_kissy_l", "cf_v_kissy_r", "cf_e_bored", "cf_v_bored_talk", "cf_v_bored_l", "cf_v_bored_r", "cf_e_excited", "cf_v_excited_talk", "cf_v_excited_l", "cf_v_excited_r", "cf_e_thinking", "cf_v_thinking_talk", "cf_v_thinking_l", "cf_v_thinking_r", "cf_e_scared", "cf_v_scared_talk", "cf_v_scared_l", "cf_v_scared_r", "jinx_flip", "jinx_spin", "jinx_fire", "jinx_launch", "artillery", "golden_banana", "golden_mango", "tower", "eagle_roll", "tank_drive", "soldier_run", "soldier_throw", "grenade", "explosion", "eagle_glide", "eagle_flap", "plane", "title", "chef_parachute", "chef_chop", "chef_jump", "chef_fly", "chef_truck", "cf_x_look_d", "cf_v_smile_d", "cf_v_grin_d", "cf_v_oo_d", "cf_v_smirk_d", "cf_v_shocked_d", "cf_v_sleepy_d", "cf_v_sideeye_d", "cf_v_sad_d", "cf_v_tongue_d", "cf_v_puffed_d", "cf_v_determined_d", "cf_v_evil_d", "cf_v_smug_d", "cf_v_confused_d", "cf_v_disgusted_d", "cf_v_nervous_d", "cf_v_kissy_d", "cf_v_bored_d", "cf_v_excited_d", "cf_v_thinking_d", "cf_v_scared_d"],
+  use(name, a) { const img = new Image(); img.onload = () => { this.sprites[name] = Object.assign({ img }, a); if (name === "tower" && Lurk.up) Lurk.paint(); if (/^plane_/.test(name)) setTimeout(() => Plane.prep(), 250); }; img.src = a.url; },
+  NAMES: ["lli_frame", "lli_backdrop", "plane_fly", "plane_turn", "plane_roll", "vin_anim", "yo_flag", "yo_F_UM", "yo_F_ly", "yo_F_UF", "yo_F_lr", "yo_F_li", "yo_F_le", "yo_F_ln", "yo_F_ld", "yo_F_lo", "yo_F_bang", "yo_F_UY", "yo_F_UL", "yo_F_UG", "yo_F_la", "yo_F_lm", "yo_F_under", "yo_F_UW", "yo_F_UP", "ufo_ship", "ufo_beam", "med_soldier_run", "med_soldier_down", "med_soldier_limp", "med_medic_run", "med_medic_reach", "med_medic_throw", "med_meat", "med_L_N", "med_L_E", "med_L_D", "med_L_Y", "med_L_O", "med_L_U", "med_L_M", "med_L_R", "train_engine", "train_car", "train_caboose", "train_wall", "train_L_M", "train_L_Y", "train_L_S", "train_L_T", "train_L_O", "train_L_R", "train_L_2", "train_L_D", "pb_bag", "pirate_ship", "pirate_wave", "pirate_fall", "pirate_slide", "pirate_waving", "scrap_truck", "scrap_truck_empty", "scrap_truck_dump", "scrap_pile", "scrap_guy", "scrap_guy_pop", "scrap_guy_cheer", "scrap_guy_run", "scrap_harvester", "scrap_harvester_go", "vt_L_v", "vt_L_UT", "vt_L_e", "vt_L_r", "vt_L_i", "vt_L_b", "vt_L_l", "vt_boma", "vt_soldier", "vt_soldier_cheer", "vt_soldier_throw", "vt_soldier_salute", "vt_soldier_flip", "gem_base", "gem_sparkle", "gem_pulse", "gem_fire", "gem_glint", "gem_turn", "gem_power", "gem_topspin", "gem_dizzy", "gem_bounce", "gem_twirl", "gem_sway", "gem_shiver", "gem_heart", "gem_bubbles", "gem_orbit", "gem_snow", "gem_galaxy", "gem_jelly", "dice_1", "dice_2", "dice_3", "dice_4", "dice_5", "dice_6", "dice_tumble", "dice_shake", "cs__base", "cs_tank", "cs_tank_form", "cs_tank_idle", "cs_tank_act", "cs_tank_turn", "cs_dog", "cs_dog_form", "cs_dog_idle", "cs_dog_act", "cs_dog_turn", "cs_cat", "cs_cat_form", "cs_cat_idle", "cs_cat_act", "cs_cat_turn", "cs_fish", "cs_fish_form", "cs_fish_idle", "cs_fish_act", "cs_fish_turn", "cs_whale", "cs_whale_form", "cs_whale_idle", "cs_whale_act", "cs_whale_turn", "cs_bunny", "cs_bunny_form", "cs_bunny_idle", "cs_bunny_act", "cs_bunny_turn", "cs_turtle", "cs_turtle_form", "cs_turtle_idle", "cs_turtle_act", "cs_turtle_turn", "cs_duck", "cs_duck_form", "cs_duck_idle", "cs_duck_act", "cs_duck_turn", "cs_elephant", "cs_elephant_form", "cs_elephant_idle", "cs_elephant_act", "cs_elephant_turn", "cs_dino", "cs_dino_form", "cs_dino_idle", "cs_dino_act", "cs_dino_turn", "cs_dragon", "cs_dragon_form", "cs_dragon_idle", "cs_dragon_act", "cs_dragon_turn", "cs_butterfly", "cs_butterfly_form", "cs_butterfly_idle", "cs_butterfly_act", "cs_bird", "cs_bird_form", "cs_bird_idle", "cs_bird_act", "cs_bird_turn", "cs_snail", "cs_snail_form", "cs_snail_idle", "cs_snail_turn", "cs_octopus", "cs_octopus_form", "cs_octopus_idle", "cs_octopus_act", "cs_crab", "cs_crab_form", "cs_crab_idle", "cs_crab_act", "cs_plane", "cs_plane_form", "cs_plane_idle", "cs_plane_act", "cs_plane_turn", "cs_rocket", "cs_rocket_form", "cs_rocket_idle", "cs_rocket_act", "cs_car", "cs_car_form", "cs_car_idle", "cs_car_act", "cs_car_turn", "cs_train", "cs_train_form", "cs_train_idle", "cs_train_act", "cs_train_turn", "cs_boat", "cs_boat_form", "cs_boat_idle", "cs_heli", "cs_heli_form", "cs_heli_idle", "cs_heli_turn", "cs_ufo", "cs_ufo_form", "cs_ufo_idle", "cs_ufo_act", "cs_ufo_turn", "cs_heart", "cs_heart_form", "cs_heart_idle", "cs_heart_act", "cs_star", "cs_star_form", "cs_star_idle", "cs_star_act", "cs_moon", "cs_moon_form", "cs_moon_idle", "cs_mushroom", "cs_mushroom_form", "cs_mushroom_idle", "cs_tree", "cs_tree_form", "cs_tree_idle", "cs_castle", "cs_castle_form", "cs_castle_idle", "cs_ghost", "cs_ghost_form", "cs_ghost_idle", "cs_ghost_act", "cs_pig", "cs_pig_form", "cs_pig_idle", "cs_pig_act", "cs_pig_turn", "cs_sheep", "cs_sheep_form", "cs_sheep_idle", "cs_sheep_act", "cs_sheep_turn", "cs_lion", "cs_lion_form", "cs_lion_idle", "cs_lion_act", "cs_lion_turn", "cs_giraffe", "cs_giraffe_form", "cs_giraffe_idle", "cs_giraffe_turn", "cs_horse", "cs_horse_form", "cs_horse_idle", "cs_horse_act", "cs_horse_turn", "cs_cow", "cs_cow_form", "cs_cow_idle", "cs_cow_act", "cs_cow_turn", "cs_penguin", "cs_penguin_form", "cs_penguin_idle", "cs_penguin_act", "cs_owl", "cs_owl_form", "cs_owl_idle", "cs_owl_act", "cs_frog", "cs_frog_form", "cs_frog_idle", "cs_frog_act", "cs_frog_turn", "cs_snake", "cs_snake_form", "cs_snake_idle", "cs_snake_act", "cs_snake_turn", "cs_shark", "cs_shark_form", "cs_shark_idle", "cs_shark_act", "cs_shark_turn", "cs_dolphin", "cs_dolphin_form", "cs_dolphin_idle", "cs_dolphin_act", "cs_dolphin_turn", "cs_bee", "cs_bee_form", "cs_bee_idle", "cs_bee_act", "cs_bee_turn", "cs_spider", "cs_spider_form", "cs_spider_idle", "cs_mouse", "cs_mouse_form", "cs_mouse_idle", "cs_mouse_act", "cs_mouse_turn", "cs_fox", "cs_fox_form", "cs_fox_idle", "cs_fox_act", "cs_fox_turn", "cs_bear", "cs_bear_form", "cs_bear_idle", "cs_bear_act", "cs_bear_turn", "cs_kangaroo", "cs_kangaroo_form", "cs_kangaroo_idle", "cs_kangaroo_act", "cs_kangaroo_turn", "cs_flamingo", "cs_flamingo_form", "cs_flamingo_idle", "cs_flamingo_turn", "cs_seahorse", "cs_seahorse_form", "cs_seahorse_idle", "cs_seahorse_turn", "cs_jellyfish", "cs_jellyfish_form", "cs_jellyfish_idle", "cs_jellyfish_act", "cs_unicorn", "cs_unicorn_form", "cs_unicorn_idle", "cs_unicorn_act", "cs_unicorn_turn", "cs_guitar", "cs_guitar_form", "cs_guitar_idle", "cs_guitar_act", "cs_umbrella", "cs_umbrella_form", "cs_umbrella_idle", "cs_umbrella_act", "cs_balloon", "cs_balloon_form", "cs_balloon_idle", "cs_balloon_act", "cs_lighthouse", "cs_lighthouse_form", "cs_lighthouse_idle", "cs_lighthouse_act", "cs_house", "cs_house_form", "cs_house_idle", "cs_house_act", "cs_robot", "cs_robot_form", "cs_robot_idle", "cs_robot_act", "cs_skull", "cs_skull_form", "cs_skull_idle", "cs_skull_act", "cs_crown", "cs_crown_form", "cs_crown_idle", "cs_crown_act", "cs_anchor", "cs_anchor_form", "cs_anchor_idle", "cs_sword", "cs_sword_form", "cs_sword_idle", "cs_sword_act", "cs_trophy", "cs_trophy_form", "cs_trophy_idle", "cs_trophy_act", "cs_cupcake", "cs_cupcake_form", "cs_cupcake_idle", "cs_icecream", "cs_icecream_form", "cs_icecream_idle", "cs_pizza", "cs_pizza_form", "cs_pizza_idle", "cs_pizza_turn", "cs_apple", "cs_apple_form", "cs_apple_idle", "cs_bell", "cs_bell_form", "cs_bell_idle", "cs_bell_act", "cs_kite", "cs_kite_form", "cs_kite_idle", "cs_submarine", "cs_submarine_form", "cs_submarine_idle", "cs_submarine_act", "cs_submarine_turn", "cs_bicycle", "cs_bicycle_form", "cs_bicycle_idle", "cs_bicycle_act", "cs_bicycle_turn", "cs_gamepad", "cs_gamepad_form", "cs_gamepad_idle", "cs_gamepad_act", "cf_e_none", "disco_glint", "cf_x_talk_me", "sm_hat", "sm_face", "sm_nose", "sm_arm", "sm_ball", "sm_ball_melt", "sm_puddle", "cf_ref", "cf_x_talk", "cf_x_wide", "cf_x_look_l", "cf_x_look_r", "cf_x_smile", "cf_x_grin", "cf_x_oo", "cf_x_blink", "cf_v_smile_talk", "cf_v_smile_l", "cf_v_smile_r", "cf_v_grin_talk", "cf_v_grin_l", "cf_v_grin_r", "cf_v_oo_talk", "cf_v_oo_l", "cf_v_oo_r", "cf_v_closed_talk", "cf_e_smirk", "cf_v_smirk_talk", "cf_v_smirk_l", "cf_v_smirk_r", "cf_e_wink", "cf_v_wink_talk", "cf_e_laugh", "cf_v_laugh_talk", "cf_e_shocked", "cf_v_shocked_talk", "cf_v_shocked_l", "cf_v_shocked_r", "cf_e_sleepy", "cf_v_sleepy_talk", "cf_v_sleepy_l", "cf_v_sleepy_r", "cf_e_sideeye", "cf_v_sideeye_talk", "cf_v_sideeye_l", "cf_v_sideeye_r", "cf_e_sad", "cf_v_sad_talk", "cf_v_sad_l", "cf_v_sad_r", "cf_e_tongue", "cf_v_tongue_talk", "cf_v_tongue_l", "cf_v_tongue_r", "cf_e_puffed", "cf_v_puffed_talk", "cf_v_puffed_l", "cf_v_puffed_r", "cf_e_determined", "cf_v_determined_talk", "cf_v_determined_l", "cf_v_determined_r", "cf_e_evil", "cf_v_evil_talk", "cf_v_evil_l", "cf_v_evil_r", "cf_e_smug", "cf_v_smug_talk", "cf_v_smug_l", "cf_v_smug_r", "cf_e_confused", "cf_v_confused_talk", "cf_v_confused_l", "cf_v_confused_r", "cf_e_disgusted", "cf_v_disgusted_talk", "cf_v_disgusted_l", "cf_v_disgusted_r", "cf_e_nervous", "cf_v_nervous_talk", "cf_v_nervous_l", "cf_v_nervous_r", "cf_e_kissy", "cf_v_kissy_talk", "cf_v_kissy_l", "cf_v_kissy_r", "cf_e_bored", "cf_v_bored_talk", "cf_v_bored_l", "cf_v_bored_r", "cf_e_excited", "cf_v_excited_talk", "cf_v_excited_l", "cf_v_excited_r", "cf_e_thinking", "cf_v_thinking_talk", "cf_v_thinking_l", "cf_v_thinking_r", "cf_e_scared", "cf_v_scared_talk", "cf_v_scared_l", "cf_v_scared_r", "jinx_flip", "jinx_spin", "jinx_fire", "jinx_launch", "artillery", "golden_banana", "golden_mango", "tower", "eagle_roll", "tank_drive", "soldier_run", "soldier_throw", "grenade", "explosion", "eagle_glide", "eagle_flap", "plane", "title", "chef_parachute", "chef_chop", "chef_jump", "chef_fly", "chef_truck", "cf_x_look_d", "cf_v_smile_d", "cf_v_grin_d", "cf_v_oo_d", "cf_v_smirk_d", "cf_v_shocked_d", "cf_v_sleepy_d", "cf_v_sideeye_d", "cf_v_sad_d", "cf_v_tongue_d", "cf_v_puffed_d", "cf_v_determined_d", "cf_v_evil_d", "cf_v_smug_d", "cf_v_confused_d", "cf_v_disgusted_d", "cf_v_nervous_d", "cf_v_kissy_d", "cf_v_bored_d", "cf_v_excited_d", "cf_v_thinking_d", "cf_v_scared_d"],
   async load() {
     try { const db = await this.open(), get = n => { const r = db.transaction("a").objectStore("a").get(n); r.onsuccess = () => { if (r.result) this.use(n, r.result); }; };
       const all = () => new Promise(ok => { const r = db.transaction("a").objectStore("a").getAllKeys(); r.onsuccess = () => ok(r.result || []); r.onerror = () => ok([]); });
@@ -6870,89 +6870,175 @@ const Medic = {
 
 /* ================= ✈️ the plane (EFFECTS › Plane on/off) =================
    While it's on, touching the touchpad brings in your plane (Foxhole-style: a boxy armoured cabin at the nose, the
-   propeller just behind it, long slatted wings, a thin tail boom). It goes where your finger is, smoothly (like on a
-   soft spring), facing the way it's going (turning around when you go back the other way) and tipping its nose up or
-   down as it climbs or dives; with your finger still, it waits there, gently bobbing. The buttons under the touchpad make it
-   loop, barrel-roll, and fire its machine gun (hold). Switched off, it flies off the side of the screen.
-   Art: 🎨 Art › PLANE ART: plane_fly (level, gun marked), plane_climb, plane_dive (nose up / down), plane_turn
-   (turning around, right to left), plane_roll (a barrel roll). It blends between them by how it's flying. Until made, a drawn stand-in. */
+   propeller just behind it, long slatted wings, a thin tail boom). It flies to wherever your finger is, smoothly:
+   - your finger's place is glided evenly from each place it's told to the next (it's told every frame on the phone, but
+     only about 15 times a second in OBS over the internet), and never moves faster than the plane can fly; the plane
+     follows that on a soft spring that never overshoots, so it speeds up and slows down gently and stops on your finger;
+   - its nose tips up or down by how steeply it's climbing or diving (smoothly: quick wiggles barely tip it);
+   - it turns around when your finger goes well behind it (or it has been backing up for a moment), swinging round
+     smoothly, and it can swing back halfway through; small moves near it don't turn it;
+   - a loop or a barrel roll (the buttons under the touchpad) is flown on top of that, so it keeps following meanwhile;
+     the gun fires while its button is held.
+   Switched off, it flies off the side it's facing.
+   Art: 🎨 Art › PLANE ART: plane_fly (level, propeller spinning, gun marked), plane_turn (turning around: its frames
+   are picked by how far round it has turned, not played by the clock), plane_roll (a barrel roll). Climbing and diving
+   are the level picture tilted, which is smooth at any angle. The pictures are made ready once (build): every frame is
+   pinned by the middle of the plane in it and the turn and roll are sized to match the level picture, so going from one
+   picture to another never makes it jump, grow or shrink. Until they're made, a drawn stand-in.
+   (One loop only, kept with its own flag: in the touchpad copy requestAnimationFrame always answers 0.) */
 const Plane = {
-  on: false, shown: false, leaving: false, x: 1280, y: 720, tx: 1280, ty: 720, F: 1, p: 0, sp: 600, pv: 0, man: null, turn: null, fire: false,
-  bullets: [], flashAt: 0, lastShot: 0, lastSnd: 0, W: 420, raf: 0, held: false,
-  toggle(v) { v = v == null ? !this.on : !!v; if (v === this.on) return this.on; this.on = v; this.fire = false;
-    if (v) { this.shown = false; this.leaving = false; } else if (this.shown) this.leaving = true; this.start(); if (!MIRROR) Mirror.send(true); return this.on; },
-  go(x, y) { if (!this.on) return; this.tx = Math.max(0, Math.min(1, +x || 0)) * 2560; this.ty = Math.max(0, Math.min(1, +y || 0)) * 1440; this.touchAt = performance.now();
-    if (!this.shown) { this.shown = true; this.leaving = false; this.F = this.tx > 1280 ? -1 : 1; this.x = this.F > 0 ? -260 : 2820; this.y = this.ty; this.vx = this.F * 1400; this.vy = 0; this.p = 0; this.man = null; this.turn = null; } this.start(); },
-  act(a) { if (!this.on || !this.shown || this.man || this.turn) return;
-    if (a === "loop") { const R = 220; this.man = { a, t: 0, dur: 1600, th0: this.p, cx: this.x - Math.sin(this.p) * R * this.F, cy: this.y - Math.cos(this.p) * R, F: this.F }; }
-    else if (a === "roll") this.man = { a, t: 0, dur: 950 }; },
-  setFire(v) { this.fire = !!v && this.on && this.shown; },
+  on: false, shown: false, leaving: false, fire: false, fireAt: 0, running: false, W: 420, VT: 3200,       // (VT: as fast as it flies, in stage pixels a second)
+  x: 1280, y: 720, vx: 0, vy: 0,                                    // where it is, and how fast it's going
+  tx: 1280, ty: 720, gx: 1280, gy: 720, gs: 0, goAt: 0, gap: 16,    // your finger: the newest place told, the place gliding there (and how fast), how often it's told (ms)
+  D: 1, psi: 0, psiV: 0, psiT: 0, back: 0,                          // which way it's heading (1 right, -1 left), how far round it has turned (0 = facing right … π = facing left), how far it has backed up
+  p: 0, pV: 0,                                                      // its nose: up (+) or down (-), in radians
+  man: null, want: null, bullets: [], flashAt: 0, lastShot: 0, lastSnd: 0, prepT: 0,
+  toggle(v) { v = v == null ? !this.on : !!v; if (v === this.on) return this.on; this.on = v; this.fire = false; this.want = null;
+    if (v) { this.prep(); if (this.leaving) { this.leaving = false; this.aim(Math.max(260, Math.min(2300, this.x)), Math.max(200, Math.min(1240, this.y))); } }     // (switched back on while flying off: it comes back and waits)
+    else if (this.shown) { this.leaving = true; this.aim(this.D > 0 ? 3500 : -940, this.y - 200); }
+    this.start(); if (!MIRROR) Mirror.send(true); return this.on; },
+  aim(x, y) { this.tx = x; this.ty = y; this.gs = 1e9; this.goAt = performance.now(); },
+  go(x, y) { if (!this.on) return; const now = performance.now(), nx = Math.max(0, Math.min(1, +x || 0)) * 2560, ny = Math.max(0, Math.min(1, +y || 0)) * 1440;
+    if (!this.shown) {                                              // it flies in from the nearer side, at the height of your finger
+      this.shown = true; this.leaving = false; this.D = nx > 1280 ? -1 : 1; this.x = this.gx = this.D > 0 ? -300 : 2860; this.y = this.gy = ny; this.vx = this.D * 1500; this.vy = 0;
+      this.psi = this.psiT = this.D > 0 ? 0 : Math.PI; this.psiV = this.p = this.pV = this.back = 0; this.man = this.want = null; this.gap = 16; }
+    else { const since = now - this.goAt; if (since > 3 && since < 260) this.gap += (since - this.gap) * .3; }
+    this.goAt = now; this.tx = nx; this.ty = ny; this.gs = Math.hypot(nx - this.gx, ny - this.gy) / Math.max(.012, this.gap / 1000);      // the speed that gets the glide there just as the next place is due
+    this.start(); },
+  act(a) { if (this.on && this.shown && !this.leaving && (a === "loop" || a === "roll")) this.want = { a, at: performance.now() }; },
+  setFire(v) { this.fire = !!v && this.on && this.shown; this.fireAt = performance.now(); },
   spr(k) { const a = ChefArt.sprites[k]; return a && a.img && a.img.complete && a.img.naturalWidth ? a : null; },
-  start() { if (this.raf) return; let last = performance.now();
-    const step = now => { const dt = Math.min(.034, (now - last) / 1000); last = now; this.tick(dt, now); this.draw(now);
-      if (this.on || this.leaving || this.bullets.length) this.raf = requestAnimationFrame(step); else { this.raf = 0; $("#planecv").getContext("2d").clearRect(0, 0, 2560, 1440); } };
-    this.raf = requestAnimationFrame(step); },
-  // the way it's pointing, on screen (radians; 0 = right)
-  heading() { return this.F > 0 ? -this.p : Math.PI + this.p; },
+  start() { if (this.running) return; this.running = true; let last = performance.now();
+    const step = now => { const dt = Math.min(.05, Math.max(.001, (now - last) / 1000)); last = now;
+      try { this.tick(dt, now); this.draw(now); } catch (e) { console.error(e); }
+      if (this.shown || this.bullets.length) requestAnimationFrame(step); else this.running = false; };
+    requestAnimationFrame(step); },
+  // one step of a spring that never overshoots (worked out exactly, so it's the same at any frame rate): [new place, new speed]
+  spring(x, v, to, w, dt) { const d = x - to, e = Math.exp(-w * dt), t = (v + w * d) * dt; return [to + (d + t) * e, (v - w * t) * e]; },
   tick(dt, now) {
-    if (this.shown) { const m = this.man;
-      if (this.leaving) { this.tx = this.F > 0 ? 3200 : -640; if (this.x > 2560 + 420 || this.x < -420) { this.shown = false; this.leaving = false; this.man = null; this.turn = null; } }
-      if (m && m.a === "loop") { m.t += dt * 1000; const q = Math.min(1, m.t / m.dur), e = q < .5 ? 2 * q * q : 1 - Math.pow(-2 * q + 2, 2) / 2, th = m.th0 + e * Math.PI * 2, R = 220;
-        this.x = m.cx + Math.sin(th) * R * m.F; this.y = m.cy + Math.cos(th) * R; this.p = th; this.vx = 0; this.vy = 0;
-        if (q >= 1) { this.p = m.th0; this.man = null; } }
-      else this.fly(dt, now);
-      if (m && m.a === "roll") { m.t += dt * 1000; if (m.t >= m.dur) this.man = null; }
-      const T = this.turn; if (T) { T.t += dt * 1000; if (T.t >= T.dur) { this.F = -T.F0; this.turn = null; } }
+    if (this.shown) {
+      // your finger's place, glided: there just as the next place is due, and never faster than the plane flies
+      const gd = Math.hypot(this.tx - this.gx, this.ty - this.gy);
+      if (gd > .01) { const st = Math.min(gd, Math.min(this.VT, Math.max(this.gs, 240)) * dt); this.gx += (this.tx - this.gx) / gd * st; this.gy += (this.ty - this.gy) / gd * st; }
+      [this.x, this.vx] = this.spring(this.x, this.vx, this.gx, 11, dt); [this.y, this.vy] = this.spring(this.y, this.vy, this.gy, 11, dt);
+      const sp = Math.hypot(this.vx, this.vy);
+      if (this.leaving && (this.x > 2560 + 380 || this.x < -380)) { this.shown = this.leaving = this.fire = false; this.man = this.want = null; }
+      // which way it heads: it turns around when your finger is well behind it, or once it has backed up a little way
+      // (a small move back near it, or a lean back while going nearly straight up or down, doesn't turn it)
+      if (!this.leaving && !this.man) { const f = this.vx * this.D;
+        if (f < 0 && Math.abs(this.vx) > .25 * Math.abs(this.vy)) this.back -= f * dt; else if (f > 40) this.back = 0;
+        if ((this.tx - this.x) * this.D < -190 || this.back > 140) { this.D = -this.D; this.back = 0; } }
+      // it swings round in about half a second: the angle it's swinging to moves round at an even rate and it follows
+      // that on a spring, so the turn starts gently, ends gently, and can be turned back at any point
+      { const to = this.D > 0 ? 0 : Math.PI, st = 9.2 * dt; this.psiT += Math.max(-st, Math.min(st, to - this.psiT)); [this.psi, this.psiV] = this.spring(this.psi, this.psiV, this.psiT, 18, dt);
+        if (Math.abs(this.psiT - to) < 1e-6 && Math.abs(this.psi - to) < .003 && Math.abs(this.psiV) < .02) { this.psi = this.psiT = to; this.psiV = 0; } }
+      // its nose: up when climbing, down when diving, by how steep its path is (about 45° at most, and less when it's
+      // hardly moving forward); level, swaying a little, when it's waiting. It swings there on a spring too, so it never snaps
+      { const m = Math.max(0, Math.min(1, (sp - 60) / 240)), k = m * m * (3 - 2 * m);
+        const want = k * Math.max(-.8, Math.min(.8, Math.atan2(-this.vy, Math.max(Math.abs(this.vx), 1400)))) + (1 - k) * Math.sin(now / 1100) * .04;
+        [this.p, this.pV] = this.spring(this.p, this.pV, want, 7, dt); }
+      // a loop or a roll starts once it's side-on (pressed during a turn-around, it waits for that)
+      const side = Math.abs(Math.cos(this.psi)) > .93;
+      if (this.want && now - this.want.at > 1500) this.want = null;
+      if (this.want && !this.man && side && !this.leaving) { const a = this.want.a; this.want = null; this.man = a === "loop" ? { a, t: 0, dur: 1600, th0: this.p, F: this.psi < Math.PI / 2 ? 1 : -1 } : { a, t: 0, dur: 950 }; }
+      if (this.man && (this.man.t += dt * 1000) >= this.man.dur) this.man = null;
+      // the gun, while it's held: a bullet every 65 ms from its muzzle, the way the nose points
+      if (this.fire && now - this.fireAt > 1300) this.fire = false;       // (the app says "still held" a few times a second; if that stops coming, so does the gun)
+      if (this.fire && this.shown && !this.leaving && side && now - this.lastShot > 65) { this.lastShot = this.flashAt = now;
+        const P = this.pose(now), mz = this.muzzle(P), hx = P.F * Math.cos(P.pd), hy = -Math.sin(P.pd); this.bullets.push({ x: mz[0], y: mz[1], vx: hx * 3000 + this.vx * .4, vy: hy * 3000 + this.vy * .4 });
+        if (!MIRROR && now - this.lastSnd > 90) { this.lastSnd = now; try { Sound.init(); const C = Sound.ctx; if (C) { const t = C.currentTime; Sound.burst(t, .07, .07, "bandpass", 2200, 700); Sound.tone(t, .06, .045, 210, 70, "square"); } } catch (e) {} } }
     }
-    // the gun: a bullet every 65 ms from the muzzle, the way it's pointing
-    if (this.fire && this.shown && !this.leaving && !this.turn && now - this.lastShot > 65) { this.lastShot = now; this.flashAt = now;
-      const mz = this.muzzle(), h = this.heading(), c = Math.cos(h), s = Math.sin(h); this.bullets.push({ x: mz[0], y: mz[1], vx: c * 3000 + this.vx * .4, vy: s * 3000 + this.vy * .4 });
-      if (!MIRROR && now - this.lastSnd > 90) { this.lastSnd = now; try { Sound.init(); const C = Sound.ctx; if (C) { const t = C.currentTime; Sound.burst(t, .07, .07, "bandpass", 2200, 700); Sound.tone(t, .06, .045, 210, 70, "square"); } } catch (e) {} } }
-    this.bullets.forEach(b => { b.x += b.vx * dt; b.y += b.vy * dt; }); this.bullets = this.bullets.filter(b => b.x > -100 && b.x < 2660 && b.y > -100 && b.y < 1540);
+    if (this.bullets.length) { this.bullets.forEach(b => { b.x += b.vx * dt; b.y += b.vy * dt; }); this.bullets = this.bullets.filter(b => b.x > -100 && b.x < 2660 && b.y > -100 && b.y < 1540); }
   },
-  // it goes where your finger is, smoothly: pulled toward it like on a soft spring that never overshoots (and never
-  // faster than a plane would), turning to face the way it's going and tipping its nose up or down as it climbs or dives
-  fly(dt, now) { const W0 = 7.5, ax = W0 * W0 * (this.tx - this.x) - 2 * W0 * this.vx, ay = W0 * W0 * (this.ty - this.y) - 2 * W0 * this.vy;
-    this.vx += ax * dt; this.vy += ay * dt; const sp = Math.hypot(this.vx, this.vy), MAX = 2400; if (sp > MAX) { this.vx *= MAX / sp; this.vy *= MAX / sp; }
-    this.x += this.vx * dt; this.y += this.vy * dt;
-    // going the other way for a moment (not just a wobble): it turns around
-    if (!this.turn && !this.man && this.vx * this.F < -260) { this.backT = (this.backT || 0) + dt; if (this.backT > .08) { this.turn = { t: 0, dur: 520, F0: this.F }; this.backT = 0; } } else this.backT = 0;
-    // nose up when climbing, down when diving (at most about 35°), level and gently bobbing when it's waiting
-    const along = Math.max(Math.abs(this.vx), 420), want = sp < 60 ? Math.sin(now / 900) * .05 : Math.max(-.62, Math.min(.62, Math.atan2(-this.vy, along)));
-    this.p += (want - this.p) * Math.min(1, dt * 6); },
-  size(k) { const a = this.spr(k || "plane_fly"), W = this.W; return a ? [W, W * a.h / a.w, a] : [W, W * .42, null]; },
-  muzzle() { const [W, H, a] = this.size(), n = a && a.nozzle || [.98, .55], lx = (n[0] - .5) * W, ly = (n[1] - .5) * H, h = -this.p;
-    const c = Math.cos(h), s = Math.sin(h), rx = lx * c - ly * s, ry = lx * s + ly * c; return [this.x + rx * this.F, this.y + ry]; },
-  // which pictures to show now, and how strongly (a blend of two at the edges)
-  poses() { const deg = this.p * 180 / Math.PI, m = this.man;
-    if (m && m.a === "loop") return [["plane_fly", 1, this.p]];
-    const up = this.spr("plane_climb"), dn = this.spr("plane_dive");
-    const out = []; const blend = (a, b, k, rotA, rotB) => { if (k <= 0) out.push([a, 1, rotA]); else if (k >= 1) out.push([b, 1, rotB]); else { out.push([a, 1, rotA]); out.push([b, k, rotB]); } };
-    if (deg > 12 && up) { blend("plane_fly", "plane_climb", (deg - 12) / 14, this.p, this.p - 30 * Math.PI / 180); return out; }
-    if (deg < -12 && dn) { blend("plane_fly", "plane_dive", (-deg - 12) / 14, this.p, this.p + 30 * Math.PI / 180); return out; }
-    return [["plane_fly", 1, this.p]]; },
+  // where it's drawn and how its nose points right now: the spot it has followed your finger to, plus the loop it may be flying
+  pose(now) { const m = this.man; let x = this.x, y = this.y, pd = this.p, F = this.psi < Math.PI / 2 ? 1 : -1;
+    if (m && m.a === "loop") { const q = Math.min(1, m.t / m.dur), e = q * q * (3 - 2 * q), th = m.th0 + e * Math.PI * 2, R = 220; F = m.F;
+      x += R * F * (Math.sin(th) - Math.sin(m.th0)); y += R * (Math.cos(th) - Math.cos(m.th0)); pd += e * Math.PI * 2; }
+    y += Math.sin(now / 420) * 4 * Math.max(0, 1 - Math.hypot(this.vx, this.vy) / 300);         // waiting: it bobs a little
+    return { x, y, pd, F }; },
+  muzzle(P) { const L = this.bk("plane_fly"), m = L ? L.muz : [this.W * .53, this.W * .009], c = Math.cos(P.pd), s = Math.sin(P.pd);
+    return [P.x + P.F * (m[0] * c + m[1] * s), P.y - m[0] * s + m[1] * c]; },
   draw(now) { const g = $("#planecv").getContext("2d"); g.clearRect(0, 0, 2560, 1440);
-    g.save(); g.lineCap = "round"; this.bullets.forEach(b => { const sp = Math.hypot(b.vx, b.vy) || 1, ux = b.vx / sp, uy = b.vy / sp;
+    if (this.bullets.length) { g.save(); g.lineCap = "round"; this.bullets.forEach(b => { const sp = Math.hypot(b.vx, b.vy) || 1, ux = b.vx / sp, uy = b.vy / sp;
       g.strokeStyle = "rgba(255,190,70,.35)"; g.lineWidth = 9; g.beginPath(); g.moveTo(b.x - ux * 46, b.y - uy * 46); g.lineTo(b.x, b.y); g.stroke();
-      g.strokeStyle = "#fff4c2"; g.lineWidth = 3.5; g.beginPath(); g.moveTo(b.x - ux * 40, b.y - uy * 40); g.lineTo(b.x, b.y); g.stroke(); }); g.restore();
+      g.strokeStyle = "#fff4c2"; g.lineWidth = 3.5; g.beginPath(); g.moveTo(b.x - ux * 40, b.y - uy * 40); g.lineTo(b.x, b.y); g.stroke(); }); g.restore(); }
     if (!this.shown) return;
-    const W = this.W, m = this.man, T = this.turn, bob = Math.sin(now / 380) * 3;
-    const frameOf = (a, t) => Math.floor(t / (a.ms || 60)) % (a.frames || 1);
-    const pic = (a, f, rot, alpha, flipX) => { const h = W * a.h / a.w; g.save(); g.globalAlpha = alpha; g.translate(this.x, this.y + bob); g.scale(flipX, 1); g.rotate(-rot); g.drawImage(a.img, f * a.w, 0, a.w, a.h, -W / 2, -h / 2, W, h); g.restore(); };
-    if (T) { const tu = this.spr("plane_turn"), q = Math.min(1, T.t / T.dur);
-      if (tu) pic(tu, Math.min(tu.frames - 1, Math.floor(q * tu.frames)), this.p, 1, T.F0);                       // (its turn is drawn right-to-left; mirrored for left-to-right)
-      else { const a = this.spr("plane_fly"), sx = Math.cos(Math.PI * q) * T.F0;                                     // no picture: it squeezes round
-        g.save(); g.translate(this.x, this.y + bob); g.scale(Math.abs(sx) < .05 ? .05 * Math.sign(sx || 1) : sx, 1); g.rotate(-this.p);
-        if (a) { const H = W * a.h / a.w; g.drawImage(a.img, frameOf(a, now) * a.w, 0, a.w, a.h, -W / 2, -H / 2, W, H); } else this.drawn(g, W, W * .42, now); g.restore(); } }
-    else if (m && m.a === "roll" && this.spr("plane_roll")) { const r = this.spr("plane_roll"); pic(r, Math.min(r.frames - 1, Math.floor(m.t / m.dur * r.frames)), this.p, 1, this.F); }
-    else { const rollS = m && m.a === "roll" ? Math.cos(m.t / m.dur * Math.PI * 2) : 1, list = this.poses(); let any = false;
-      list.forEach(([k, al, rot]) => { const a = this.spr(k); if (!a) return; any = true;
-        if (rollS !== 1) { const h = W * a.h / a.w; g.save(); g.globalAlpha = al; g.translate(this.x, this.y + bob); g.scale(this.F, 1); g.rotate(-rot); g.scale(1, rollS); g.drawImage(a.img, frameOf(a, now) * a.w, 0, a.w, a.h, -W / 2, -h / 2, W, h); g.restore(); }
-        else pic(a, frameOf(a, now), rot, al, this.F); });
-      if (!any) { g.save(); g.translate(this.x, this.y + bob); g.scale(this.F, rollS); g.rotate(-this.p); this.drawn(g, W, W * .42, now); g.restore(); } }
-    if (now - this.flashAt < 45 && !T) { const mz = this.muzzle(); g.save(); g.translate(mz[0], mz[1]); g.rotate(this.heading());
+    const P = this.pose(now), m = this.man, L = this.bk("plane_fly"), c = Math.cos(this.psi);
+    if (m && m.a === "roll") { const R = this.bk("plane_roll"), q = Math.min(.9999, m.t / m.dur);
+      if (R) this.put(g, R.f[Math.floor(q * R.f.length)], P.x, P.y, P.pd, P.F, R.flip, 1);
+      else this.body(g, L, now, P.x, P.y, P.pd, P.F, Math.cos(q * Math.PI * 2)); }                                  // (no roll picture: the level one squashes over and back)
+    else { const T = Math.abs(c) < .9995 ? this.bk("plane_turn") : null, n = T ? T.f.length : 0, i = T ? Math.round((T.dir > 0 ? this.psi : Math.PI - this.psi) / Math.PI * (n - 1)) : 0;
+      if (T && i > 0 && i < n - 1) this.put(g, T.f[i], P.x, P.y, P.pd * c, 1, 1, 1);                                // turning around: the frame for how far round it is
+      else this.body(g, L, now, P.x, P.y, P.pd, T ? P.F : c, 1); }                                                   // (no turning picture: the level one squeezes round)
+    if (now - this.flashAt < 45) { const mz = this.muzzle(P); g.save(); g.translate(mz[0], mz[1]); g.rotate(Math.atan2(-Math.sin(P.pd), P.F * Math.cos(P.pd)));
       const fl = g.createRadialGradient(10, 0, 2, 10, 0, 34); fl.addColorStop(0, "#fffbe6"); fl.addColorStop(.4, "rgba(255,200,80,.9)"); fl.addColorStop(1, "rgba(255,120,20,0)");
       g.fillStyle = fl; g.beginPath(); g.ellipse(14, 0, 34, 16, 0, 0, Math.PI * 2); g.fill(); g.restore(); } },
+  // the level picture (or the drawn stand-in) on a spot: nose tilted, mirrored or squeezed across (sx), squashed down (sy)
+  body(g, L, now, x, y, rot, sx, sy) { if (Math.abs(sx) < .05) sx = sx < 0 ? -.05 : .05; if (Math.abs(sy) < .03) sy = sy < 0 ? -.03 : .03;
+    if (L) this.put(g, L.f[Math.floor(now / L.ms) % L.f.length], x, y, rot, sx, 1, sy);
+    else { g.save(); g.translate(x, y); g.scale(sx, 1); g.rotate(-rot); g.scale(1, sy); this.drawn(g, this.W, this.W * .42, now); g.restore(); } },
+  put(g, fr, x, y, rot, sx, flip, sy) { g.save(); g.translate(x, y); g.scale(sx, 1); g.rotate(-rot); if (flip !== 1 || sy !== 1) g.scale(flip, sy);
+    g.drawImage(fr.src, fr.sx, fr.sy, fr.sw, fr.sh, fr.ox, fr.oy, fr.w, fr.h); g.restore(); },
+  // ---------------- its pictures, made ready once ----------------
+  // a sheet ready to draw (null: not made, or no use), built the first time it's asked for and again if its art changes
+  bk(name) { const a = this.spr(name); if (!a) return null; const L = name === "plane_fly" ? null : this.bk("plane_fly");
+    if (!a._pb || a._pb.ref !== L) { try { a._pb = this.build(name, a, L); } catch (e) { console.error(e); a._pb = this.plain(a, L); } }
+    return a._pb.dir ? a._pb : null; },
+  // ahead of time (when its art arrives, and when the plane is switched on), one sheet at a time, so nothing has to be worked out mid-flight
+  prep() { if (this.prepT) return; const names = ["plane_fly", "plane_turn", "plane_roll"], L = () => { const a = this.spr("plane_fly"); return a && a._pb || null; };
+    const next = () => { this.prepT = 0; const nm = names.find(k => { const a = this.spr(k); return a && (!a._pb || (k !== "plane_fly" && a._pb.ref !== L())); }); if (!nm) return;
+      const a = this.spr(nm), go = () => { try { this.bk(nm); } catch (e) {} this.prepT = setTimeout(next, 60); };
+      this.prepT = 1; a.img.decode ? a.img.decode().then(go, go) : go(); };
+    this.prepT = setTimeout(next, 0); },
+  // the frames as they are (each in its box, middle on the spot): what build starts from, and what's used if build can't look at the picture
+  plain(a, L) { const c = this.W / a.w, f = [], nz = a.nozzle || [.98, .55];
+    for (let i = 0; i < (a.frames || 1); i++) f.push({ src: a.img, sx: i * a.w, sy: 0, sw: a.w, sh: a.h, ox: -a.w * c / 2, oy: -a.h * c / 2, w: a.w * c, h: a.h * c });
+    return { f, ms: a.ms || 60, flip: 1, dir: 1, ref: L, len: 0, P: null, muz: [(nz[0] - .5) * a.w * c, (nz[1] - .5) * a.h * c] }; },
+  // what's in each frame of a sheet (looked at on a small copy): how much plane, where its middle is, how long it is,
+  // and its outline from end to end in 24 steps (to tell which way it faces)
+  measure(a) { const n = a.frames || 1, sw = Math.min(a.w, 320), k = sw / a.w, sh = Math.max(2, Math.round(a.h * k)), out = [];
+    const cv = document.createElement("canvas"); cv.width = sw; cv.height = sh; const g = cv.getContext("2d", { willReadFrequently: true }); g.imageSmoothingQuality = "high";
+    for (let f = 0; f < n; f++) { g.clearRect(0, 0, sw, sh); g.drawImage(a.img, f * a.w, 0, a.w, a.h, 0, 0, sw, sh);
+      const d = g.getImageData(0, 0, sw, sh).data, col = new Float32Array(sw); let A = 0, mx = 0, my = 0;
+      for (let y = 0, i = 3; y < sh; y++) for (let x = 0; x < sw; x++, i += 4) { const w = d[i]; if (w < 10) continue; A += w; mx += w * x; my += w * y; col[x] += w; }
+      if (A < 255 * 12) { out.push(null); continue; }
+      // its length: from where 1.5% of it lies to the left, to where 1.5% lies to the right (so a thin gun barrel or aerial doesn't count)
+      const at = part => { let s = 0; const want = A * part; for (let x = 0; x < sw; x++) { if (s + col[x] >= want) return x + (col[x] ? (want - s) / col[x] : 0); s += col[x]; } return sw; };
+      const xa = at(.015), xb = at(.985), P = new Float32Array(24);
+      for (let x = 0; x < sw; x++) { const b = Math.floor((x + .5 - xa) / Math.max(1, xb - xa) * 24); if (b >= 0 && b < 24) P[b] += col[x] / A; }
+      out.push({ A: A / 255 / (k * k), cx: (mx / A + .5) / k, cy: (my / A + .5) / k, len: (xb - xa) / k, P }); }
+    return out; },
+  build(name, a, L) { const B = this.plain(a, L), M = this.measure(a), ok = M.filter(Boolean), n = M.length; if (!ok.length) return B;
+    const f0 = M[0] || ok[0], fN = M[n - 1] || ok[ok.length - 1], mid = v => v.sort((p, q) => p - q)[v.length >> 1];
+    const far = (p, q, rev) => { let s = 0; for (let i = 0; i < 24; i++) s += Math.abs(p[i] - q[rev ? 23 - i : i]); return s; };          // how unlike two outlines are (rev: the second one mirrored)
+    let c = this.W / a.w, an, sc = null;
+    if (name === "plane_fly") {
+      // every frame of the loop is the same pose: a frame whose plane sits somewhere else, or came out bigger or smaller, is put right (ones that match are left exactly as they are)
+      const Am = ok.reduce((s, f) => s + f.A, 0) / ok.length, tol = a.w * .002;
+      an = M.map(f => !f || Math.hypot(f.cx - f0.cx, f.cy - f0.cy) < tol ? [f0.cx, f0.cy] : [f.cx, f.cy]);
+      sc = M.map(f => { const r = f ? Math.sqrt(Am / f.A) : 1; return Math.abs(r - 1) < .015 ? 1 : Math.max(.9, Math.min(1.1, r)); });
+      B.len = mid(ok.map(f => f.len)) * c; B.P = f0.P;
+      const nz = a.nozzle || [.98, .55]; B.muz = [(nz[0] * a.w - f0.cx) * c, (nz[1] * a.h - f0.cy) * c];
+    } else {
+      // the turn and the roll: every frame pinned by the middle of the plane in it, and the whole sheet sized so the plane
+      // is as long as in the level picture (measured on the frames where it's side-on: the turn's first and last, any of the roll's)
+      an = M.map(f => f ? [f.cx, f.cy] : [a.w / 2, a.h / 2]);
+      const turn = name === "plane_turn", len = turn ? (f0.len + fN.len) / 2 : mid(ok.map(f => f.len)), P = L && L.P;
+      if (L && L.len && len > 4) c = Math.max(c * .5, Math.min(c * 2, L.len / len));
+      const left = f => !!P && far(f.P, P, true) * 1.25 < far(f.P, P, false), right = f => !!P && far(f.P, P, false) * 1.25 < far(f.P, P, true);     // clearly facing left / right (the level picture faces right)
+      if (turn) { B.dir = n < 4 ? 0 : left(f0) && right(fN) ? -1 : right(fN) || left(f0) ? 0 : 1;     // drawn left-to-right: used backwards. Doesn't end up facing the other way (or hardly any frames): not used
+        if (!B.dir && n >= 4 && !MIRROR && window.remoteSend) window.remoteSend({ cmd: "artNote", text: "The plane's “turning around” picture doesn't end up facing the other way, so it isn't being used (the plane flips over instead). On the Art screen tap Make on “Plane turning around” again, then ⇪ Send to OBS." }); }
+      else if (left(f0)) B.flip = -1;                                                                 // a roll drawn facing left: mirrored
+    }
+    B.f.forEach((fr, i) => { const s = c * (sc ? sc[i] : 1); fr.ox = -an[i][0] * s; fr.oy = -an[i][1] * s; fr.w = a.w * s; fr.h = a.h * s; });
+    this.sharpen(a, B); return B; },
+  // then each frame becomes its own small picture at the size it's shown, a few at a time: quicker to draw than cutting
+  // it out of the big sheet every time, and nothing has to be unpacked the moment a turn or a roll starts
+  sharpen(a, B) { if (!window.createImageBitmap) return; const K = MIRROR ? Math.min(1, Low.k * 1.3) : 1; let i = 0;
+    const next = () => { if (a._pb !== B || i >= B.f.length) return; const j = i++, fr = B.f[j], rw = Math.max(8, Math.round(fr.w * K)), rh = Math.max(8, Math.round(fr.h * K)); let pr;
+      try { pr = rw < a.w * .97 ? createImageBitmap(a.img, j * a.w, 0, a.w, a.h, { resizeWidth: rw, resizeHeight: rh, resizeQuality: "high" }) : createImageBitmap(a.img, j * a.w, 0, a.w, a.h); } catch (e) { return; }
+      pr.then(bm => { if (a._pb === B) { fr.src = bm; fr.sx = fr.sy = 0; fr.sw = bm.width; fr.sh = bm.height; } else if (bm.close) bm.close(); }, () => {}).then(() => setTimeout(next, 12)); };
+    setTimeout(next, 30); },
   // the stand-in, facing right: boxy armoured cabin at the nose, propeller behind it, a wing, a thin boom to the tail fin
   drawn(g, W, H, now) { const s = W / 400; g.save(); g.scale(s, s);
     g.fillStyle = "#6f6a45"; g.strokeStyle = "#2b2a1c"; g.lineWidth = 3;
@@ -8253,7 +8339,7 @@ window.KZDirect = function (opt) {
 (() => {
   const qs = new URLSearchParams(location.search), key = qs.get("ctl");
   if (!key || !window.WebSocket) return;
-  const PAGE = "html3", VERSION = "28d825b", INST = Math.random().toString(36).slice(2, 8);
+  const PAGE = "html3", VERSION = "b738389", INST = Math.random().toString(36).slice(2, 8);
   const QUICK = { mir: 1, rtt: 1 };                                 // sent many times a second: only the newest matters
   let said = false, direct = null;
   const seen = new Set(), seenList = [], fresh = id => { if (!id) return true; if (seen.has(id)) return false; seen.add(id); seenList.push(id); if (seenList.length > 800) seen.delete(seenList.shift()); return true; };
