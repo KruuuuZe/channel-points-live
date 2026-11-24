@@ -6432,7 +6432,7 @@ const Mirror = {
   // your finger on the touchpad: the copy does these itself, straight away (the app sends the same to OBS)
   local(c) { if (!MIRROR || !c) return; this.touchAt = performance.now();
     if (c.cmd === "cloudGo") { Face.goTo(+c.x, +c.y); return; }
-    if (c.cmd === "planeGo") { Plane.go(c.x, c.y); return; } if (c.cmd === "planeAct") { Plane.act(c.a); return; } if (c.cmd === "planeFire") { Plane.setFire(c.on); return; }
+    if (c.cmd === "planeTouch") { Plane.touch(); return; } if (c.cmd === "planeGo") { Plane.go(c.x, c.y); return; } if (c.cmd === "planeAct") { Plane.act(c.a); return; } if (c.cmd === "planeFire") { Plane.setFire(c.on); return; }
     const T = String(c.n).startsWith("dice:") ? Dice : BitGems;
     if (c.cmd === "gemGrab") T.grab(c.n); else if (c.cmd === "gemMove") { T.moveTo(c.n, +c.x, +c.y); const g = T.find(c.n); if (g && g.held) g.local = this.touchAt; }
     else if (c.cmd === "gemFling") T.fling(c.n, +c.vx, +c.vy); },
@@ -6556,6 +6556,7 @@ window.onRemote = c => {
   else if (c.cmd === "svid") SharedVid.set(c.st);                              // 🔗 a shared link's video, from the app                                // 📺 live look-in, from the app                  // from the Camera page (or a tap on the bag on the touchpad)
   else if (c.cmd === "effect" && c.name === "plane") toast(Plane.toggle() ? "✈️ Plane is on: touch the touchpad" : "✈️ Plane is away", false, 2500);
   else if (c.cmd === "planeGo") Plane.go(c.x, c.y);
+  else if (c.cmd === "planeTouch") Plane.touch();
   else if (c.cmd === "planeAct") Plane.act(c.a);
   else if (c.cmd === "planeFire") Plane.setFire(c.on);
   else if (c.cmd === "emoHit") { if (Emotes.shatter(String(c.id), +c.x, +c.y, +c.vx, +c.vy)) Plane.spend(+c.x, +c.y); }       // the touchpad copy's plane shot an emote
@@ -6891,7 +6892,7 @@ const Medic = {
    Control › EFFECTS › 😀 Floating emotes on/off switches it (remembered here; on to begin with). */
 const Emotes = {
   on: (() => { try { return localStorage.getItem("emotesOn") !== "0"; } catch (e) { return true; } })(),
-  list: new Map(), running: false, seq: 0, layer: null, popAt: 0, S: 200, MAX: 28, PER_MSG: 4,
+  list: new Map(), running: false, seq: 0, layer: null, popAt: 0, S: 200, MAX: 120,
   // only real picture addresses (they're also put into a style, for the shards)
   ok(u) { return typeof u === "string" && (u.length < 400 && /^https:\/\/[^\s"'()\\<>]+$/.test(u) || u.length < 300000 && /^data:image\/(png|gif|webp|jpeg);base64,[A-Za-z0-9+/=]+$/.test(u)); },
   // a sharper picture for the stream (the touchpad copy is small: it takes the picture as it comes)
@@ -6919,8 +6920,9 @@ const Emotes = {
   // ---- from chat (OBS only; the copy is told by OBS)
   chat(m) { if (MIRROR || !this.on || !m || !m.parts) return; const urls = [];
     m.parts.forEach(p => { if (p.img) { if (!p.gif) urls.push(p.img); } else String(p.text || "").split(/\s+/).forEach(w => { const u = w && ChatFeed.EXTRA[w]; if (u) urls.push(u); }); });
-    urls.slice(0, this.PER_MSG).forEach((u, i) => setTimeout(() => this.spawn(u), i * 170)); },
-  spawn(url) { if (MIRROR || !this.on || !this.ok(url) || this.list.size >= this.MAX) return null; const n = this.list.size, life = Math.round((13000 + Math.random() * 5000) * (n >= 20 ? .5 : n >= 12 ? .72 : 1));
+    const gap = Math.min(170, 3000 / Math.max(1, urls.length));          // every one in the message floats (a big message pops up within about 3 s)
+    urls.forEach((u, i) => setTimeout(() => this.spawn(u), i * gap)); },
+  spawn(url) { if (MIRROR || !this.on || !this.ok(url) || this.list.size >= this.MAX) return null; const n = this.list.size, life = Math.round((13000 + Math.random() * 5000) * (n >= 60 ? .5 : n >= 30 ? .72 : 1));
     const seed = (Math.random() * 4294967296) >>> 0;           // anywhere: one that pops up right on the plane blows it up
     const id = Mirror.inst + "m" + (++this.seq); this.add(id, url, seed, life, 0); Mirror.fwd("emo", [id, url, seed, life]); return id; },
   // ---- one on screen (age: how many ms ago it appeared, when it's being caught up on)
@@ -6996,14 +6998,14 @@ const Plane = {
   D: 1, psi: 0, psiV: 0, psiT: 0, back: 0,                          // which way it's heading (1 right, -1 left), how far round it has turned (0 = facing right … π = facing left), how far it has backed up
   p: 0, pV: 0,                                                      // its nose: up (+) or down (-), in radians
   man: null, want: null, bullets: [], flashAt: 0, lastShot: 0, lastSnd: 0, prepT: 0,
-  dead: 0, safeUntil: 0, fx: null, report: null,                    // blown up (until when), can't be hurt (until when), the explosion playing, how the touchpad copy tells OBS what it hit
-  toggle(v) { v = v == null ? !this.on : !!v; if (v === this.on) return this.on; this.on = v; this.fire = false; this.want = null;
+  dead: 0, down: false, again: false, safeUntil: 0, fx: null, report: null,                    // blown up (until when), can't be hurt (until when), the explosion playing, how the touchpad copy tells OBS what it hit
+  toggle(v) { v = v == null ? !this.on : !!v; if (v === this.on) return this.on; this.on = v; this.fire = false; this.want = null; this.down = this.again = false;
     if (v) { this.prep(); if (this.leaving) { this.leaving = false; this.aim(Math.max(260, Math.min(2300, this.x)), Math.max(200, Math.min(1240, this.y))); } }     // (switched back on while flying off: it comes back and waits)
     else if (this.shown) { this.leaving = true; this.aim(this.D > 0 ? 3500 : -940, this.y - 200); }
     this.start(); if (!MIRROR) Mirror.send(true); return this.on; },
   aim(x, y) { this.tx = x; this.ty = y; this.gs = 1e9; this.goAt = performance.now(); },
   go(x, y) { if (!this.on) return; const now = performance.now(), nx = Math.max(0, Math.min(1, +x || 0)) * 2560, ny = Math.max(0, Math.min(1, +y || 0)) * 1440;
-    if (this.dead) { this.tx = nx; this.ty = ny; return; }          // it has just blown up: it comes back by itself in a moment, to wherever your finger is then
+    if (this.dead || this.down) { this.tx = nx; this.ty = ny; return; }          // it has been shot down: it comes back only when you touch the touchpad again
     if (!this.shown) this.enter(nx, ny);
     else { const since = now - this.goAt; if (since > 3 && since < 260) this.gap += (since - this.gap) * .3; }
     this.goAt = now; this.tx = nx; this.ty = ny; this.gs = Math.hypot(nx - this.gx, ny - this.gy) / Math.max(.012, this.gap / 1000);      // the speed that gets the glide there just as the next place is due
@@ -7011,6 +7013,10 @@ const Plane = {
   // it flies in from the nearer side, at that height
   enter(nx, ny) { this.shown = true; this.leaving = false; this.D = nx > 1280 ? -1 : 1; this.x = this.gx = this.D > 0 ? -300 : 2860; this.y = this.gy = ny; this.vx = this.D * 1500; this.vy = 0;
     this.psi = this.psiT = this.D > 0 ? 0 : Math.PI; this.psiV = this.p = this.pV = this.back = 0; this.man = this.want = null; this.gap = 16; this.tx = nx; this.ty = ny; this.gs = 1e9; this.goAt = performance.now(); },
+  // a new touch on the touchpad (not a finger still held from before): a shot-down plane comes back, from the side,
+  // safe for its first two seconds
+  touch() { if (!this.on || !this.down) return; if (this.dead) this.again = true; else this.revive(performance.now()); },
+  revive(now) { this.down = this.again = false; if (!this.on) return; this.enter(this.tx, this.ty); this.safeUntil = now + 2200; this.start(); },
   act(a) { if (this.on && this.shown && !this.leaving && (a === "loop" || a === "roll")) this.want = { a, at: performance.now() }; },
   setFire(v) { this.fire = !!v && this.on && this.shown; this.fireAt = performance.now(); },
   spr(k) { const a = ChefArt.sprites[k]; return a && a.img && a.img.complete && a.img.naturalWidth ? a : null; },
@@ -7022,7 +7028,7 @@ const Plane = {
   // one step of a spring that never overshoots (worked out exactly, so it's the same at any frame rate): [new place, new speed]
   spring(x, v, to, w, dt) { const d = x - to, e = Math.exp(-w * dt), t = (v + w * d) * dt; return [to + (d + t) * e, (v - w * t) * e]; },
   tick(dt, now) {
-    if (this.dead && now >= this.dead) { this.dead = 0; if (this.on) { this.enter(this.tx, this.ty); this.safeUntil = now + 2200; } }      // back from the side, safe for its first two seconds
+    if (this.dead && now >= this.dead) { this.dead = 0; if (this.again) this.revive(now); }      // (touched again while it was still blowing up: back once the blast is over)
     if (this.shown) {
       // your finger's place, glided: there just as the next place is due, and never faster than the plane flies
       const gd = Math.hypot(this.tx - this.gx, this.ty - this.gy);
@@ -7083,7 +7089,7 @@ const Plane = {
       bits: Array.from({ length: 16 }, () => { const a = r() * 6.2832, v = 300 + r() * 950; return [Math.cos(a) * v, Math.sin(a) * v - 260, r() * 6.2832, (r() - .5) * 18, 16 + r() * 34, 8 + r() * 18, r() < .45 ? "#6f6a45" : r() < .5 ? "#4b4830" : "#8b8459"]; }),
       blobs: Array.from({ length: 8 }, (v, i) => [(r() - .5) * 210, (r() - .5) * 130, 120 + r() * 150, i ? r() * .18 : 0]),
       rays: Array.from({ length: 18 }, () => [r() * 6.2832, 500 + r() * 900, 30 + r() * 70]) };
-    this.shown = this.leaving = false; this.dead = now + 1500; this.man = this.want = null; this.start();
+    this.shown = this.leaving = false; this.dead = now + 1500; this.down = true; this.again = false; this.man = this.want = null; this.start();
     if (!MIRROR) { try { Sound.init(); const C = Sound.ctx; if (C) { const t = C.currentTime; Sound.burst(t, .6, .5, "lowpass", 1500, 70); Sound.tone(t, .5, .5, 150, 32); Sound.burst(t + .04, 1, .15, "bandpass", 520, 110); } } catch (e) {}
       Mirror.fwd("plane.boom", []); }
     return true; },
@@ -8506,7 +8512,7 @@ window.KZDirect = function (opt) {
 (() => {
   const qs = new URLSearchParams(location.search), key = qs.get("ctl");
   if (!key || !window.WebSocket) return;
-  const PAGE = "html3", VERSION = "dd9f002", INST = Math.random().toString(36).slice(2, 8);
+  const PAGE = "html3", VERSION = "d8b6195", INST = Math.random().toString(36).slice(2, 8);
   const QUICK = { mir: 1, rtt: 1 };                                 // sent many times a second: only the newest matters
   let said = false, direct = null;
   const seen = new Set(), seenList = [], fresh = id => { if (!id) return true; if (seen.has(id)) return false; seen.add(id); seenList.push(id); if (seenList.length > 800) seen.delete(seenList.shift()); return true; };
