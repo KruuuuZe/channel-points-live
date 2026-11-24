@@ -6568,11 +6568,11 @@ window.SharedVid = SharedVid;
 const LiveLook = {
   st: { on: false, mode: "big", list: [], cur: 0, loud: [] }, tiles: new Map(), api: null, apiWait: null,
   set(st) { if (!st) return; const was = this.st.on; this.st = Object.assign({ on: false, mode: "big", list: [], cur: 0, loud: [] }, st); this.st.list = (this.st.list || []).filter(x => x && /^[a-z0-9_]{2,30}$/i.test(x.login)).slice(0, 16);
-    if (this.st.on && !was) this.warm(); else if (!this.st.on) { this.shown = false; this.arming = false; clearInterval(this.armT); this.tiles.forEach(t => { try { t.player && t.ready && t.player.pause(); } catch (e) {} t.playing = false; }); }
+    if (this.st.on && !was) this.warm(); else if (!this.st.on) { this.shown = false; this.arming = false; clearInterval(this.armT); }
     this.render(); Mirror.send(true); },
   /* Switched on: the streams are started first, invisibly (on the stream they're see-through), and the look-in only
      appears once the ones on screen are really playing (at most about 4 seconds), so it comes up already moving.
-     The players are made ahead of time, while it's off, as soon as streams are picked, so they're quick to start.
+     Switched off, every player is closed completely (nothing keeps running in OBS).
      (If this browser won't start them while they're see-through, it just shows them straight away, and remembers.) */
   shown: false, arming: false,
   warm() { clearInterval(this.armT); const real = !MIRROR && /github\.io$|^localhost$|^127\./.test(location.hostname);
@@ -6581,7 +6581,7 @@ const LiveLook = {
     this.shown = false; this.arming = true; const t0 = performance.now();
     setTimeout(() => this.tiles.forEach(t => { try { if (t.ready && t.player.isPaused()) t.player.play(); } catch (e) {} }), 30);          // start them now (they're made already)
     this.armT = setInterval(() => { const vis = [...this.tiles.values()].filter(t => +t.el.style.opacity > .98), dt = performance.now() - t0, any = vis.some(t => t.playing);
-      if ((vis.length && vis.every(t => t.playing) && dt > 300) || dt > 4000 || (!any && dt > 2200)) {
+      if ((vis.length && vis.every(t => t.playing) && dt > 300) || dt > 6500 || (!any && dt > 5000)) {
         try { localStorage.setItem("lliWarmFail", any ? "0" : String(fails + 1)); } catch (e) {}
         clearInterval(this.armT); this.arming = false; this.shown = true; this.render(); } }, 100); },
   // Twitch's player script, once
@@ -6591,9 +6591,9 @@ const LiveLook = {
   render() { const box = $("#lli"), S = this.st, W = 2560, H = 1440, art = this.frameArt();
     box.classList.toggle("on", !!S.on && this.shown);
     const bdArt = ChefArt.sprites.lli_backdrop, bd = box.querySelector(".bd"); if (bdArt && bdArt.img && !bd.querySelector("img")) { const im = document.createElement("img"); im.src = bdArt.url || bdArt.img.src; bd.append(im); }
-    const want = S.list, n = want.length, keep = new Set(want.map(x => x.login.toLowerCase()));
+    const want = S.on ? S.list : [], n = want.length, keep = new Set(want.map(x => x.login.toLowerCase()));   // (switched off: every player is closed)
     // gone: shrink away, then go
-    this.tiles.forEach((t, k) => { if (!keep.has(k)) { this.tiles.delete(k); t.el.style.opacity = 0; t.el.style.transform = "scale(.6)"; Float.remove(t.fl); setTimeout(() => { try { t.player && t.player.destroy && t.player.destroy(); } catch (e) {} t.el.remove(); }, 800); } });
+    this.tiles.forEach((t, k) => { if (!keep.has(k)) { this.tiles.delete(k); t.el.style.opacity = 0; t.el.style.transform = "scale(.6)"; try { t.player && t.player.pause && t.player.pause(); } catch (e) {} try { t.player && t.player.destroy && t.player.destroy(); } catch (e) {} t.player = null; Float.remove(t.fl); setTimeout(() => t.el.remove(), 800); } });
     // where each one goes
     const rects = []; const cur = Math.max(0, Math.min(n - 1, S.cur | 0));
     if (S.mode === "grid") { const cols = Math.ceil(Math.sqrt(n)) || 1 /* 2 → 2×1, 3–4 → 2×2, 5–6 → 3×2, 7–9 → 3×3 */, rows = Math.ceil(n / cols) || 1, AW = 2380, AH = 1140;
@@ -7926,7 +7926,7 @@ window.KZDirect = function (opt) {
 (() => {
   const qs = new URLSearchParams(location.search), key = qs.get("ctl");
   if (!key || !window.WebSocket) return;
-  const PAGE = "html3", VERSION = "f75cb75", INST = Math.random().toString(36).slice(2, 8);
+  const PAGE = "html3", VERSION = "67fc818", INST = Math.random().toString(36).slice(2, 8);
   const QUICK = { mir: 1, rtt: 1 };                                 // sent many times a second: only the newest matters
   let said = false, direct = null;
   const seen = new Set(), seenList = [], fresh = id => { if (!id) return true; if (seen.has(id)) return false; seen.add(id); seenList.push(id); if (seenList.length > 800) seen.delete(seenList.shift()); return true; };
