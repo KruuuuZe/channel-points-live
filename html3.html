@@ -371,13 +371,14 @@ body.fit #stage{background:radial-gradient(1200px 700px at 30% 20%,#1a103322,tra
 #scrapcv{position:absolute;inset:0;width:2560px;height:1440px;pointer-events:none;z-index:9}
 #vtcv{position:absolute;inset:0;width:2560px;height:1440px;pointer-events:none;z-index:9}
 /* the layer real video players live in: outside the scaled stage (see Float) */
-#flt{position:fixed;inset:0;pointer-events:none;z-index:5} #flt .fh{position:fixed;overflow:hidden;background:#000} #flt .fh > div,#flt .fh iframe{width:100%;height:100%;border:0;display:block}
+#flt{position:fixed;inset:0;pointer-events:none;z-index:5} #flt .fh{position:fixed;overflow:hidden;background:#000;transition:opacity 1.6s ease-in-out} #flt .fh > div,#flt .fh iframe{width:100%;height:100%;border:0;display:block}
 /* 🔗 shared links: a video in the left 3/4 of the screen */
 #svid{position:absolute;left:0;top:0;width:1920px;height:1080px;z-index:7;pointer-events:none;opacity:0;transition:opacity .5s}
 #svid.on{opacity:1} #svid .box{position:absolute;left:0;top:0;background:#000;overflow:hidden;transition:width .5s,height .5s}
 #svid .box iframe,#svid .box > div,#svid .box img{width:100%;height:100%;border:0;display:block;object-fit:contain}
 /* 📺 live look-in */
 #lli{position:absolute;inset:0;z-index:6;pointer-events:none;opacity:0;transform:scale(1.04);transition:opacity .6s,transform .7s cubic-bezier(.2,.8,.2,1)}
+#lli.on{transition:opacity 1.6s ease-in-out,transform 1.8s cubic-bezier(.2,.8,.2,1)}          /* coming up: a slow fade */
 #lli.on{opacity:1;transform:none}
 #lli .bd{position:absolute;inset:0;background:radial-gradient(ellipse at 50% 40%,rgba(58,52,34,.88),rgba(16,15,10,.96) 75%);overflow:hidden}
 #lli .bd::before{content:"";position:absolute;inset:0;background-image:linear-gradient(rgba(200,185,130,.07) 2px,transparent 2px),linear-gradient(90deg,rgba(200,185,130,.07) 2px,transparent 2px);background-size:120px 120px}
@@ -6512,7 +6513,11 @@ const Float = {
   list: new Set(), run: false,
   add(anchor, shown, op) { let L = $("#flt"); if (!L) { L = document.createElement("div"); L.id = "flt"; document.body.append(L); }
     const h = document.createElement("div"); h.className = "fh"; L.append(h); const f = { h, anchor, shown, op }; this.list.add(f); this.loop(); return f; },
-  remove(f) { if (!f) return; this.list.delete(f); f.h.remove(); },
+  remove(f) { if (!f) return; this.list.delete(f); f.h.querySelectorAll("iframe").forEach(x => { try { x.src = "about:blank"; } catch (e) {} }); f.h.remove(); },
+  // anything a player left behind (an extra frame of Twitch's or YouTube's own): closed, unless it belongs to a player
+  // that's still in use. Each frame left open is a page running in OBS.
+  sweep() { const keep = new Set(); this.list.forEach(f => f.h.querySelectorAll("iframe").forEach(x => keep.add(x)));
+    document.querySelectorAll("iframe").forEach(x => { if (keep.has(x)) return; if (/twitch\.tv|youtube\.com|youtube-nocookie\.com|ytimg/.test(x.src || "")) { try { x.src = "about:blank"; } catch (e) {} x.remove(); } }); },
   loop() { if (this.run) return; this.run = true; const tick = () => { if (!this.list.size) { this.run = false; return; }
       this.list.forEach(f => { const ok = f.anchor.isConnected && f.shown(); f.h.style.visibility = ok ? "visible" : "hidden"; if (!ok) return; if (f.op) f.h.style.opacity = f.op();
         const r = f.anchor.getBoundingClientRect(), s = f.h.style; s.left = r.left + "px"; s.top = r.top + "px"; s.width = r.width + "px"; s.height = r.height + "px"; });
@@ -6529,7 +6534,7 @@ const SharedVid = {
   st: { on: false, item: null }, key: "", player: null, endT: 0, ytWait: null, twWait: null,
   set(st) { this.st = Object.assign({ on: false, item: null }, st || {}); const it = this.st.on && this.st.item, k = it ? it.kind + ":" + it.id + ":" + (it.n || 0) : "";
     $("#svid").classList.toggle("on", !!it); if (k === this.key) return; this.key = k; this.close(); if (it) this.open(it); Mirror.send(true); },
-  close() { clearTimeout(this.endT); try { this.player && this.player.destroy && this.player.destroy(); } catch (e) {} this.player = null; $("#svid .box").innerHTML = ""; Float.remove(this.fl); this.fl = null; },
+  close() { clearTimeout(this.endT); try { this.player && this.player.destroy && this.player.destroy(); } catch (e) {} this.player = null; $("#svid .box").innerHTML = ""; Float.remove(this.fl); this.fl = null; setTimeout(() => Float.sweep(), 1200); },
   ended(why) { const k = this.key; this.close(); $("#svid").classList.remove("on"); if (window.remoteSend && !MIRROR) window.remoteSend({ cmd: "svidEnded", key: k, why }); },
   open(it) { const box = $("#svid .box"), tall = it.kind === "yt" && it.short; box.style.width = (tall ? 608 : 1920) + "px"; box.style.height = "1080px";
     const host = location.hostname, real = !MIRROR && /github\.io$|^localhost$|^127\./.test(host), key = this.key;
@@ -6568,7 +6573,7 @@ window.SharedVid = SharedVid;
 const LiveLook = {
   st: { on: false, mode: "big", list: [], cur: 0, loud: [] }, tiles: new Map(), api: null, apiWait: null,
   set(st) { if (!st) return; const was = this.st.on; this.st = Object.assign({ on: false, mode: "big", list: [], cur: 0, loud: [] }, st); this.st.list = (this.st.list || []).filter(x => x && /^[a-z0-9_]{2,30}$/i.test(x.login)).slice(0, 16);
-    if (this.st.on && !was) this.warm(); else if (!this.st.on) { this.shown = false; this.arming = false; clearInterval(this.armT); }
+    if (this.st.on && !was) this.warm(); else if (!this.st.on) { this.shown = false; this.arming = false; clearInterval(this.armT); clearTimeout(this.sweepT); this.sweepT = setTimeout(() => Float.sweep(), 1200); }
     this.render(); Mirror.send(true); },
   /* Switched on: the streams are started first, invisibly (on the stream they're see-through), and the look-in only
      appears once the ones on screen are really playing (at most about 4 seconds), so it comes up already moving.
@@ -7756,7 +7761,7 @@ BitGems.load();
 Dice.load();
 CustomFx.load();
 // (for updating itself: nothing is on screen that a reload would cut short)
-window.kzBusy = () => Queue.busy || FxLine.running || FxLine.playing() || CustomFx.busy || Mountain.up || Lurk.busy || Gifts.sessions.some(x => x.started && !(x.head && x.head.out)) || Scrap.piles.some(p => p.state === "claimed") || (Dice.list || []).some(c => c.st && c.st !== "rest") || document.querySelector("#scrapboard.on") != null;
+window.kzBusy = () => LiveLook.st.on || SharedVid.st.on || Queue.busy || FxLine.running || FxLine.playing() || CustomFx.busy || Mountain.up || Lurk.busy || Gifts.sessions.some(x => x.started && !(x.head && x.head.out)) || Scrap.piles.some(p => p.state === "claimed") || (Dice.list || []).some(c => c.st && c.st !== "rest") || document.querySelector("#scrapboard.on") != null;
 // one-off: thebigyin's 100 bits from before the gems existed (drops in once, the first time this version loads)
 if (!MIRROR) try { if (!localStorage.getItem("kzGemSeed1")) { localStorage.setItem("kzGemSeed1", "1"); setTimeout(() => BitGems.add("thebigyin", 100), 1500); } } catch (e) {}
 if (LIVE) Live.init();
@@ -7926,7 +7931,7 @@ window.KZDirect = function (opt) {
 (() => {
   const qs = new URLSearchParams(location.search), key = qs.get("ctl");
   if (!key || !window.WebSocket) return;
-  const PAGE = "html3", VERSION = "67fc818", INST = Math.random().toString(36).slice(2, 8);
+  const PAGE = "html3", VERSION = "7199474", INST = Math.random().toString(36).slice(2, 8);
   const QUICK = { mir: 1, rtt: 1 };                                 // sent many times a second: only the newest matters
   let said = false, direct = null;
   const seen = new Set(), seenList = [], fresh = id => { if (!id) return true; if (seen.has(id)) return false; seen.add(id); seenList.push(id); if (seenList.length > 800) seen.delete(seenList.shift()); return true; };
