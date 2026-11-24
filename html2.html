@@ -257,14 +257,12 @@ const TIER = { "1000": "T1", "2000": "T2", "3000": "T3", prime: "Prime" };
 function bitColor(b) { return b >= 10000 ? "#ff4d6d" : b >= 5000 ? "#5ee7ff" : b >= 1000 ? "#a3e635" : b >= 100 ? "#b26bff" : "#c9c4dc"; }
 
 /* The same event can arrive twice (e.g. two copies of a page listening to Twitch), so an exact repeat is dropped:
-   one follow / sub / watch streak per person per stream (12 h), one raid per raider within 30 min (a real second
-   raid comes later than that), and the same gift or cheer from the same person within 30 s. */
+   one follow / sub / watch streak per person per stream (12 h), and one raid per raider within 30 min (a real second
+   raid comes later than that). Gift subs and bits are never dropped: every one counts toward the totals. */
 function dupe(kind, e) {
-  const list = { follow: "follows", sub: "subs", resub: "subs", gift: "gifts", bits: "bits", raid: "raids", streak: "streaks" }[kind];
-  const win = { follows: 12 * 3600e3, subs: 12 * 3600e3, streaks: 12 * 3600e3, raids: 30 * 60e3, gifts: 30e3, bits: 30e3 }[list], now = Date.now();
-  const nm = String(e.name || "").toLowerCase(); if (!nm || nm === "anonymous" && (list === "gifts" || list === "bits")) return false;
-  return D[list].some(x => now - x.t < win && String(x.name || "").toLowerCase() === nm &&
-    (list === "gifts" ? x.count === e.count : list === "bits" ? x.amount === e.amount : true));
+  const list = { follow: "follows", sub: "subs", resub: "subs", raid: "raids", streak: "streaks" }[kind]; if (!list) return false;
+  const win = list === "raids" ? 30 * 60e3 : 12 * 3600e3, now = Date.now(), nm = String(e.name || "").toLowerCase(); if (!nm) return false;
+  return D[list].some(x => now - x.t < win && String(x.name || "").toLowerCase() === nm);
 }
 /* every event comes through here, from Twitch or from the test buttons */
 function add(kind, e) {
@@ -272,7 +270,12 @@ function add(kind, e) {
   e.t = Date.now();
   const list = { follow: "follows", sub: "subs", resub: "subs", gift: "gifts", bits: "bits", raid: "raids", streak: "streaks" }[kind];
   e.kind = kind;
-  D[list].unshift(e); if (D[list].length > MAX_KEEP) D[list].length = MAX_KEEP;
+  // gift subs and bits: someone sending again this stream adds to their one row (their total, and "(n)" = how many times)
+  const same = (kind === "gift" || kind === "bits") && !/^anonymous$/i.test(e.name || "") &&
+    D[list].find(x => Date.now() - x.t < 12 * 3600e3 && String(x.name || "").toLowerCase() === String(e.name || "").toLowerCase());
+  if (same) { if (kind === "gift") same.count += e.count; else same.amount += e.amount; same.times = (same.times || 1) + 1; same.t = e.t;
+    if (e.tier && kind === "gift") same.tier = e.tier; D[list].splice(D[list].indexOf(same), 1); D[list].unshift(same); }
+  else { D[list].unshift(e); if (D[list].length > MAX_KEEP) D[list].length = MAX_KEEP; }
   const n = D.n;
   if (kind === "follow") n.follows++;
   else if (kind === "sub" || kind === "resub") n.subs++;
@@ -294,7 +297,7 @@ function rowFor(list, e) {
   if (list === "follows") {
     li.append(icon("i-heart"), el("span", "nm", e.name), el("span", "tm", clock(e.t)));
   } else if (list === "gifts") {
-    li.append(icon("i-gift"), el("span", "nm", e.name), el("span", "nt", "gifted"), el("span", "vl", "×" + fmt(e.count)),
+    li.append(icon("i-gift"), el("span", "nm", e.name + (e.times > 1 ? " (" + e.times + ")" : "")), el("span", "nt", "gifted"), el("span", "vl", "×" + fmt(e.count)),
       el("span", "tier", TIER[e.tier] || "T1"), el("span", "tm", clock(e.t)));
   } else if (list === "subs") {
     li.append(icon("i-star"), el("span", "nm", e.name));
@@ -304,7 +307,7 @@ function rowFor(list, e) {
     li.append(el("span", "tm", clock(e.t)));
   } else if (list === "bits") {
     li.style.setProperty("--c", bitColor(e.amount));
-    li.append(icon("i-gem"), el("span", "nm", e.name), el("span", "vl", fmt(e.amount)), el("span", "tm", clock(e.t)));
+    li.append(icon("i-gem"), el("span", "nm", e.name + (e.times > 1 ? " (" + e.times + ")" : "")), el("span", "vl", fmt(e.amount)), el("span", "tm", clock(e.t)));
   } else if (list === "raids") {
     li.append(icon("i-rocket"), el("span", "nm", e.name), el("span", "tm", clock(e.t)));     // just who raided (no raid size)
   } else if (list === "streaks") {
@@ -868,7 +871,7 @@ window.KZDirect = function (opt) {
 (() => {
   const qs = new URLSearchParams(location.search), key = qs.get("ctl");
   if (!key || !window.WebSocket) return;
-  const PAGE = "html2", VERSION = "ffd968b", INST = Math.random().toString(36).slice(2, 8);
+  const PAGE = "html2", VERSION = "8cebc65", INST = Math.random().toString(36).slice(2, 8);
   const QUICK = { mir: 1, rtt: 1 };                                 // sent many times a second: only the newest matters
   let said = false, direct = null;
   const seen = new Set(), seenList = [], fresh = id => { if (!id) return true; if (seen.has(id)) return false; seen.add(id); seenList.push(id); if (seenList.length > 800) seen.delete(seenList.shift()); return true; };
