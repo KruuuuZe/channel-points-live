@@ -6596,7 +6596,7 @@ const LiveLook = {
     this.tiles.forEach((t, k) => { if (!keep.has(k)) { this.tiles.delete(k); t.el.style.opacity = 0; t.el.style.transform = "scale(.6)"; Float.remove(t.fl); setTimeout(() => { try { t.player && t.player.destroy && t.player.destroy(); } catch (e) {} t.el.remove(); }, 800); } });
     // where each one goes
     const rects = []; const cur = Math.max(0, Math.min(n - 1, S.cur | 0));
-    if (S.mode === "grid") { const cols = Math.ceil(Math.sqrt(n * 1.3)) || 1, rows = Math.ceil(n / cols) || 1, AW = 2380, AH = 1140;
+    if (S.mode === "grid") { const cols = Math.ceil(Math.sqrt(n)) || 1,             // 2 → 2×1, 3–4 → 2×2, 5–6 → 3×2, 7–9 → 3×3 rows = Math.ceil(n / cols) || 1, AW = 2380, AH = 1140;
       // room between them for each frame (which sticks out around its video) and the name plate under it, so a video
       // never covers a neighbour's frame or name (the videos sit on top of everything else)
       const out = w => art ? w * .06 : 18, PLATE = 78;
@@ -7926,7 +7926,7 @@ window.KZDirect = function (opt) {
 (() => {
   const qs = new URLSearchParams(location.search), key = qs.get("ctl");
   if (!key || !window.WebSocket) return;
-  const PAGE = "html3", VERSION = "1f142cb", INST = Math.random().toString(36).slice(2, 8);
+  const PAGE = "html3", VERSION = "f4aed5e", INST = Math.random().toString(36).slice(2, 8);
   const QUICK = { mir: 1, rtt: 1 };                                 // sent many times a second: only the newest matters
   let said = false, direct = null;
   const seen = new Set(), seenList = [], fresh = id => { if (!id) return true; if (seen.has(id)) return false; seen.add(id); seenList.push(id); if (seenList.length > 800) seen.delete(seenList.shift()); return true; };
