@@ -6487,7 +6487,8 @@ window.onRemote = c => {
     if (c.action === "spawn") { if (!Scrap.piles.some(p => p.state !== "none")) { clearTimeout(Scrap.timer); Scrap.timer = 0; Scrap.spawn(); } }
     else if (c.action === "board") Scrap.showBoard();
     else if (c.action === "resetdaily") { Scrap.data = { t: Date.now(), users: {} }; Scrap.save(); Scrap.board(); }
-  } else if (c.cmd === "alert") {
+  } else if (c.cmd === "alertsOff") AlertsOff.set(c.st);
+  else if (c.cmd === "alert") {
     Sound.init();
     const name = String(c.name || "Viewer").slice(0, 40), color = /^#[0-9a-f]{6}$/i.test(c.color || "") ? c.color : "#ff69b4", n = Math.max(1, +c.n || 1);
     if (c.type === "sub") Alerts.sub(name, color);
@@ -7036,6 +7037,12 @@ const Queue = {
     this.busyUntil = now + (ms > 0 ? Math.min(ms, 20000) : 6000);
     if (this.goQ.length) this.goPump(); }
 };
+/* Alerts switched off from the app (PLAY AN ALERT ON STREAM › Live alerts). Only Twitch's own alerts are held back;
+   the app's play buttons still play. Kept here too, so it holds after OBS reloads. */
+const AlertsOff = { st: (() => { try { return JSON.parse(localStorage.getItem("alertsOff")) || {}; } catch (e) { return {}; } })(),
+  off(k) { return !!this.st[k]; },
+  set(st) { this.st = {}; ["sub", "follow", "raid", "gift", "bits", "streak"].forEach(k => { if (st && st[k]) this.st[k] = true; });
+    try { localStorage.setItem("alertsOff", JSON.stringify(this.st)); } catch (e) {} } };
 const Alerts = {
   sub: (name, color) => Queue.push(() => { MySounds.play("sub"); edgeGlow("#22c55e80", "#4ade80a0"); return doSub(name, color); }),
   follow: (name, color) => Queue.push(() => { MySounds.play("follow"); edgeGlow("#a855f799", "#c084fccc"); return doFollow(name, color); }),
@@ -7290,17 +7297,17 @@ const Live = {
   async handle(type, ev) {
     const who = (n, l, anon) => anon ? "Anonymous" : (n || l || "someone");
     if (type === "channel.channel_points_custom_reward_redemption.add") { Personal.redeem(ev); return; }
-    if (type === "channel.follow") Alerts.follow(who(ev.user_name, ev.user_login), await colorOf(ev.user_id));
+    if (type === "channel.follow") { if (!AlertsOff.off("follow")) Alerts.follow(who(ev.user_name, ev.user_login), await colorOf(ev.user_id)); }
     // new subs and resubs get the plane; gifted subs are skipped so a big gift drop doesn't launch 50 planes
     else if (type === "channel.subscribe") {
-      if (!ev.is_gift) Alerts.sub(who(ev.user_name, ev.user_login), await colorOf(ev.user_id));
-      else Gifts.recipient(who(ev.user_name, ev.user_login));       // someone received a gifted sub
+      if (!ev.is_gift) { if (!AlertsOff.off("sub")) Alerts.sub(who(ev.user_name, ev.user_login), await colorOf(ev.user_id)); }
+      else if (!AlertsOff.off("gift")) Gifts.recipient(who(ev.user_name, ev.user_login));       // someone received a gifted sub
     }
-    else if (type === "channel.subscription.gift")
-      Gifts.gift(who(ev.user_name, ev.user_login, ev.is_anonymous), ev.total || 1, ev.is_anonymous ? "#f472b6" : await colorOf(ev.user_id));
-    else if (type === "channel.subscription.message") Alerts.sub(who(ev.user_name, ev.user_login), await colorOf(ev.user_id));
-    else if (type === "channel.cheer") Alerts.bits(who(ev.user_name, ev.user_login, ev.is_anonymous), ev.bits || 0, ev.is_anonymous ? null : await colorOf(ev.user_id));
-    else if (type === "channel.raid") Alerts.raid(who(ev.from_broadcaster_user_name, ev.from_broadcaster_user_login));
+    else if (type === "channel.subscription.gift") { if (!AlertsOff.off("gift"))
+      Gifts.gift(who(ev.user_name, ev.user_login, ev.is_anonymous), ev.total || 1, ev.is_anonymous ? "#f472b6" : await colorOf(ev.user_id)); }
+    else if (type === "channel.subscription.message") { if (!AlertsOff.off("sub")) Alerts.sub(who(ev.user_name, ev.user_login), await colorOf(ev.user_id)); }
+    else if (type === "channel.cheer") { if (!AlertsOff.off("bits")) Alerts.bits(who(ev.user_name, ev.user_login, ev.is_anonymous), ev.bits || 0, ev.is_anonymous ? null : await colorOf(ev.user_id)); }
+    else if (type === "channel.raid") { if (!AlertsOff.off("raid")) Alerts.raid(who(ev.from_broadcaster_user_name, ev.from_broadcaster_user_login)); }
   }
 };
 /* watch streaks (and everyone's name colors) come from chat, read anonymously */
@@ -7344,7 +7351,7 @@ const Chat = {
       else Lurk.leave(login);
       return;
     }
-    if (line.indexOf(" USERNOTICE ") > 0 && tags["msg-id"] === "viewermilestone" && tags["msg-param-category"] === "watch-streak")
+    if (line.indexOf(" USERNOTICE ") > 0 && tags["msg-id"] === "viewermilestone" && tags["msg-param-category"] === "watch-streak" && !AlertsOff.off("streak"))
       Alerts.streak(tags["display-name"] || tags.login || "viewer", +tags["msg-param-value"] || 1, tags.login, tags.color || chatColors[tags["user-id"]]);
   }
 };
@@ -7921,7 +7928,7 @@ window.KZDirect = function (opt) {
 (() => {
   const qs = new URLSearchParams(location.search), key = qs.get("ctl");
   if (!key || !window.WebSocket) return;
-  const PAGE = "html3", VERSION = "180cd99", INST = Math.random().toString(36).slice(2, 8);
+  const PAGE = "html3", VERSION = "ffd968b", INST = Math.random().toString(36).slice(2, 8);
   const QUICK = { mir: 1, rtt: 1 };                                 // sent many times a second: only the newest matters
   let said = false, direct = null;
   const seen = new Set(), seenList = [], fresh = id => { if (!id) return true; if (seen.has(id)) return false; seen.add(id); seenList.push(id); if (seenList.length > 800) seen.delete(seenList.shift()); return true; };

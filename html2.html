@@ -256,8 +256,19 @@ function save() { try { localStorage.setItem(KEY, JSON.stringify(D)); } catch (e
 const TIER = { "1000": "T1", "2000": "T2", "3000": "T3", prime: "Prime" };
 function bitColor(b) { return b >= 10000 ? "#ff4d6d" : b >= 5000 ? "#5ee7ff" : b >= 1000 ? "#a3e635" : b >= 100 ? "#b26bff" : "#c9c4dc"; }
 
+/* The same event can arrive twice (e.g. two copies of a page listening to Twitch), so an exact repeat is dropped:
+   one follow / sub / watch streak per person per stream (12 h), one raid per raider within 30 min (a real second
+   raid comes later than that), and the same gift or cheer from the same person within 30 s. */
+function dupe(kind, e) {
+  const list = { follow: "follows", sub: "subs", resub: "subs", gift: "gifts", bits: "bits", raid: "raids", streak: "streaks" }[kind];
+  const win = { follows: 12 * 3600e3, subs: 12 * 3600e3, streaks: 12 * 3600e3, raids: 30 * 60e3, gifts: 30e3, bits: 30e3 }[list], now = Date.now();
+  const nm = String(e.name || "").toLowerCase(); if (!nm || nm === "anonymous" && (list === "gifts" || list === "bits")) return false;
+  return D[list].some(x => now - x.t < win && String(x.name || "").toLowerCase() === nm &&
+    (list === "gifts" ? x.count === e.count : list === "bits" ? x.amount === e.amount : true));
+}
 /* every event comes through here, from Twitch or from the test buttons */
 function add(kind, e) {
+  if (dupe(kind, e)) return;
   e.t = Date.now();
   const list = { follow: "follows", sub: "subs", resub: "subs", gift: "gifts", bits: "bits", raid: "raids", streak: "streaks" }[kind];
   e.kind = kind;
@@ -857,7 +868,7 @@ window.KZDirect = function (opt) {
 (() => {
   const qs = new URLSearchParams(location.search), key = qs.get("ctl");
   if (!key || !window.WebSocket) return;
-  const PAGE = "html2", VERSION = "180cd99", INST = Math.random().toString(36).slice(2, 8);
+  const PAGE = "html2", VERSION = "ffd968b", INST = Math.random().toString(36).slice(2, 8);
   const QUICK = { mir: 1, rtt: 1 };                                 // sent many times a second: only the newest matters
   let said = false, direct = null;
   const seen = new Set(), seenList = [], fresh = id => { if (!id) return true; if (seen.has(id)) return false; seen.add(id); seenList.push(id); if (seenList.length > 800) seen.delete(seenList.shift()); return true; };
