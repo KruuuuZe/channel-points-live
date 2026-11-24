@@ -5504,7 +5504,7 @@ const Personal = {
     window.twitchStatus = Object.assign(window.twitchStatus || {}, { lastRedeem: this.last });
     if (window.remoteSend) window.remoteSend({ cmd: "hello", tw: window.twitchStatus });
     const title = (ev.reward && ev.reward.title) || "";
-    if (/^\s*special\s*effects?\s*$/i.test(title)) { Alerts.special(ev.user_name || ev.user_login); return; }      // 🛸 the "Special Effects" redeem
+    if (/^\s*special\s*effects?\s*$/i.test(title)) { Recent.note("special", ev.user_name || ev.user_login); Alerts.special(ev.user_name || ev.user_login); return; }      // 🛸 the "Special Effects" redeem
     if (!this.REWARD.test(title)) return;
     const k = (ev.user_login || "").toLowerCase();
     const rx = AutoFx.REDEEM[k]; if (rx) { rx(); return; }            // effects that only play on the redeem
@@ -6590,9 +6590,11 @@ window.onRemote = c => {
     else if (c.action === "board") Scrap.showBoard();
     else if (c.action === "resetdaily") { Scrap.data = { t: Date.now(), users: {} }; Scrap.save(); Scrap.board(); }
   } else if (c.cmd === "alertsOff") AlertsOff.set(c.st);
+  else if (c.cmd === "recentAsk") Recent.tell();
   else if (c.cmd === "alert") {
     Sound.init();
-    const name = String(c.name || "Viewer").slice(0, 40), color = /^#[0-9a-f]{6}$/i.test(c.color || "") ? c.color : "#ff69b4", n = Math.max(1, +c.n || 1);
+    const rc = c.recent && Recent.st[c.type];                   // the app's buttons replay the most recent real one (who, and how much)
+    const name = String(rc ? rc.name : c.name || "Viewer").slice(0, 40), color = rc && rc.color ? rc.color : /^#[0-9a-f]{6}$/i.test(c.color || "") ? c.color : "#ff69b4", n = Math.max(1, +(rc && c.type !== "lurk" && c.type !== "special" ? rc.n : c.n) || 1);
     if (c.type === "sub") Alerts.sub(name, color);
     else if (c.type === "follow") Alerts.follow(name, color);
     else if (c.type === "bits") Alerts.bits(name, Math.min(100000, n), color);
@@ -7152,6 +7154,12 @@ const Queue = {
 };
 /* Alerts switched off from the app (PLAY AN ALERT ON STREAM › Live alerts). Only Twitch's own alerts are held back;
    the app's play buttons still play. Kept here too, so it holds after OBS reloads. */
+/* the most recent real one of each alert (who, and how much), so the app's PLAY AN ALERT buttons replay them */
+const Recent = { st: (() => { try { return JSON.parse(localStorage.getItem("recentAlerts")) || {}; } catch (e) { return {}; } })(),
+  note(kind, name, n, color) { if (MIRROR || !name) return; Promise.resolve(color).catch(() => null).then(c => {
+    this.st[kind] = { name: String(name).slice(0, 40), n: n || 1, color: /^#[0-9a-f]{6}$/i.test(c || "") ? c : null, at: Date.now() };
+    try { localStorage.setItem("recentAlerts", JSON.stringify(this.st)); } catch (e) {} this.tell(); }); },
+  tell() { if (window.remoteSend && !MIRROR) window.remoteSend({ cmd: "recentAlerts", st: this.st }); } };
 const AlertsOff = { st: (() => { try { return JSON.parse(localStorage.getItem("alertsOff")) || {}; } catch (e) { return {}; } })(),
   off(k) { return !!this.st[k]; },
   set(st) { this.st = {}; ["sub", "follow", "raid", "gift", "bits", "streak"].forEach(k => { if (st && st[k]) this.st[k] = true; });
@@ -7411,6 +7419,9 @@ const Live = {
   async handle(type, ev) {
     const who = (n, l, anon) => anon ? "Anonymous" : (n || l || "someone");
     if (type === "channel.channel_points_custom_reward_redemption.add") { Personal.redeem(ev); return; }
+    { const R = { "channel.follow": ["follow"], "channel.subscribe": ev.is_gift ? null : ["sub"], "channel.subscription.message": ["sub"], "channel.subscription.gift": ["gift", ev.total || 1], "channel.cheer": ["bits", ev.bits || 0], "channel.raid": ["raid"] }[type];
+      if (R) { const raid = type === "channel.raid", anon = ev.is_anonymous;
+        Recent.note(R[0], who(raid ? ev.from_broadcaster_user_name : ev.user_name, raid ? ev.from_broadcaster_user_login : ev.user_login, anon), R[1], anon ? "#f472b6" : raid ? null : colorOf(ev.user_id)); } }
     if (type === "channel.follow") { if (!AlertsOff.off("follow")) Alerts.follow(who(ev.user_name, ev.user_login), await colorOf(ev.user_id)); }
     // new subs and resubs get the plane; gifted subs are skipped so a big gift drop doesn't launch 50 planes
     else if (type === "channel.subscribe") {
@@ -7452,6 +7463,7 @@ const Chat = {
       const login = (line.match(/ :([^!]+)!/) || [])[1] || "";
       const msg = line.slice(line.indexOf(" :", pm) + 2).trim();
       AutoFx.chat(login);
+      if (/^!lurk\b/i.test(msg)) Recent.note("lurk", tags["display-name"] || login, 1, tags.color || chatColors[tags["user-id"]]);
       if (/^!lurk\b/i.test(msg)) Lurk.join(tags["display-name"] || login, login, tags.color || chatColors[tags["user-id"]]);
       else if (/^!(star[1-6]|staroff)\b/i.test(msg)) {         // wanted stars: the streamer only (counts as chat, so a lurking streamer leaves the tower)
         if ((tags.badges || "").includes("broadcaster/")) { const m = msg.match(/^!star([1-6])/i); Wanted.set(m ? +m[1] : 0); }
@@ -7465,7 +7477,7 @@ const Chat = {
       else Lurk.leave(login);
       return;
     }
-    if (line.indexOf(" USERNOTICE ") > 0 && tags["msg-id"] === "viewermilestone" && tags["msg-param-category"] === "watch-streak" && !AlertsOff.off("streak"))
+    if (line.indexOf(" USERNOTICE ") > 0 && tags["msg-id"] === "viewermilestone" && tags["msg-param-category"] === "watch-streak" && (Recent.note("streak", tags["display-name"] || tags.login, +tags["msg-param-value"] || 1, tags.color || chatColors[tags["user-id"]]), !AlertsOff.off("streak")))
       Alerts.streak(tags["display-name"] || tags.login || "viewer", +tags["msg-param-value"] || 1, tags.login, tags.color || chatColors[tags["user-id"]]);
   }
 };
@@ -8042,7 +8054,7 @@ window.KZDirect = function (opt) {
 (() => {
   const qs = new URLSearchParams(location.search), key = qs.get("ctl");
   if (!key || !window.WebSocket) return;
-  const PAGE = "html3", VERSION = "9ec8145", INST = Math.random().toString(36).slice(2, 8);
+  const PAGE = "html3", VERSION = "02e8745", INST = Math.random().toString(36).slice(2, 8);
   const QUICK = { mir: 1, rtt: 1 };                                 // sent many times a second: only the newest matters
   let said = false, direct = null;
   const seen = new Set(), seenList = [], fresh = id => { if (!id) return true; if (seen.has(id)) return false; seen.add(id); seenList.push(id); if (seenList.length > 800) seen.delete(seenList.shift()); return true; };
