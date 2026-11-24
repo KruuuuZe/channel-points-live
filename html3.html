@@ -391,7 +391,7 @@ body.fit #stage{background:radial-gradient(1200px 700px at 30% 20%,#1a103322,tra
 #lli{position:absolute;inset:0;z-index:6;pointer-events:none;opacity:0;transform:scale(1.04);transition:opacity .6s,transform .7s cubic-bezier(.2,.8,.2,1)}
 #lli.on{transition:opacity .2s,transform .25s cubic-bezier(.2,.8,.2,1)}          /* coming up: straight away */
 #lli.on{opacity:1;transform:none}
-#lli .bd{position:absolute;inset:0;background:radial-gradient(ellipse at 50% 40%,rgba(58,52,34,.88),rgba(16,15,10,.96) 75%);overflow:hidden}
+#lli .bd{display:none;position:absolute;inset:0;background:radial-gradient(ellipse at 50% 40%,rgba(58,52,34,.88),rgba(16,15,10,.96) 75%);overflow:hidden}
 #lli .bd::before{content:"";position:absolute;inset:0;background-image:linear-gradient(rgba(200,185,130,.07) 2px,transparent 2px),linear-gradient(90deg,rgba(200,185,130,.07) 2px,transparent 2px);background-size:120px 120px}
 #lli .bd img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:.95}
 #lli .hd{position:absolute;left:60px;top:40px;height:96px;display:flex;align-items:center;gap:18px;padding:0 34px;font:900 54px/1 "Black Ops One","Stencil","Impact",sans-serif;letter-spacing:.12em;color:#e9dfb8;text-shadow:0 3px 0 #000;
@@ -400,6 +400,7 @@ body.fit #stage{background:radial-gradient(1200px 700px at 30% 20%,#1a103322,tra
 @keyframes lliDot{50%{opacity:.35}}
 #lli .tl{position:absolute;transition:left .75s cubic-bezier(.2,.8,.2,1),top .75s cubic-bezier(.2,.8,.2,1),width .75s cubic-bezier(.2,.8,.2,1),height .75s cubic-bezier(.2,.8,.2,1),opacity .6s,transform .75s cubic-bezier(.2,.8,.2,1)}
 #lli .tl .vid{position:absolute;inset:0;background:#000;border-radius:6px;overflow:hidden}
+#lli .tl.drag{transition:opacity .6s} #lli .tl .rz{position:absolute;right:-10px;bottom:-10px;width:120px;height:120px;z-index:3;background:linear-gradient(135deg,transparent 52%,#a3e635 52% 60%,transparent 60% 70%,#a3e635 70% 78%,transparent 78%)}
 #lli .tl .vid iframe,#lli .tl .vid img{width:100%;height:100%;border:0;display:block;object-fit:cover}
 #lli .tl .fr{position:absolute;inset:-18px;border:14px solid #2d2c22;border-radius:14px;box-shadow:inset 0 0 0 3px #6f6a4e,0 14px 40px #000c;
   background:radial-gradient(circle,#a39d78 3px,transparent 4px) 0 0/40px 40px;-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude;padding:0}
@@ -6721,11 +6722,16 @@ const LiveLook = {
         rects.push({ l: rx + c * (tw + gx), t: oy + r * (th + gy), w: tw, h: th, o: 1, s: 1, small: tw < 900 }); }); }
     else { const tw = 1960, th = tw * 9 / 16, l = (W - tw) / 2, t = 210;
       want.forEach((x, i) => { const d = i - cur; rects.push({ l: l + d * (tw + 260), t: t + Math.abs(d) * 40, w: tw, h: th, o: d === 0 ? 1 : 0, s: d === 0 ? 1 : .86, small: false }); }); }
+    // moved or resized on the touchpad (long-press to move, the bottom-right corner to resize): those win over the layout
+    want.forEach((x, i) => { const p = (S.pos || {})[x.login.toLowerCase()], r = rects[i]; if (!p || r.o !== 1) return;
+      r.l = +p.l || 0; r.t = +p.t || 0; r.w = Math.max(320, +p.w || r.w); r.h = r.w * 9 / 16; r.s = 1; r.small = r.w < 900; });
     want.forEach((x, i) => { const k = x.login.toLowerCase(), r = rects[i]; let t = this.tiles.get(k);
       if (!t) { const el = document.createElement("div"); el.className = "tl"; el.innerHTML = '<div class="vid"></div><div class="fr"></div><div class="np"><span class="nm"></span><span class="v"></span><span class="m"></span></div>';
         el.style.cssText = `left:${r.l + r.w * .2}px;top:${r.t + r.h * .2}px;width:${r.w * .6}px;height:${r.h * .6}px;opacity:0`; box.append(el);
+        if (MIRROR) el.insertAdjacentHTML("beforeend", '<div class="rz"></div>');          // (the touchpad copy: a corner to drag to resize)
         t = { el, login: k, player: null }; this.tiles.set(k, t); this.load(t, x); requestAnimationFrame(() => requestAnimationFrame(() => this.place(t, r))); }
       else this.place(t, r);
+      t.rect = r; t.el.classList.toggle("drag", S.drag === k);
       const fr = t.el.querySelector(".fr"); if (art) { if (!fr.classList.contains("art")) { fr.className = "fr art"; fr.innerHTML = '<img alt="">'; } fr.querySelector("img").src = art; }
       t.el.querySelector(".nm").textContent = x.name || x.login; t.el.querySelector(".v").textContent = "";                         // (no viewer counts on stream)
       const loud = (S.loud || []).map(z => z.toLowerCase()).includes(k); t.el.classList.toggle("loud", loud); t.el.querySelector(".m").textContent = loud ? "🔊" : "🔇"; t.el.classList.toggle("small", !!r.small);
@@ -8057,7 +8063,7 @@ window.KZDirect = function (opt) {
 (() => {
   const qs = new URLSearchParams(location.search), key = qs.get("ctl");
   if (!key || !window.WebSocket) return;
-  const PAGE = "html3", VERSION = "efde2f0", INST = Math.random().toString(36).slice(2, 8);
+  const PAGE = "html3", VERSION = "fa328d6", INST = Math.random().toString(36).slice(2, 8);
   const QUICK = { mir: 1, rtt: 1 };                                 // sent many times a second: only the newest matters
   let said = false, direct = null;
   const seen = new Set(), seenList = [], fresh = id => { if (!id) return true; if (seen.has(id)) return false; seen.add(id); seenList.push(id); if (seenList.length > 800) seen.delete(seenList.shift()); return true; };
