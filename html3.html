@@ -6862,9 +6862,9 @@ const Medic = {
 
 /* ================= vinnie8d (his first chat of the day) =================
    His animation (made in 🎨 Art › VINNIE8D ART from his reference picture) pops up from the bottom right corner with
-   "Vinnie(FM)" above it in light green, plays for 5 seconds, then pops back down. Sound: the "vinnie" sound slot. */
+   "Vinnie(FM)" above it in light green, plays for 3 seconds, then pops back down. Sound: the "vinnie" sound slot. */
 const Vinnie = {
-  busy: false, NAME: "Vinnie(FM)", H: 460, HOLD: 5000,
+  busy: false, NAME: "Vinnie(FM)", H: 460, HOLD: 3000,
   run() { if (this.busy) return; this.busy = true; ChefArt.ready(["vin_anim"]).then(() => this.go(), () => this.go()); },
   go() { try { MySounds.play("vinnie"); } catch (e) {}
     if (!ChefArt.sprites.vin_anim && window.remoteSend && !MIRROR) window.remoteSend({ cmd: "artMissing", what: "🎞️ vinnie8d", names: ["vin_anim"] });
@@ -8141,7 +8141,7 @@ window.KZDirect = function (opt) {
 (() => {
   const qs = new URLSearchParams(location.search), key = qs.get("ctl");
   if (!key || !window.WebSocket) return;
-  const PAGE = "html3", VERSION = "ea80b83", INST = Math.random().toString(36).slice(2, 8);
+  const PAGE = "html3", VERSION = "5711bc7", INST = Math.random().toString(36).slice(2, 8);
   const QUICK = { mir: 1, rtt: 1 };                                 // sent many times a second: only the newest matters
   let said = false, direct = null;
   const seen = new Set(), seenList = [], fresh = id => { if (!id) return true; if (seen.has(id)) return false; seen.add(id); seenList.push(id); if (seenList.length > 800) seen.delete(seenList.shift()); return true; };
