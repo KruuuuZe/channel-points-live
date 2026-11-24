@@ -6981,6 +6981,7 @@ const Plane = {
     g.strokeStyle = "#2b2a1c"; g.lineWidth = 6; g.beginPath(); g.moveTo(-12, -58 * pr); g.lineTo(-12, 58 * pr); g.stroke();
     g.restore(); }
 };
+window.Plane = Plane;                        // (the app's touchpad looks at it in its copy: is the plane on?)
 /* ================= vinnie8d (his first chat of the day) =================
    His animation (made in 🎨 Art › VINNIE8D ART from his reference picture) pops up from the bottom right corner with
    "Vinnie(FM)" above it in light green, plays for 3 seconds, then pops back down. Sound: the "vinnie" sound slot. */
@@ -8262,7 +8263,7 @@ window.KZDirect = function (opt) {
 (() => {
   const qs = new URLSearchParams(location.search), key = qs.get("ctl");
   if (!key || !window.WebSocket) return;
-  const PAGE = "html3", VERSION = "a1f3cc5", INST = Math.random().toString(36).slice(2, 8);
+  const PAGE = "html3", VERSION = "cb77c97", INST = Math.random().toString(36).slice(2, 8);
   const QUICK = { mir: 1, rtt: 1 };                                 // sent many times a second: only the newest matters
   let said = false, direct = null;
   const seen = new Set(), seenList = [], fresh = id => { if (!id) return true; if (seen.has(id)) return false; seen.add(id); seenList.push(id); if (seenList.length > 800) seen.delete(seenList.shift()); return true; };
