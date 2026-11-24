@@ -6921,7 +6921,7 @@ const Emotes = {
     m.parts.forEach(p => { if (p.img) { if (!p.gif) urls.push(p.img); } else String(p.text || "").split(/\s+/).forEach(w => { const u = w && ChatFeed.EXTRA[w]; if (u) urls.push(u); }); });
     urls.slice(0, this.PER_MSG).forEach((u, i) => setTimeout(() => this.spawn(u), i * 170)); },
   spawn(url) { if (MIRROR || !this.on || !this.ok(url) || this.list.size >= this.MAX) return null; const n = this.list.size, life = Math.round((13000 + Math.random() * 5000) * (n >= 20 ? .5 : n >= 12 ? .72 : 1));
-    let seed = 0; for (let i = 0; i < 8; i++) { seed = (Math.random() * 4294967296) >>> 0; const q = this.wander(this.plan(seed, life), 0); if (!Plane.shown || Math.hypot(q.x - Plane.x, q.y - Plane.y) > 520) break; }     // not right on top of the plane
+    const seed = (Math.random() * 4294967296) >>> 0;           // anywhere: one that pops up right on the plane blows it up
     const id = Mirror.inst + "m" + (++this.seq); this.add(id, url, seed, life, 0); Mirror.fwd("emo", [id, url, seed, life]); return id; },
   // ---- one on screen (age: how many ms ago it appeared, when it's being caught up on)
   add(id, url, seed, life, age) { if (!this.ok(url) || this.list.has(id) || this.list.size >= this.MAX + 8) return; const S = this.S, el = document.createElement("img");
@@ -6934,7 +6934,7 @@ const Emotes = {
   start() { if (this.running) return; this.running = true;
     const step = now => { this.list.forEach(e => { const t = (now - e.born) / 1000, q = this.at(e, t), S = e.S;
         if (t > e.p.life + .3 && (q.x < -S || q.x > 2560 + S || q.y < -S || q.y > 1440 + S || t > e.p.life + 5)) return this.drop(e.id);
-        e.x = q.x; e.y = q.y; e.t = t; if (!e.vis) { e.el.style.opacity = t < .12 ? Math.max(0, t / .12).toFixed(2) : "1"; if (t >= .12) e.vis = 1; }
+        e.x = q.x; e.y = q.y; e.t = t; e.k = q.k; if (!e.vis) { e.el.style.opacity = t < .12 ? Math.max(0, t / .12).toFixed(2) : "1"; if (t >= .12) e.vis = 1; }
         e.el.style.transform = "translate3d(" + (q.x - S / 2).toFixed(1) + "px," + (q.y - S / 2).toFixed(1) + "px,0) rotate(" + q.r.toFixed(3) + "rad) scale(" + q.k.toFixed(3) + ")"; });
       if (this.list.size) requestAnimationFrame(step); else this.running = false; };
     requestAnimationFrame(step); },
@@ -7030,11 +7030,11 @@ const Plane = {
       [this.x, this.vx] = this.spring(this.x, this.vx, this.gx, 11, dt); [this.y, this.vy] = this.spring(this.y, this.vy, this.gy, 11, dt);
       const sp = Math.hypot(this.vx, this.vy);
       if (this.leaving && (this.x > 2560 + 380 || this.x < -380)) { this.shown = this.leaving = this.fire = false; this.man = this.want = null; }
-      // which way it heads: it turns around when your finger is well behind it, or once it has backed up a little way
-      // (a small move back near it, or a lean back while going nearly straight up or down, doesn't turn it)
+      // which way it heads: it turns around only when you move it back quickly (a fast swipe the other way, for a little
+      // distance). Moved back slowly, it keeps facing the same way and just backs up
       if (!this.leaving && !this.man) { const f = this.vx * this.D;
-        if (f < 0 && Math.abs(this.vx) > .25 * Math.abs(this.vy)) this.back -= f * dt; else if (f > 40) this.back = 0;
-        if ((this.tx - this.x) * this.D < -190 || this.back > 140) { this.D = -this.D; this.back = 0; } }
+        if (f < -1300 && Math.abs(this.vx) > .5 * Math.abs(this.vy)) this.back -= f * dt; else if (f > -700) this.back = 0;
+        if (this.back > 110) { this.D = -this.D; this.back = 0; } }
       // it swings round in about half a second: the angle it's swinging to moves round at an even rate and it follows
       // that on a spring, so the turn starts gently, ends gently, and can be turned back at any point
       { const to = this.D > 0 ? 0 : Math.PI, st = 9.2 * dt; this.psiT += Math.max(-st, Math.min(st, to - this.psiT)); [this.psi, this.psiV] = this.spring(this.psi, this.psiV, this.psiT, 18, dt);
@@ -7067,12 +7067,12 @@ const Plane = {
         if ((cx - e.x) * (cx - e.x) + (cy - e.y) * (cy - e.y) < rr * rr) { b.hit = 1; hit.push([e.id, cx, cy, b.vx, b.vy]); return; } } });
     if (hit.length) { this.bullets = this.bullets.filter(b => !b.hit);
       hit.forEach(h => { if (Emotes.shatter(h[0], h[1], h[2], h[3], h[4])) this.tell({ cmd: "emoHit", id: h[0], x: Math.round(h[1]), y: Math.round(h[2]), vx: Math.round(h[3]), vy: Math.round(h[4]) }); }); }
-    // flying into one: the plane blows up. Not one that popped up right on top of it, nor one it's touching when it
-    // comes back (while it blinks): those can't hurt it until they've drifted clear of it once
+    // flying into one, or one popping up right on it: the plane blows up. Only while it blinks, just back, is it safe:
+    // one it's touching then can't hurt it until they've been clear of each other once
     if (this.shown && !this.leaving) { const P = this.pose(now), c = Math.cos(P.pd), s = Math.sin(P.pd), W = this.W, safe = now <= this.safeUntil;
-      for (const e of Emotes.list.values()) { if (e.x == null || !e.ready) continue; const rr = (e.hw + e.hh) * .36 + W * .11; let touch = false;
+      for (const e of Emotes.list.values()) { if (e.x == null || !e.ready) continue; const rr = (e.hw + e.hh) * .36 * (e.k || 1) + W * .11; let touch = false;
         for (const o of [-.3, 0, .3]) { const px = P.x + P.F * o * W * c, py = P.y - o * W * s; if ((px - e.x) * (px - e.x) + (py - e.y) * (py - e.y) < rr * rr) { touch = true; break; } }
-        if (!touch) e.pass = 0; else if (safe || e.t < 1 || e.pass == null) e.pass = 1;
+        if (!touch) e.pass = 0; else if (safe) e.pass = 1;
         else if (!e.pass) { this.boom(now); this.tell({ cmd: "planeBoom" }); try { navigator.vibrate && navigator.vibrate([40, 30, 90]); } catch (x) {} return; } } } },
   tell(c) { if (this.report) { try { this.report(c); } catch (e) {} } },
   // OBS, when the copy says an emote was shot: the bullet nearest to it is spent too
@@ -8506,7 +8506,7 @@ window.KZDirect = function (opt) {
 (() => {
   const qs = new URLSearchParams(location.search), key = qs.get("ctl");
   if (!key || !window.WebSocket) return;
-  const PAGE = "html3", VERSION = "3e4ccaf", INST = Math.random().toString(36).slice(2, 8);
+  const PAGE = "html3", VERSION = "dd9f002", INST = Math.random().toString(36).slice(2, 8);
   const QUICK = { mir: 1, rtt: 1 };                                 // sent many times a second: only the newest matters
   let said = false, direct = null;
   const seen = new Set(), seenList = [], fresh = id => { if (!id) return true; if (seen.has(id)) return false; seen.add(id); seenList.push(id); if (seenList.length > 800) seen.delete(seenList.shift()); return true; };
