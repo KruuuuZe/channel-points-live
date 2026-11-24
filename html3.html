@@ -6977,7 +6977,6 @@ const Plane = {
     g.fillStyle = "#a9b4b0"; g.fillRect(120, -36, 56, 22); g.strokeRect(120, -36, 56, 22);
     g.strokeStyle = "#4b4830"; g.lineWidth = 2; for (let i = 0; i < 4; i++) { g.beginPath(); g.moveTo(50, -24 + i * 14); g.lineTo(110, -24 + i * 14); g.stroke(); }
     g.fillStyle = "#222"; g.fillRect(186, 0, 26, 7);                                                                                                // the gun
-    g.strokeStyle = "#2b2a1c"; g.lineWidth = 3; g.beginPath(); g.moveTo(80, 30); g.lineTo(90, 52); g.stroke(); g.beginPath(); g.arc(90, 56, 8, 0, Math.PI * 2); g.fillStyle = "#222"; g.fill();
     const pr = Math.sin(now / 18); g.fillStyle = "rgba(60,60,50,.35)"; g.beginPath(); g.ellipse(-12, 0, 8, 60, 0, 0, Math.PI * 2); g.fill();          // the propeller, a blur
     g.strokeStyle = "#2b2a1c"; g.lineWidth = 6; g.beginPath(); g.moveTo(-12, -58 * pr); g.lineTo(-12, 58 * pr); g.stroke();
     g.restore(); }
@@ -8263,7 +8262,7 @@ window.KZDirect = function (opt) {
 (() => {
   const qs = new URLSearchParams(location.search), key = qs.get("ctl");
   if (!key || !window.WebSocket) return;
-  const PAGE = "html3", VERSION = "1cf4e45", INST = Math.random().toString(36).slice(2, 8);
+  const PAGE = "html3", VERSION = "a1f3cc5", INST = Math.random().toString(36).slice(2, 8);
   const QUICK = { mir: 1, rtt: 1 };                                 // sent many times a second: only the newest matters
   let said = false, direct = null;
   const seen = new Set(), seenList = [], fresh = id => { if (!id) return true; if (seen.has(id)) return false; seen.add(id); seenList.push(id); if (seenList.length > 800) seen.delete(seenList.shift()); return true; };
