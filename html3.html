@@ -6510,11 +6510,11 @@ window.onRemote = c => {
    spot they belong to on the stage (which still does all the gliding and framing). */
 const Float = {
   list: new Set(), run: false,
-  add(anchor, shown) { let L = $("#flt"); if (!L) { L = document.createElement("div"); L.id = "flt"; document.body.append(L); }
-    const h = document.createElement("div"); h.className = "fh"; L.append(h); const f = { h, anchor, shown }; this.list.add(f); this.loop(); return f; },
+  add(anchor, shown, op) { let L = $("#flt"); if (!L) { L = document.createElement("div"); L.id = "flt"; document.body.append(L); }
+    const h = document.createElement("div"); h.className = "fh"; L.append(h); const f = { h, anchor, shown, op }; this.list.add(f); this.loop(); return f; },
   remove(f) { if (!f) return; this.list.delete(f); f.h.remove(); },
   loop() { if (this.run) return; this.run = true; const tick = () => { if (!this.list.size) { this.run = false; return; }
-      this.list.forEach(f => { const ok = f.anchor.isConnected && f.shown(); f.h.style.visibility = ok ? "visible" : "hidden"; if (!ok) return;
+      this.list.forEach(f => { const ok = f.anchor.isConnected && f.shown(); f.h.style.visibility = ok ? "visible" : "hidden"; if (!ok) return; if (f.op) f.h.style.opacity = f.op();
         const r = f.anchor.getBoundingClientRect(), s = f.h.style; s.left = r.left + "px"; s.top = r.top + "px"; s.width = r.width + "px"; s.height = r.height + "px"; });
       requestAnimationFrame(tick); }; requestAnimationFrame(tick); }
 };
@@ -6567,15 +6567,31 @@ window.SharedVid = SharedVid;
    The app's touchpad copy shows each stream's thumbnail instead of the video (no sound, much lighter). */
 const LiveLook = {
   st: { on: false, mode: "big", list: [], cur: 0, loud: [] }, tiles: new Map(), api: null, apiWait: null,
-  set(st) { if (!st) return; this.st = Object.assign({ on: false, mode: "big", list: [], cur: 0, loud: [] }, st); this.st.list = (this.st.list || []).filter(x => x && /^[a-z0-9_]{2,30}$/i.test(x.login)).slice(0, 16); this.render(); Mirror.send(true); },
+  set(st) { if (!st) return; const was = this.st.on; this.st = Object.assign({ on: false, mode: "big", list: [], cur: 0, loud: [] }, st); this.st.list = (this.st.list || []).filter(x => x && /^[a-z0-9_]{2,30}$/i.test(x.login)).slice(0, 16);
+    if (this.st.on && !was) this.warm(); else if (!this.st.on) { this.shown = false; this.arming = false; clearInterval(this.armT); this.tiles.forEach(t => { try { t.player && t.ready && t.player.pause(); } catch (e) {} t.playing = false; }); }
+    this.render(); Mirror.send(true); },
+  /* Switched on: the streams are started first, invisibly (on the stream they're see-through), and the look-in only
+     appears once the ones on screen are really playing (at most about 4 seconds), so it comes up already moving.
+     The players are made ahead of time, while it's off, as soon as streams are picked, so they're quick to start.
+     (If this browser won't start them while they're see-through, it just shows them straight away, and remembers.) */
+  shown: false, arming: false,
+  warm() { clearInterval(this.armT); const real = !MIRROR && /github\.io$|^localhost$|^127\./.test(location.hostname);
+    let fails = 0; try { fails = +localStorage.getItem("lliWarmFail") || 0; } catch (e) {}
+    if (!real || fails >= 2 || !this.st.list.length) { this.shown = true; return; }
+    this.shown = false; this.arming = true; const t0 = performance.now();
+    setTimeout(() => this.tiles.forEach(t => { try { if (t.ready && t.player.isPaused()) t.player.play(); } catch (e) {} }), 30);          // start them now (they're made already)
+    this.armT = setInterval(() => { const vis = [...this.tiles.values()].filter(t => +t.el.style.opacity > .98), dt = performance.now() - t0, any = vis.some(t => t.playing);
+      if ((vis.length && vis.every(t => t.playing) && dt > 300) || dt > 4000 || (!any && dt > 2200)) {
+        try { localStorage.setItem("lliWarmFail", any ? "0" : String(fails + 1)); } catch (e) {}
+        clearInterval(this.armT); this.arming = false; this.shown = true; this.render(); } }, 100); },
   // Twitch's player script, once
   ready() { if (window.Twitch && Twitch.Player) return Promise.resolve(); if (this.apiWait) return this.apiWait;
     return this.apiWait = new Promise(ok => { const sc = document.createElement("script"); sc.src = "https://player.twitch.tv/js/embed/v1.js"; sc.onload = ok; sc.onerror = ok; document.head.append(sc); }); },
   frameArt() { const a = ChefArt.sprites.lli_frame; return a && a.img && a.img.complete ? a.url || a.img.src : null; },
   render() { const box = $("#lli"), S = this.st, W = 2560, H = 1440, art = this.frameArt();
-    box.classList.toggle("on", !!S.on);
+    box.classList.toggle("on", !!S.on && this.shown);
     const bdArt = ChefArt.sprites.lli_backdrop, bd = box.querySelector(".bd"); if (bdArt && bdArt.img && !bd.querySelector("img")) { const im = document.createElement("img"); im.src = bdArt.url || bdArt.img.src; bd.append(im); }
-    const want = S.on ? S.list : [], n = want.length, keep = new Set(want.map(x => x.login.toLowerCase()));
+    const want = S.list, n = want.length, keep = new Set(want.map(x => x.login.toLowerCase()));
     // gone: shrink away, then go
     this.tiles.forEach((t, k) => { if (!keep.has(k)) { this.tiles.delete(k); t.el.style.opacity = 0; t.el.style.transform = "scale(.6)"; Float.remove(t.fl); setTimeout(() => { try { t.player && t.player.destroy && t.player.destroy(); } catch (e) {} t.el.remove(); }, 800); } });
     // where each one goes
@@ -6597,21 +6613,22 @@ const LiveLook = {
         t = { el, login: k, player: null }; this.tiles.set(k, t); this.load(t, x); requestAnimationFrame(() => requestAnimationFrame(() => this.place(t, r))); }
       else this.place(t, r);
       const fr = t.el.querySelector(".fr"); if (art) { if (!fr.classList.contains("art")) { fr.className = "fr art"; fr.innerHTML = '<img alt="">'; } fr.querySelector("img").src = art; }
-      t.el.querySelector(".nm").textContent = x.name || x.login; t.el.querySelector(".v").textContent = x.viewers != null ? "👁 " + (+x.viewers).toLocaleString() : "";
+      t.el.querySelector(".nm").textContent = x.name || x.login; t.el.querySelector(".v").textContent = "";                         // (no viewer counts on stream)
       const loud = (S.loud || []).map(z => z.toLowerCase()).includes(k); t.el.classList.toggle("loud", loud); t.el.querySelector(".m").textContent = loud ? "🔊" : "🔇"; t.el.classList.toggle("small", !!r.small);
       t.vol = Math.max(0, Math.min(1, +((S.vol || {})[k] ?? 1))); this.mute(t, !loud); }); },
   place(t, r) { const s = t.el.style; s.left = r.l + "px"; s.top = r.t + "px"; s.width = r.w + "px"; s.height = r.h + "px"; s.opacity = r.o; s.transform = `scale(${r.s})`; },
   load(t, x) { const vid = t.el.querySelector(".vid");
     if (MIRROR || !/github\.io$|^localhost$|^127\./.test(location.hostname)) { if (x.thumb) { const im = document.createElement("img"); im.src = String(x.thumb).replace("{width}", "640").replace("{height}", "360"); vid.append(im); } return; }    // the touchpad copy: a picture, not the video
-    t.fl = Float.add(vid, () => this.st.on && $("#lli").classList.contains("on") && +getComputedStyle(t.el).opacity > .98 && +getComputedStyle($("#lli")).opacity > .98);
+    t.fl = Float.add(vid, () => this.st.on && (this.shown || this.arming) && +t.el.style.opacity > .98, () => this.shown ? 1 : .01);
     const id = "lliP_" + t.login + "_" + Date.now(), pd = document.createElement("div"); pd.id = id; t.fl.h.append(pd);
     this.ready().then(() => { if (!this.tiles.has(t.login) || !window.Twitch || !Twitch.Player) return;
       try { t.player = new Twitch.Player(id, { channel: t.login, parent: [location.hostname], muted: true, autoplay: true, controls: false, width: "100%", height: "100%" });
         // it should just play: as soon as the player is ready, if the browser blocked autoplay, and whenever it's found paused
         const go = () => { try { if (t.player.isPaused && t.player.isPaused()) t.player.play(); } catch (e) {} };
-        t.player.addEventListener(Twitch.Player.READY, () => { t.ready = true; this.mute(t, t.wantMuted !== false); go(); setTimeout(go, 800); });
+        t.player.addEventListener(Twitch.Player.READY, () => { t.ready = true; this.mute(t, t.wantMuted !== false); if (this.st.on) { go(); setTimeout(go, 800); } else try { t.player.pause(); } catch (e) {} });
+        if (Twitch.Player.PLAYING) t.player.addEventListener(Twitch.Player.PLAYING, () => { t.playing = true; });
         if (Twitch.Player.PLAYBACK_BLOCKED) t.player.addEventListener(Twitch.Player.PLAYBACK_BLOCKED, () => { try { t.player.setMuted(true); t.player.play(); } catch (e) {} });
-        if (Twitch.Player.PAUSE) t.player.addEventListener(Twitch.Player.PAUSE, () => setTimeout(go, 400));
+        if (Twitch.Player.PAUSE) t.player.addEventListener(Twitch.Player.PAUSE, () => { t.playing = false; if (this.st.on) setTimeout(go, 400); });
         if (!this.keepT) this.keepT = setInterval(() => { if (!this.st.on) return; this.tiles.forEach(x => { if (x.ready && x.player) try { if (x.player.isPaused()) x.player.play(); } catch (e) {} }); }, 2500);
       } catch (e) {} }); },
   mute(t, m) { t.wantMuted = m; if (!t.player || !t.ready) return; try { t.player.setMuted(m); if (!m) t.player.setVolume(t.vol == null ? 1 : t.vol); } catch (e) {} }
@@ -7909,7 +7926,7 @@ window.KZDirect = function (opt) {
 (() => {
   const qs = new URLSearchParams(location.search), key = qs.get("ctl");
   if (!key || !window.WebSocket) return;
-  const PAGE = "html3", VERSION = "0fb3923", INST = Math.random().toString(36).slice(2, 8);
+  const PAGE = "html3", VERSION = "1f142cb", INST = Math.random().toString(36).slice(2, 8);
   const QUICK = { mir: 1, rtt: 1 };                                 // sent many times a second: only the newest matters
   let said = false, direct = null;
   const seen = new Set(), seenList = [], fresh = id => { if (!id) return true; if (seen.has(id)) return false; seen.add(id); seenList.push(id); if (seenList.length > 800) seen.delete(seenList.shift()); return true; };
