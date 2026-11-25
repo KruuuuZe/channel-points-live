@@ -7411,7 +7411,7 @@ const Plane = {
     else if (this.shown) { this.leaving = true; this.aim(this.D > 0 ? 3500 : -940, this.y - 200); }
     this.start(); if (!MIRROR) Mirror.send(true); return this.on; },
   aim(x, y) { this.tx = x; this.ty = y; this.gs = 1e9; this.goAt = performance.now(); },
-  go(x, y) { if (!this.on) return; const now = performance.now(), nx = Math.max(0, Math.min(1, +x || 0)) * 2560, ny = Math.max(0, Math.min(1, +y || 0)) * 1440;
+  go(x, y) { if (!this.on) return; const now = performance.now(), nx = Math.max(.05, Math.min(.95, +x || 0)) * 2560, ny = Math.max(.07, Math.min(.92, +y || 0)) * 1440;      // (the whole plane stays on the screen)
     if (this.dead || this.down) { this.tx = nx; this.ty = ny; return; }          // it has been shot down: it comes back only when you touch the touchpad again
     if (!this.shown) this.enter(nx, ny);
     else { const since = now - this.goAt; if (since > 3 && since < 260) this.gap += (since - this.gap) * .3; }
@@ -7429,8 +7429,10 @@ const Plane = {
   spr(k) { const a = ChefArt.sprites[k]; return a && a.img && a.img.complete && a.img.naturalWidth ? a : null; },
   start() { if (this.running) return; this.running = true; let last = performance.now();
     const step = now => { const dt = Math.min(.05, Math.max(.001, (now - last) / 1000)); last = now;
-      try { this.tick(dt, now); this.draw(now); } catch (e) { console.error(e); }
-      if (this.shown || this.bullets.length || this.fx || this.dead) requestAnimationFrame(step); else this.running = false; };
+      // (each on its own: a hiccup in one can never leave an old picture frozen on the screen)
+      try { this.tick(dt, now); } catch (e) { console.error(e); }
+      try { this.draw(now); } catch (e) { console.error(e); try { $("#planecv").getContext("2d").clearRect(0, 0, 2560, 1440); } catch (x) {} }
+      if (this.shown || this.bullets.length || this.fx || this.dead) requestAnimationFrame(step); else { this.running = false; try { $("#planecv").getContext("2d").clearRect(0, 0, 2560, 1440); } catch (x) {} } };
     requestAnimationFrame(step); },
   // one step of a spring that never overshoots (worked out exactly, so it's the same at any frame rate): [new place, new speed]
   spring(x, v, to, w, dt) { const d = x - to, e = Math.exp(-w * dt), t = (v + w * d) * dt; return [to + (d + t) * e, (v - w * t) * e]; },
@@ -7512,7 +7514,8 @@ const Plane = {
   // the explosion: its picture (plane_boom) played once, or drawn: a flash, a fireball that swells and cools to smoke, a
   // ring, and pieces of the plane flung out and falling
   blast(g, now) { const fx = this.fx, t = (now - fx.at) / 1000, B = this.bk("plane_boom"), k = t * (1 - Math.min(.45, t * .4)), x = fx.x + fx.vx * k, y = fx.y + fx.vy * k;
-    if (B) { const i = Math.floor(t * 1000 / B.ms); if (i >= B.f.length) { this.fx = null; return; } this.put(g, B.f[i], x, y, fx.pd, fx.F, B.flip, 1); return; }
+    if (t > 3) { this.fx = null; return; }                                    // (never longer than 3 seconds, whatever its picture says)
+    if (B) { const i = Math.floor(t * 1000 / (B.ms > 0 ? B.ms : 85)); if (!(i < B.f.length) || !B.f[i]) { this.fx = null; return; } this.put(g, B.f[i], x, y, fx.pd, fx.F, B.flip, 1); return; }
     const q = t / .95; if (q >= 1) { this.fx = null; return; }
     const mix = (a, b, u) => a + (b - a) * Math.max(0, Math.min(1, u)), col = (u, al) => { const h = u < .3 ? u / .3 : 1, c = u < .3 ? 0 : (u - .3) / .7;     // white-hot, then fire, then smoke
       return "rgba(" + Math.round(mix(mix(255, 255, h), 62, c)) + "," + Math.round(mix(mix(248, 150, h), 56, c)) + "," + Math.round(mix(mix(215, 36, h), 52, c)) + "," + al.toFixed(3) + ")"; };
@@ -7602,7 +7605,7 @@ const Plane = {
       // middle of the whole blast), and it's sized so that plane is as long as the level one (else about 2.4 planes wide)
       const P = L && L.P, like = P ? Math.min(far(f0.P, P, false), far(f0.P, P, true)) : 9, tot = ok.reduce((s, f) => s + f.A, 0), W = this.W;
       const mid0 = like < .55 ? [f0.cx, f0.cy] : [ok.reduce((s, f) => s + f.cx * f.A, 0) / tot, ok.reduce((s, f) => s + f.cy * f.A, 0) / tot];
-      an = M.map(() => mid0); c = Math.max(W * 1.2 / a.w, Math.min(W * 5 / a.w, like < .55 && L.len && f0.len > 4 ? L.len / f0.len : W * 2.4 / a.w));
+      an = M.map(() => mid0); c = Math.max(W * 1.2 / a.w, Math.min(W * 3 / a.w, like < .55 && L.len && f0.len > 4 ? L.len / f0.len : W * 2.4 / a.w));
       if (P && like < .55 && far(f0.P, P, true) * 1.25 < far(f0.P, P, false)) B.flip = -1;
     } else {
       // the turn and the roll: every frame pinned by the middle of the plane in it, and the whole sheet sized so the plane
@@ -8960,7 +8963,7 @@ window.KZDirect = function (opt) {
 (() => {
   const qs = new URLSearchParams(location.search), key = qs.get("ctl");
   if (!key || !window.WebSocket) return;
-  const PAGE = "html3", VERSION = "cf45820", INST = Math.random().toString(36).slice(2, 8);
+  const PAGE = "html3", VERSION = "e39307f", INST = Math.random().toString(36).slice(2, 8);
   const QUICK = { mir: 1, rtt: 1 };                                 // sent many times a second: only the newest matters
   let said = false, direct = null;
   const seen = new Set(), seenList = [], fresh = id => { if (!id) return true; if (seen.has(id)) return false; seen.add(id); seenList.push(id); if (seenList.length > 800) seen.delete(seenList.shift()); return true; };
