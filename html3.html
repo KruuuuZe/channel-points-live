@@ -645,7 +645,7 @@ body.fit #stage{background:radial-gradient(1200px 700px at 30% 20%,#1a103322,tra
   <button class="b-scrap" data-t="scroopboard">!scroopleaderboard</button>
   <button class="b-bolt" data-t="bolt">⚡ Bolt</button><button class="snd" data-snd="bolt" title="Add a sound for this effect">🔊+</button>
   <button class="b-mango" data-t="mango">🥭 Mango</button><button class="snd" data-snd="mango" title="Add a sound for this effect">🔊+</button>
-  <button class="b-banana" data-t="train">🚂 mystory2d train</button><button class="b-smoke" data-t="emote">😀 Floating emote</button><button class="b-smoke" data-t="flak">💥 !flak</button><button class="b-smoke" data-t="tank1">🪖 !tank1</button><button class="b-smoke" data-t="tank2">🪖 !tank2</button><button class="b-smoke" data-t="trepair">🔧 repair tanks</button><button class="b-banana" data-t="flags">🏳️ YoLoGame_WP flags</button><button class="b-banana" data-t="vinnie">🎞️ vinnie8d</button><button class="snd" data-snd="vinnie" title="Add a sound for vinnie8d">🔊+</button><button class="snd" data-snd="flags" title="Add a sound for the YoLoGame_WP flags">🔊+</button><button class="b-banana" data-t="medic">🩹 NeedYouMoree medic</button><button class="b-banana" data-t="banana">🍌 Banana</button><button class="b-banana" data-t="pirate">🏴‍☠️ Kapelan012 pirate</button><button class="b-smoke" data-t="smokeLap">🌀 Smoke lap</button><button class="b-banana" data-t="vterrible">💣 vTerrible</button><button class="snd" data-snd="vterrible" title="Add a sound for vTerrible">🔊+</button><button class="b-banana" data-t="scrap">🛞 Jawa929 scrap haul</button><button class="snd" data-snd="scrap" title="Add a sound for the scrap haul">🔊+</button><button class="snd" data-snd="smokeLap" title="Add a sound for the smoke lap">🔊+</button><button class="snd" data-snd="pirate" title="Add a sound for the pirate">🔊+</button><button class="snd" data-snd="banana" title="Add a sound for this effect">🔊+</button>
+  <button class="b-banana" data-t="train">🚂 mystory2d train</button><button class="b-smoke" data-t="emote">😀 Floating emote</button><button class="b-smoke" data-t="flak">💥 !flak</button><button class="b-smoke" data-t="tank1">🪖 !tank1</button><button class="b-smoke" data-t="tank2">🪖 !tank2</button><button class="b-smoke" data-t="trepair">🔧 repair tanks</button><button class="b-smoke" data-t="tboard">🏆 !tankleaderboard</button><button class="b-banana" data-t="flags">🏳️ YoLoGame_WP flags</button><button class="b-banana" data-t="vinnie">🎞️ vinnie8d</button><button class="snd" data-snd="vinnie" title="Add a sound for vinnie8d">🔊+</button><button class="snd" data-snd="flags" title="Add a sound for the YoLoGame_WP flags">🔊+</button><button class="b-banana" data-t="medic">🩹 NeedYouMoree medic</button><button class="b-banana" data-t="banana">🍌 Banana</button><button class="b-banana" data-t="pirate">🏴‍☠️ Kapelan012 pirate</button><button class="b-smoke" data-t="smokeLap">🌀 Smoke lap</button><button class="b-banana" data-t="vterrible">💣 vTerrible</button><button class="snd" data-snd="vterrible" title="Add a sound for vTerrible">🔊+</button><button class="b-banana" data-t="scrap">🛞 Jawa929 scrap haul</button><button class="snd" data-snd="scrap" title="Add a sound for the scrap haul">🔊+</button><button class="snd" data-snd="smokeLap" title="Add a sound for the smoke lap">🔊+</button><button class="snd" data-snd="pirate" title="Add a sound for the pirate">🔊+</button><button class="snd" data-snd="banana" title="Add a sound for this effect">🔊+</button>
   <button class="b-turkey" data-t="turkey">🦃 Turkey</button><button class="snd" data-snd="turkey" title="Add a sound for this effect">🔊+</button>
   <button class="b-penguin" data-t="penguin">🐧 Penguin</button><button class="snd" data-snd="penguin" title="Add a sound for this effect">🔊+</button>
   <button class="b-fish" data-t="fish">🐟 ATT3NCHUN</button><button class="snd" data-snd="fish" title="Add a sound for this effect">🔊+</button>
@@ -7061,6 +7061,15 @@ const Tanks = {
     this.start(); },
   fix(s) { const t = this.slots[s]; if (!t || t.dead) return; t.hp = 1; t.tracks = t.turret = true; t.parts = []; t.last = performance.now(); this.say(t, "🔧 repaired! −" + fmt(this.COST) + " scrap");
     for (let i = 0; i < 18; i++) this.fx.push({ k: "spark", x: this.cx(t) + rand(-120, 120), y: this.GY - rand(40, 220), vx: rand(-200, 200), vy: rand(-320, -60), at: performance.now(), life: rand(500, 900), c: "#a3e635" }); },
+  // wins, kept for the !tankleaderboard (All Time)
+  wins: (() => { try { return JSON.parse(localStorage.getItem("tankWins")) || {}; } catch (e) { return {}; } })(),
+  win(t) { const u = this.wins[t.k] || (this.wins[t.k] = { name: t.name, color: t.color, w: 0 }); u.name = t.name; u.color = t.color; u.w++; try { localStorage.setItem("tankWins", JSON.stringify(this.wins)); } catch (e) {} },
+  // !tankleaderboard: the top 10 by wins, for 20 seconds (in the scroop board's place)
+  board() { const b = document.createElement("div"), top = Object.values(this.wins).sort((a, c) => c.w - a.w).slice(0, 10);
+    b.append(el("h4", null, "🪖 TANK BATTLE · TOP 10 WINS"));
+    if (!top.length) b.append(el("div", "none", "No tank wins yet…"));
+    top.forEach((u, i) => { const row = el("div", "r"), n = el("b", null, (i + 1) + ". " + u.name); row.style.setProperty("--uc", css(bright(u.color || "#ffffff"))); row.append(n, el("span", null, fmt(u.w) + (u.w === 1 ? " win" : " wins"))); b.append(row); });
+    Scrap.showBoard(b.innerHTML); },
   say(t, text) { if (!t) return; t.say = text; t.sayAt = performance.now(); },
   // how likely its shot is to hit: best at full health, lower as it's worn, lower with no tracks, far lower with no turret
   aim(t) { return .85 * (.45 + .55 * t.hp) * (t.tracks ? 1 : .72) * (t.turret ? 1 : .3); },
@@ -7081,7 +7090,8 @@ const Tanks = {
     if (sh.brk === "turret" && e.turret) { e.turret = false; this.part(e, "turret", now); }
     if (e.hp <= 0) this.kill(e, now); },
   kill(t, now) { t.dead = now;
-    { const w = this.slots[1 - t.s]; if (!MIRROR && w && !w.dead) Flak.loot({ login: /^test\d$/.test(w.k) ? "test" : w.k, name: w.name, color: w.color }, this.cx(t), this.GY - this.H - 160); }     // the winner's loot, as for !flak if (t.turret) { t.turret = false; this.part(t, "turret", now); } this.boom(this.cx(t), this.GY - this.H * .5, 2.2, now); this.say(t, "💥 destroyed");
+    { const w = this.slots[1 - t.s]; if (!MIRROR && w && !w.dead && !/^test\d$/.test(w.k)) this.win(w);
+      if (!MIRROR && w && !w.dead) Flak.loot({ login: /^test\d$/.test(w.k) ? "test" : w.k, name: w.name, color: w.color }, this.cx(t), this.GY - this.H - 160); }     // the winner's loot, as for !flak if (t.turret) { t.turret = false; this.part(t, "turret", now); } this.boom(this.cx(t), this.GY - this.H * .5, 2.2, now); this.say(t, "💥 destroyed");
     setTimeout(() => { if (this.slots[t.s] === t) this.slots[t.s] = null; }, 4500); },
   // a piece blown off: it flies off spinning and falls (the turret) or drops and rolls away (the tracks)
   part(t, which, now) { const dir = t.s ? 1 : -1; t.parts.push({ which, at: now, vx: which === "turret" ? dir * rand(150, 380) : dir * rand(40, 110), vy: which === "turret" ? -rand(700, 900) : -rand(80, 160), spin: rand(-6, 6) * (which === "turret" ? 1 : .2) });
@@ -8017,6 +8027,7 @@ document.querySelectorAll("#testbar [data-t]").forEach(b => b.onclick = () => {
   else if (t === "flags") Flags.run();
   else if (t === "flak") Flak.order("test", "Test", "#a3e635");
   else if (t === "tank1" || t === "tank2") Tanks.cmd(+t.slice(4), "test" + t.slice(4), "Tester" + t.slice(4), t === "tank1" ? "#ff7f50" : "#1e90ff");
+  else if (t === "tboard") Tanks.board();
   else if (t === "trepair") Tanks.slots.forEach(x => { if (x && !x.dead) { Tanks.fix(x.s); Mirror.fwd("tank.fix", [x.s]); } });       // (the test bar's: free)
   else if (t === "emote") { if (!Emotes.on) Emotes.toggle(true); Emotes.spawn("https://static-cdn.jtvnw.net/emoticons/v2/" + ["25", "354", "425618"][Math.floor(Math.random() * 3)] + "/default/dark/2.0"); }
   else if (t === "vinnie") Vinnie.run();
@@ -8254,6 +8265,7 @@ const Chat = {
       else if (/^!scroopleaderboard\b/i.test(msg)) Scrap.showBoard();
       else if (/^!tank[12]\b/i.test(msg)) Tanks.cmd(+msg[5], login, tags["display-name"] || login, tags.color || chatColors[tags["user-id"]]);
       else if (/^!repair\b/i.test(msg)) Tanks.repairCmd(login);
+      else if (/^!tankleaderboard\b/i.test(msg)) Tanks.board();
       else if (/^!flak\b/i.test(msg)) Flak.order(login, tags["display-name"] || login, tags.color || chatColors[tags["user-id"]]);
       else if (/^!(green|blue)\b/i.test(msg)) Scrap.pick(login, msg.slice(1).split(/\s/)[0].toLowerCase());          // their !scroop soldier's color
       else if (/^!scroop\b/i.test(msg) || msg.includes("kruuuuCatch1")) Scrap.dig(tags["display-name"] || login, login, tags.color || chatColors[tags["user-id"]]);   // lurkers can scroop without leaving the tower
@@ -8843,7 +8855,7 @@ window.KZDirect = function (opt) {
 (() => {
   const qs = new URLSearchParams(location.search), key = qs.get("ctl");
   if (!key || !window.WebSocket) return;
-  const PAGE = "html3", VERSION = "6a61e0f", INST = Math.random().toString(36).slice(2, 8);
+  const PAGE = "html3", VERSION = "33e0a96", INST = Math.random().toString(36).slice(2, 8);
   const QUICK = { mir: 1, rtt: 1 };                                 // sent many times a second: only the newest matters
   let said = false, direct = null;
   const seen = new Set(), seenList = [], fresh = id => { if (!id) return true; if (seen.has(id)) return false; seen.add(id); seenList.push(id); if (seenList.length > 800) seen.delete(seenList.shift()); return true; };
