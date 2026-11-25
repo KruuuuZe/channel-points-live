@@ -5519,6 +5519,8 @@ const Personal = {
     const title = (ev.reward && ev.reward.title) || "";
     { const u = /\b(?:https?:\/\/|www\.)[^\s<>"]+[^\s<>".,!?)\]]/i.exec(ev.user_input || "");      // a redeem with a link in it: to the app's Shared Links, under the redeemer's name
       if (u && window.remoteSend && !MIRROR) window.remoteSend({ cmd: "redeemLink", url: /^https?:/i.test(u[0]) ? u[0] : "https://" + u[0], from: ev.user_name || ev.user_login || "", reward: title }); }
+    const who = (ev.user_login || "").toLowerCase();
+    if (!this.REWARD.test(title)) AutoFx.chat(who);                   // (any other redeem counts as their first action of the day: it plays their effect if they haven't had it yet)
     if (/^\s*special\s*effects?\s*$/i.test(title)) { Recent.note("special", ev.user_name || ev.user_login); Alerts.special(ev.user_name || ev.user_login); return; }      // 🛸 the "Special Effects" redeem
     if (!this.REWARD.test(title)) return;
     const k = (ev.user_login || "").toLowerCase();
@@ -5526,7 +5528,7 @@ const Personal = {
     const raid = Object.keys(CUSTOM_RAIDS).find(x => x.toLowerCase() === k);        // (a raider's redeem plays their raid effect, even if they also have a first-chat one)
     if (raid) { Alerts.raidFx(ev.user_name || ev.user_login); return; }
     const fx = AutoFx.FIRST_OF_DAY[k];
-    if (fx) { fx(); return; }
+    if (fx) { if (!AutoFx.had(k)) AutoFx.mark(k); fx(); return; }     // ("Play my Effect" plays it whenever it's redeemed; it also counts as their first of the day)
   }
 };
 
@@ -5540,15 +5542,23 @@ const AutoFx = {
   KEY: "autoFxDay",
   REDEEM: { jawa929: () => ScrapHaul.run() },                                // played only by the "Play my Effect" redeem
   FIRST_OF_DAY: { vinnie8d: () => Vinnie.run(), yologame_wp: () => Flags.run(), needyoumoree: () => Medic.run(), mystory2d: () => Train.run(), vterriblex01: () => VTerrible.run(), jawa929: () => ScrapHaul.run(), thenapalmer: () => Mango.run(), kapelan012: () => Pirate.run(), att3nchun: () => Fishy.run(), anime_chef: () => Chef.run(), tassiethedevil: () => Tank.run(), kazul123: () => Kazul.run(), partisanherojinx: () => Jinx.run() },
+  // A viewer's first chat message of the day, or their first channel point redeem of the day, whichever comes first,
+  // plays their effect; after that neither does, until tomorrow. Who has had theirs today is kept here, in memory (so
+  // it holds even if OBS's storage doesn't) and in the app too: OBS tells the app each time, and the app tells OBS the
+  // list again whenever OBS starts up (so a reload or an update can't make anyone's effect play twice).
+  mem: {},
+  today() { const d = new Date(); return d.getFullYear() + "-" + (d.getMonth() + 1) + "-" + d.getDate(); },
+  seen() { let s = {}; try { s = JSON.parse(localStorage.getItem(this.KEY)) || {}; } catch (e) {} return Object.assign(s, this.mem); },
+  had(k) { return this.seen()[k] === this.today(); },
+  mark(k) { const t = this.today(), s = this.seen(); s[k] = this.mem[k] = t; try { localStorage.setItem(this.KEY, JSON.stringify(s)); } catch (e) {}
+    if (window.remoteSend && !MIRROR) window.remoteSend({ cmd: "firstsSeen", day: t, list: Object.keys(s).filter(x => s[x] === t) }); },
+  // from the app, as OBS starts: who has already had theirs today
+  learn(day, list) { if (day !== this.today() || !Array.isArray(list)) return; list.forEach(k => { k = String(k).toLowerCase(); this.mem[k] = day; }); const s = this.seen(); try { localStorage.setItem(this.KEY, JSON.stringify(s)); } catch (e) {} },
   chat(login) {
-    const k = (login || "").toLowerCase(), fx = this.FIRST_OF_DAY[k]; if (!fx) return;
-    const d = new Date(), today = d.getFullYear() + "-" + (d.getMonth() + 1) + "-" + d.getDate();
-    let seen = {}; try { seen = JSON.parse(localStorage.getItem(this.KEY)) || {}; } catch (e) {}
-    if (seen[k] === today) return;
-    seen[k] = today; try { localStorage.setItem(this.KEY, JSON.stringify(seen)); } catch (e) {}
-    fx();
+    const k = (login || "").toLowerCase(), fx = this.FIRST_OF_DAY[k]; if (!fx || this.had(k)) return false;
+    this.mark(k); fx(); return true;
   },
-  reset() { try { localStorage.removeItem(this.KEY); } catch (e) {} },   // everyone's next chat counts as their first of the day again
+  reset() { this.mem = {}; try { localStorage.removeItem(this.KEY); } catch (e) {} if (window.remoteSend && !MIRROR) window.remoteSend({ cmd: "firstsSeen", day: this.today(), list: [] }); },   // everyone's next chat counts as their first of the day again
   hourly() {
     const next = () => { const n = new Date(), ms = (60 - n.getMinutes()) * 60000 - n.getSeconds() * 1000 - n.getMilliseconds(); setTimeout(() => { Bolt.run(); next(); }, ms + 50); };
     next();
@@ -6619,6 +6629,7 @@ window.onRemote = c => {
     else if (c.action === "board") Scrap.showBoard();
     else if (c.action === "resetdaily") { Scrap.data = { t: Date.now(), users: {} }; Scrap.save(); Scrap.board(); }
   } else if (c.cmd === "alertsOff") AlertsOff.set(c.st);
+  else if (c.cmd === "firstsSeen") AutoFx.learn(c.day, c.list);
   else if (c.cmd === "recentAsk") Recent.tell();
   else if (c.cmd === "alert") {
     Sound.init();
@@ -8520,7 +8531,7 @@ window.KZDirect = function (opt) {
 (() => {
   const qs = new URLSearchParams(location.search), key = qs.get("ctl");
   if (!key || !window.WebSocket) return;
-  const PAGE = "html3", VERSION = "9394d13", INST = Math.random().toString(36).slice(2, 8);
+  const PAGE = "html3", VERSION = "95c5168", INST = Math.random().toString(36).slice(2, 8);
   const QUICK = { mir: 1, rtt: 1 };                                 // sent many times a second: only the newest matters
   let said = false, direct = null;
   const seen = new Set(), seenList = [], fresh = id => { if (!id) return true; if (seen.has(id)) return false; seen.add(id); seenList.push(id); if (seenList.length > 800) seen.delete(seenList.shift()); return true; };
