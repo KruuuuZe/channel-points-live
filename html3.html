@@ -2472,7 +2472,8 @@ const Scrap = {
   /* !green / !blue in chat: that viewer's soldier wears that color from now on (and over whatever Stream Avatars says) */
   picked: (() => { try { return JSON.parse(localStorage.getItem("scroopPicked")) || {}; } catch (e) { return {}; } })(),
   pick(login, team) { const k = (login || "").toLowerCase(); if (!k || (team !== "green" && team !== "blue")) return;
-    this.picked[k] = team; try { localStorage.setItem("scroopPicked", JSON.stringify(this.picked)); } catch (e) {} this.saMessage(k + "|" + team, true); },
+    this.picked[k] = team; try { localStorage.setItem("scroopPicked", JSON.stringify(this.picked)); } catch (e) {} this.saMessage(k + "|" + team, true);
+    try { Tanks.recolor(k, team); } catch (e) {} },                                                     // (their tank, if they have one out, switches too)
   /* a message from the Stream Avatars script: "chattername|green", "chattername|blue" or "chattername|none" */
   saMessage(text, mine) {
     const [n, t] = String(text || "").split("|"); const k = (n || "").trim().toLowerCase(); if (!k) return;
@@ -7059,6 +7060,12 @@ const Tanks = {
     if (have < this.COST) { this.say(t, "needs " + fmt(this.COST) + " scrap (has " + fmt(have) + ")"); Mirror.fwd("tank.say", [s, "needs " + fmt(this.COST) + " scrap (has " + fmt(have) + ")"]); return; }
     u.pts -= this.COST; const d = Scrap.data && Scrap.data.users[k]; if (d) d.pts = Math.max(0, (d.pts || 0) - this.COST); Scrap.save();
     this.fix(s); Mirror.fwd("tank.fix", [s]); },
+  // !green / !blue: their tank switches team at once; in the middle of a battle, as soon as it's over (OBS, then the copy)
+  recolor(k, team, now2) { const t = this.slots.find(x => x && x.k === k && !x.dead); if (!t) return; if (t.team === team) { t.wantTeam = null; return; }
+    const e = this.slots[1 - t.s]; if (!MIRROR && !now2 && e && !e.dead && !e.leaving) { t.wantTeam = team; this.say(t, "switching to " + team + " after this battle"); Mirror.fwd("tank.say", [t.s, "switching to " + team + " after this battle"]); return; }
+    t.team = team; t.wantTeam = null; t.play = null;
+    for (let i = 0; i < 14; i++) this.fx.push({ k: "spark", x: this.cx(t) + rand(-100, 100), y: this.GY - rand(20, this.H), vx: rand(-150, 150), vy: rand(-300, -60), at: performance.now(), life: rand(400, 800), c: team === "blue" ? "#60a5fa" : "#4ade80" });
+    if (!MIRROR) Mirror.fwd("tank.team", [k, team]); },
   // ---- what happens (in OBS and the copy alike)
   add(s, k, name, color, team) { const now = performance.now(), o = this.slots[1 - s]; if (o) o.park = false;           // (a parked winner drives back in to fight)
     // OBS: the app says which of this team's tank pictures OBS doesn't have (they show as the other team's, or stand-ins)
@@ -7178,6 +7185,7 @@ const Tanks = {
       const target = t.leaving ? edge - dir * (w + 400) : t.park ? edge - dir * w * .75 : edge + dir * (12 + 44 * (1 + Math.sin((now - t.born) / 2600 + t.s * 2))), sp = t.park ? 70 : t.tracks ? 520 : 90;
       const dx = target - t.x; t.v = Math.abs(dx) > 2 && !t.dead ? Math.sign(dx) * Math.min(sp, Math.abs(dx) * 3) : 0; t.x += t.v * dt;
       if (t.leaving && Math.abs(dx) < 4) this.slots[t.s] = null;
+      if (!MIRROR && t.wantTeam && !t.dead) { const e = this.slots[1 - t.s]; if (!e || e.dead || e.leaving) this.recolor(t.k, t.wantTeam, true); }      // the battle's over: the switch they asked for
     });
     // OBS: they take turns firing while both are out and in place
     if (!MIRROR) this.slots.forEach(t => { const e = t && this.slots[1 - t.s]; if (!t || !e || t.dead || e.dead || t.leaving || e.leaving) return;
@@ -8735,7 +8743,7 @@ Mirror.ON = {
   emo: (id, url, seed, life) => Emotes.add(id, url, seed, life, Mirror.lag), "emo.x": (id, x, y, vx, vy) => { Emotes.shatter(id, x, y, vx, vy); }, "emo.off": () => Emotes.clear(),
   "plane.boom": () => { Plane.boom(performance.now()); },
   "tank.add": (s, k, n, c, team) => Tanks.add(s, k, n, c, team), "tank.fire": (...a) => Tanks.fire(...a), "tank.fix": s => Tanks.fix(s), "tank.go": s => { const t = Tanks.slots[s]; if (t) t.leaving = true; },
-  "tank.say": (s, text) => Tanks.say(Tanks.slots[s], text),
+  "tank.say": (s, text) => Tanks.say(Tanks.slots[s], text), "tank.team": (k, team) => Tanks.recolor(k, team, true),
   flak: (x, born) => Flak.go(x, born), "flak.loot": (name, color, i, n, x, y) => Flak.show(name, color, i, n, x, y), "flak.shot": (tx, ty, ex, ey, air) => Flak.shoot(tx, ty, ex, ey, air),
   "dice.fx": (kind, i, x, y, face) => { const c = Dice.list[i]; if (c && c.local) return; Dice.puff(kind, { x, y, face }, true); }
 };
@@ -8917,7 +8925,7 @@ window.KZDirect = function (opt) {
 (() => {
   const qs = new URLSearchParams(location.search), key = qs.get("ctl");
   if (!key || !window.WebSocket) return;
-  const PAGE = "html3", VERSION = "68141da", INST = Math.random().toString(36).slice(2, 8);
+  const PAGE = "html3", VERSION = "ab77886", INST = Math.random().toString(36).slice(2, 8);
   const QUICK = { mir: 1, rtt: 1 };                                 // sent many times a second: only the newest matters
   let said = false, direct = null;
   const seen = new Set(), seenList = [], fresh = id => { if (!id) return true; if (seen.has(id)) return false; seen.add(id); seenList.push(id); if (seenList.length > 800) seen.delete(seenList.shift()); return true; };
