@@ -7055,9 +7055,11 @@ const Plane = {
       if (this.want && now - this.want.at > 1500) this.want = null;
       if (this.want && !this.man && side && !this.leaving) { const a = this.want.a; this.want = null; this.man = a === "loop" ? { a, t: 0, dur: 1600, th0: this.p, F: this.psi < Math.PI / 2 ? 1 : -1 } : { a, t: 0, dur: 950 }; }
       if (this.man && (this.man.t += dt * 1000) >= this.man.dur) this.man = null;
-      // the gun, while it's held: a bullet every 65 ms from its muzzle, the way the nose points
-      if (this.fire && now - this.fireAt > 1300) this.fire = false;       // (the app says "still held" a few times a second; if that stops coming, so does the gun)
-      if (this.fire && this.shown && !this.leaving && side && now - this.lastShot > 65) { this.lastShot = this.flashAt = now;
+      // the gun fires by itself while an emote is in its line of fire (and a moment after, so a burst isn't cut short): a
+      // bullet every 65 ms from its muzzle, the way the nose points. (An older app's Fire button still works too.)
+      if (this.fire && now - this.fireAt > 1300) this.fire = false;       // (that app says "still held" a few times a second; if that stops coming, so does the gun)
+      if (this.shown && !this.leaving && side && this.inSights(now)) this.autoAt = now;
+      if ((this.fire || now - (this.autoAt || -1e9) < 160) && this.shown && !this.leaving && side && now - this.lastShot > 65) { this.lastShot = this.flashAt = now;
         const P = this.pose(now), mz = this.muzzle(P), hx = P.F * Math.cos(P.pd), hy = -Math.sin(P.pd); this.bullets.push({ x: mz[0], y: mz[1], vx: hx * 3000 + this.vx * .4, vy: hy * 3000 + this.vy * .4 });
         if (!MIRROR && now - this.lastSnd > 90) { this.lastSnd = now; try { Sound.init(); const C = Sound.ctx; if (C) { const t = C.currentTime; Sound.burst(t, .07, .07, "bandpass", 2200, 700); Sound.tone(t, .06, .045, 210, 70, "square"); } } catch (e) {} } }
     }
@@ -7080,6 +7082,12 @@ const Plane = {
         for (const o of [-.3, 0, .3]) { const px = P.x + P.F * o * W * c, py = P.y - o * W * s; if ((px - e.x) * (px - e.x) + (py - e.y) * (py - e.y) < rr * rr) { touch = true; break; } }
         if (!touch) e.pass = 0; else if (safe) e.pass = 1;
         else if (!e.pass) { this.boom(now); this.tell({ cmd: "planeBoom" }); try { navigator.vibrate && navigator.vibrate([40, 30, 90]); } catch (x) {} return; } } } },
+  // is an emote in its line of fire? (the path its bullets would take from the muzzle, up to about 2/3 of the screen
+  // ahead; an emote counts if that path passes through it, the same size the bullets hit)
+  inSights(now) { if (!Emotes.list.size) return false; const P = this.pose(now), mz = this.muzzle(P), bx = P.F * Math.cos(P.pd) * 3000 + this.vx * .4, by = -Math.sin(P.pd) * 3000 + this.vy * .4, L = Math.hypot(bx, by) || 1, ux = bx / L, uy = by / L;
+    for (const e of Emotes.list.values()) { if (e.x == null || !e.ready || e.t < .3) continue; const dx = e.x - mz[0], dy = e.y - mz[1], a = dx * ux + dy * uy; if (a < 0 || a > 1700) continue;
+      const rr = (e.hw + e.hh) * .42 * (e.k || 1), q = dx * uy - dy * ux; if (q * q < rr * rr) return true; }
+    return false; },
   tell(c) { if (this.report) { try { this.report(c); } catch (e) {} } },
   // OBS, when the copy says an emote was shot: the bullet nearest to it is spent too
   spend(x, y) { let best = -1, bd = 400 * 400; this.bullets.forEach((b, i) => { const d = (b.x - x) * (b.x - x) + (b.y - y) * (b.y - y); if (d < bd) { bd = d; best = i; } }); if (best >= 0) this.bullets.splice(best, 1); },
@@ -8512,7 +8520,7 @@ window.KZDirect = function (opt) {
 (() => {
   const qs = new URLSearchParams(location.search), key = qs.get("ctl");
   if (!key || !window.WebSocket) return;
-  const PAGE = "html3", VERSION = "027438d", INST = Math.random().toString(36).slice(2, 8);
+  const PAGE = "html3", VERSION = "23e9fcc", INST = Math.random().toString(36).slice(2, 8);
   const QUICK = { mir: 1, rtt: 1 };                                 // sent many times a second: only the newest matters
   let said = false, direct = null;
   const seen = new Set(), seenList = [], fresh = id => { if (!id) return true; if (seen.has(id)) return false; seen.add(id); seenList.push(id); if (seenList.length > 800) seen.delete(seenList.shift()); return true; };
