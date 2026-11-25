@@ -302,6 +302,7 @@ body.fit #stage{background:radial-gradient(1200px 700px at 30% 20%,#1a103322,tra
 #scrapboard{position:absolute;right:40px;bottom:650px;padding:10px 16px 12px;border-radius:14px;background:#0d0b17cc;border:2px solid #8b6b3d;
   font-size:22px;font-weight:800;color:#f5f2ff;min-width:250px;opacity:0;transition:opacity .6s}
 #scrapboard.on{opacity:1}
+#scrapboard:has(.tb){bottom:auto;top:-990px;transform:scale(2);transform-origin:top right}           /* the tank board: twice the size, 110 px down from the top right of the screen (its box is the bottom 340 px) */
 #scrapboard h4{margin:0 0 6px;font-size:18px;letter-spacing:.14em;color:#e2b26b}
 #scrapboard .cols{display:flex;gap:30px}
 #scrapboard h5{margin:0 0 4px;font-size:16px;letter-spacing:.16em;color:#c9b8ff}
@@ -415,6 +416,9 @@ body.fit #stage{background:radial-gradient(1200px 700px at 30% 20%,#1a103322,tra
 #traincv{position:absolute;inset:0;width:2560px;height:1440px;pointer-events:none;z-index:9}
 #planecv{position:absolute;inset:0;width:2560px;height:1440px;pointer-events:none;z-index:9}
 #tankcv{position:absolute;inset:0;width:2560px;height:1440px;pointer-events:none;z-index:7}
+#salvbar{position:absolute;left:0;right:0;top:24px;display:flex;flex-wrap:wrap;justify-content:center;gap:14px;padding:0 60px;pointer-events:none;z-index:11}
+#salvbar .sb{display:flex;align-items:center;gap:12px;padding:10px 22px;border-radius:999px;background:#0d0b17e6;border:3px solid var(--uc);box-shadow:0 0 18px var(--uc);font:900 30px/1 "Segoe UI",sans-serif;color:#f5f2ff;white-space:nowrap}
+#salvbar .sb b{color:var(--uc);text-shadow:0 0 10px var(--uc)} #salvbar .sb svg{width:40px;height:40px} #salvbar .sb small{font-size:22px;color:#cfc59a;font-weight:800}
 #flakloot{position:absolute;inset:0;pointer-events:none;z-index:10} #flakloot .loot .who{margin-right:6px}
 #flakcv{position:absolute;inset:0;width:2560px;height:1440px;pointer-events:none;z-index:9}
 /* 😀 floating emotes (under the plane and its bullets): each one a picture, so animated ones keep moving; .emoX: one that's been shot, in shards */
@@ -528,7 +532,7 @@ body.fit #stage{background:radial-gradient(1200px 700px at 30% 20%,#1a103322,tra
   <canvas id="flagcv" width="2560" height="1440"></canvas>
   <canvas id="vincv" width="2560" height="1440"></canvas>
   <div id="emo"></div>
-  <canvas id="tankcv" width="2560" height="1440"></canvas><canvas id="flakcv" width="2560" height="1440"></canvas><div id="flakloot"></div>
+  <canvas id="tankcv" width="2560" height="1440"></canvas><canvas id="flakcv" width="2560" height="1440"></canvas><div id="flakloot"></div><div id="salvbar"></div>
   <canvas id="planecv" width="2560" height="1440"></canvas>
   <canvas id="mediccv" width="2560" height="1440"></canvas>
   <div id="svid"><div class="frm"><div class="plate"></div></div><div class="box"></div></div>
@@ -2444,6 +2448,13 @@ const Scrap = {
       if (l.gold && !MIRROR) this.goldAdd(l.k, n);                         // the running total of golden fruit scrooped
     }
     this.save(); },
+  // !salvage: a bubble across the top with how much salvage they have (All Time) and their scrap points, for 5 seconds,
+  // in their Twitch color; several at once line up side by side
+  bubble(login, name, color, n, pts) { if (!MIRROR) { this.build(); const u = this.all.users[String(login || "").toLowerCase()] || {}; n = u.salv || 0; pts = u.pts || 0; color = color || TWITCH_DEFAULTS[(name || "").length % TWITCH_DEFAULTS.length]; Mirror.fwd("salv", [login, name, color, n, pts]); }
+    const box = $("#salvbar"); if (!box) return; const b = el("div", "sb"); b.style.setProperty("--uc", css(bright(color || "#ffffff")));
+    b.insertAdjacentHTML("beforeend", LOOT[0].svg); const nm = el("b", null, name); b.append(nm, el("span", null, fmt(n) + " Salvage"), el("small", null, "· " + fmt(pts) + " pts")); box.append(b);
+    b.animate([{ transform: "translateY(-40px) scale(.7)", opacity: 0 }, { transform: "none", opacity: 1, offset: .06 }, { transform: "none", opacity: 1, offset: .92 }, { transform: "translateY(-20px)", opacity: 0 }], { duration: 5000, easing: "ease-out", fill: "forwards" });
+    setTimeout(() => b.remove(), 5050); },
   roll() {
     const g = Math.random();
     if (g < .01) return { l: GOLD_BANANA, n: 1 };                       // 1%: the Golden Banana
@@ -7081,12 +7092,12 @@ const Tanks = {
     t.streak = (t.streak || 0) + 1; u.best = Math.max(u.best || 0, t.streak); try { localStorage.setItem("tankWins", JSON.stringify(this.wins)); } catch (e) {} },
   // !tankleaderboard: the top 10 by wins, for 20 seconds (in the scroop board's place)
   // (wins, and their best win streak: wins in a row with one tank, until it's destroyed or leaves)
-  board() { const b = document.createElement("div"), top = Object.values(this.wins).sort((a, c) => c.w - a.w || (c.best || 0) - (a.best || 0)).slice(0, 10);
+  board() { const b = el("div", "tb"), top = Object.values(this.wins).sort((a, c) => c.w - a.w || (c.best || 0) - (a.best || 0)).slice(0, 10);
     b.append(el("h4", null, "🪖 TANK BATTLE · TOP 10"));
     if (!top.length) b.append(el("div", "none", "No tank wins yet…"));
     else { const hd = el("div", "r"); hd.style.cssText = "font-size:15px;color:#c9b8ff;letter-spacing:.1em"; hd.append(el("span", null, "PLAYER"), el("span", null, "WINS · BEST STREAK")); hd.firstChild.style.color = "#c9b8ff"; b.append(hd); }
     top.forEach((u, i) => { const row = el("div", "r"), n = el("b", null, (i + 1) + ". " + u.name); row.style.setProperty("--uc", css(bright(u.color || "#ffffff"))); row.append(n, el("span", null, fmt(u.w) + " · 🔥" + fmt(u.best || 0))); b.append(row); });
-    Scrap.showBoard(b.innerHTML); },
+    Scrap.showBoard(b.outerHTML); },
   // a hit animation on the tank (its art), if made; a floating label over it
   anim(t, n, now) { if (t.tracks && t.turret && this.sp("tank_" + t.team + "_" + n)) t.play = { n, at: now }; },       // (made from the whole tank: not once it's broken)
   pop(t, text, color, now) { const n = now - (t.popAt || 0) < 700 ? (t.popN || 0) + 1 : 0; t.popAt = now; t.popN = n;           // (two at once: the second above the first)
@@ -8341,6 +8352,7 @@ const Chat = {
       else if (/^!repair\b/i.test(msg) || msg.includes("kruuuuWrench1")) Tanks.repairCmd(login);          // (the wrench emote counts as !repair)
       else if (/^!tankleaderboard\b/i.test(msg)) Tanks.board();
       else if (/^!leave\b/i.test(msg)) Tanks.leaveCmd(login);
+      else if (/^!salvage\b/i.test(msg)) Scrap.bubble(login, tags["display-name"] || login, tags.color || chatColors[tags["user-id"]]);
       else if (/^!flak\b/i.test(msg)) Flak.order(login, tags["display-name"] || login, tags.color || chatColors[tags["user-id"]]);
       else if (/^!(green|blue)\b/i.test(msg)) Scrap.pick(login, msg.slice(1).split(/\s/)[0].toLowerCase());          // their !scroop soldier's color
       else if (/^!scroop\b/i.test(msg) || msg.includes("kruuuuCatch1")) Scrap.dig(tags["display-name"] || login, login, tags.color || chatColors[tags["user-id"]]);   // lurkers can scroop without leaving the tower
@@ -8749,6 +8761,7 @@ Mirror.ON = {
   "plane.boom": () => { Plane.boom(performance.now()); },
   "tank.add": (s, k, n, c, team) => Tanks.add(s, k, n, c, team), "tank.fire": (...a) => Tanks.fire(...a), "tank.fix": s => Tanks.fix(s), "tank.go": s => { const t = Tanks.slots[s]; if (t) t.leaving = true; },
   "tank.say": (s, text) => Tanks.say(Tanks.slots[s], text), "tank.team": (k, team) => Tanks.recolor(k, team, true),
+  salv: (login, name, color, n, pts) => Scrap.bubble(login, name, color, n, pts),
   flak: (x, born) => Flak.go(x, born), "flak.loot": (name, color, i, n, x, y) => Flak.show(name, color, i, n, x, y), "flak.shot": (tx, ty, ex, ey, air) => Flak.shoot(tx, ty, ex, ey, air),
   "dice.fx": (kind, i, x, y, face) => { const c = Dice.list[i]; if (c && c.local) return; Dice.puff(kind, { x, y, face }, true); }
 };
@@ -8930,7 +8943,7 @@ window.KZDirect = function (opt) {
 (() => {
   const qs = new URLSearchParams(location.search), key = qs.get("ctl");
   if (!key || !window.WebSocket) return;
-  const PAGE = "html3", VERSION = "7e37522", INST = Math.random().toString(36).slice(2, 8);
+  const PAGE = "html3", VERSION = "9c3a572", INST = Math.random().toString(36).slice(2, 8);
   const QUICK = { mir: 1, rtt: 1 };                                 // sent many times a second: only the newest matters
   let said = false, direct = null;
   const seen = new Set(), seenList = [], fresh = id => { if (!id) return true; if (seen.has(id)) return false; seen.add(id); seenList.push(id); if (seenList.length > 800) seen.delete(seenList.shift()); return true; };
