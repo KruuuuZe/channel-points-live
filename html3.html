@@ -2234,19 +2234,19 @@ function edgeGlow(c1, c2) { const e = el("div", "edge"); e.style.setProperty("--
 const LOOT = [
   { k: "salv", name: "Salvage", w: 58, min: 8, max: 25, pts: 1, c: "#c9c3b8",
     svg: `<svg viewBox="0 0 60 60"><path d="M8 44 L14 22 L26 16 L30 26 L42 14 L54 30 L48 48 L30 52 Z" fill="#8d8579" stroke="#3b362f" stroke-width="3"/><path d="M16 30 L28 34 M34 28 L44 36 M24 44 L36 42" stroke="#c9c3b8" stroke-width="3"/></svg>` },
-  { k: "comp", name: "Components", w: 22, min: 3, max: 10, pts: 3, c: "#7dd3fc",
+  { k: "comp", name: "Components", w: 22, min: 3, max: 10, pts: 20, c: "#7dd3fc",
     svg: `<svg viewBox="0 0 60 60"><circle cx="30" cy="30" r="17" fill="none" stroke="#5aa9d6" stroke-width="10" stroke-dasharray="7 4.6"/><circle cx="30" cy="30" r="12" fill="#2b4a63" stroke="#7dd3fc" stroke-width="3"/><circle cx="30" cy="30" r="4" fill="#0d1b26"/></svg>` },
-  { k: "sulf", name: "Sulfur", w: 15, min: 3, max: 10, pts: 3, c: "#fde047",
+  { k: "sulf", name: "Sulfur", w: 15, min: 3, max: 10, pts: 20, c: "#fde047",
     svg: `<svg viewBox="0 0 60 60"><path d="M30 6 L44 22 L38 52 L20 52 L14 24 Z" fill="#eab308" stroke="#713f12" stroke-width="3"/><path d="M30 6 L28 52 M14 24 L44 22" stroke="#fef08a" stroke-width="2.5"/></svg>` },
   { k: "rare", name: "Rare Metal", w: 5, min: 1, max: 3, pts: 15, c: "#c084fc", rare: true,
     svg: `<svg viewBox="0 0 60 60"><path d="M8 40 L18 22 L50 22 L56 40 Z" fill="#7c3aed" stroke="#e9d5ff" stroke-width="3"/><path d="M18 22 L14 40 M50 22 L52 40" stroke="#c4b5fd" stroke-width="2"/><path d="M20 27 L46 27" stroke="#f5f3ff" stroke-width="3" stroke-linecap="round"/></svg>` }
 ];
 // the golden finds: Golden Banana and Golden Mango, 1% each on any pile, worth 50 points, with golden fireworks in their shape
-const GOLD_BANANA = { k: "gban", name: "Golden Banana", min: 1, max: 1, pts: 50, c: "#facc15", rare: true, gold: true, art: "golden_banana", shape: (x, y, s, n) => bananaPoints(x, y, s, n),
+const GOLD_BANANA = { k: "gban", name: "Golden Banana", min: 1, max: 1, pts: 100, c: "#facc15", rare: true, gold: true, art: "golden_banana", shape: (x, y, s, n) => bananaPoints(x, y, s, n),
   svg: `<svg viewBox="0 0 60 60"><defs><linearGradient id="gbG" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fff7c2"/><stop offset=".45" stop-color="#facc15"/><stop offset="1" stop-color="#b8860b"/></linearGradient></defs>
     <path d="M10 18 C12 40 30 52 50 44 C54 42 54 38 50 38 C34 42 20 34 16 16 C15 12 10 13 10 18 Z" fill="url(#gbG)" stroke="#7a5800" stroke-width="2.5"/>
     <path d="M11 14 L9 8 L14 9 Z" fill="#7a5800"/><path d="M18 22 C22 34 32 40 44 40" stroke="#fffbe0" stroke-width="2.5" fill="none" stroke-linecap="round" opacity=".8"/></svg>` };
-const GOLD_MANGO = { k: "gmango", name: "Golden Mango", min: 1, max: 1, pts: 50, c: "#fbbf24", rare: true, gold: true, art: "golden_mango", shape: (x, y, s, n) => mangoPoints(x, y, s, n), leaf: true,
+const GOLD_MANGO = { k: "gmango", name: "Golden Mango", min: 1, max: 1, pts: 100, c: "#fbbf24", rare: true, gold: true, art: "golden_mango", shape: (x, y, s, n) => mangoPoints(x, y, s, n), leaf: true,
   svg: `<svg viewBox="0 0 60 60"><defs><radialGradient id="gmG" cx=".35" cy=".35" r=".8"><stop offset="0" stop-color="#fff7c2"/><stop offset=".5" stop-color="#fbbf24"/><stop offset="1" stop-color="#a16207"/></radialGradient></defs>
     <path d="M30 12 C44 10 54 24 52 38 C50 50 38 56 26 52 C12 48 6 34 12 22 C16 15 23 12 30 12 Z" fill="url(#gmG)" stroke="#7a5800" stroke-width="2.5"/>
     <path d="M30 12 C30 8 31 6 33 4" stroke="#7a5800" stroke-width="3" fill="none" stroke-linecap="round"/><path d="M32 8 C38 2 48 3 50 6 C44 10 37 11 32 8 Z" fill="#65a30d" stroke="#365314" stroke-width="2"/>
@@ -2394,10 +2394,12 @@ const Scrap = {
     });
     b.append(cols);
   },
-  /* !scroopleaderboard: show the board for 20 seconds */
+  /* !scroopleaderboard: show the board for 10 seconds */
+  // a leaderboard asked for in chat shows at most once a minute (each board on its own)
+  boardOk(name) { const now = Date.now(), at = (this.boardAts || (this.boardAts = {}))[name] || 0; if (now - at < 60000) return false; this.boardAts[name] = now; return true; },
   showBoard(html) { this.build(); const b = $("#scrapboard"); if (html != null) b.innerHTML = html; else this.board(); b.classList.add("on");   // (the touchpad copy shows OBS's board)
-    Mirror.began2("Scrap.board", [b.innerHTML], (e, now) => now - e.at < 5000);
-    clearTimeout(this.boardT); this.boardT = setTimeout(() => b.classList.remove("on"), 5000); },             // (shows for 5 seconds)
+    Mirror.began2("Scrap.board", [b.innerHTML], (e, now) => now - e.at < 10000);
+    clearTimeout(this.boardT); this.boardT = setTimeout(() => b.classList.remove("on"), 10000); },            // (shows for 10 seconds)
   start() { this.build(); if (MIRROR) return; this.schedule(this.FIRST); this.listenSA(); },       // (the touchpad copy gets its piles and digs from OBS)
   busy() { return this.piles.filter(p => p.state !== "none").length; },
   schedule(ms) { clearTimeout(this.timer); this.timer = setTimeout(() => { this.timer = 0; this.spawn(); }, ms); },
@@ -2466,7 +2468,7 @@ const Scrap = {
       if (!top.length) d.append(el("div", "none", "No salvage yet…"));
       top.forEach((u, i) => { const row = el("div", "r"); row.style.setProperty("--uc", css(bright(u.color || "#ffffff"))); row.append(el("b", null, (i + 1) + ". " + u.name), el("span", null, fmt(u.pts))); d.append(row); });
       html = d.innerHTML; Mirror.fwd("salvboard", [html]); }
-    box.innerHTML = html; box.classList.add("on"); clearTimeout(this.sbT); this.sbT = setTimeout(() => box.classList.remove("on"), 5000); },
+    box.innerHTML = html; box.classList.add("on"); clearTimeout(this.sbT); this.sbT = setTimeout(() => box.classList.remove("on"), 10000); },
   roll() {
     const g = Math.random();
     if (g < .01) return { l: GOLD_BANANA, n: 1 };                       // 1%: the Golden Banana
@@ -8374,12 +8376,12 @@ const Chat = {
       else if (/^!rain\b/i.test(msg)) { Face.chatRain(); Lurk.leave(login); }
       else if (/^!dice\b/i.test(msg)) { Dice.roll(login); Lurk.leave(login); }
       else if (/^!snow\b/i.test(msg)) { Face.chatSnow(tags["display-name"] || login, tags.color || chatColors[tags["user-id"]]); Lurk.leave(login); }
-      else if (/^!scroopleaderboard\b/i.test(msg)) Scrap.showBoard();
+      else if (/^!scroopleaderboard\b/i.test(msg)) { if (Scrap.boardOk("scroop")) Scrap.showBoard(); }
       else if (/^!tank[12]\b/i.test(msg)) Tanks.cmd(+msg[5], login, tags["display-name"] || login, tags.color || chatColors[tags["user-id"]]);
       else if (/^!repair\b/i.test(msg) || msg.includes("kruuuuWrench1")) Tanks.repairCmd(login);          // (the wrench emote counts as !repair)
-      else if (/^!tankleaderboard\b/i.test(msg)) Tanks.board();
+      else if (/^!tankleaderboard\b/i.test(msg)) { if (Scrap.boardOk("tank")) Tanks.board(); }
       else if (/^!leave\b/i.test(msg)) Tanks.leaveCmd(login);
-      else if (/^!salvageleaderboard\b/i.test(msg)) Scrap.salvBoard();
+      else if (/^!salvageleaderboard\b/i.test(msg)) { if (Scrap.boardOk("salvage")) Scrap.salvBoard(); }
       else if (/^!salvage\b/i.test(msg)) Scrap.bubble(login, tags["display-name"] || login, tags.color || chatColors[tags["user-id"]]);
       else if (/^!flak\b/i.test(msg)) Flak.order(login, tags["display-name"] || login, tags.color || chatColors[tags["user-id"]]);
       else if (/^!(green|blue)\b/i.test(msg)) Scrap.pick(login, msg.slice(1).split(/\s/)[0].toLowerCase());          // their !scroop soldier's color
@@ -8971,7 +8973,7 @@ window.KZDirect = function (opt) {
 (() => {
   const qs = new URLSearchParams(location.search), key = qs.get("ctl");
   if (!key || !window.WebSocket) return;
-  const PAGE = "html3", VERSION = "b97e71c", INST = Math.random().toString(36).slice(2, 8);
+  const PAGE = "html3", VERSION = "e8d512a", INST = Math.random().toString(36).slice(2, 8);
   const QUICK = { mir: 1, rtt: 1 };                                 // sent many times a second: only the newest matters
   let said = false, direct = null;
   const seen = new Set(), seenList = [], fresh = id => { if (!id) return true; if (seen.has(id)) return false; seen.add(id); seenList.push(id); if (seenList.length > 800) seen.delete(seenList.shift()); return true; };
