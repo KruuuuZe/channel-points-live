@@ -7508,7 +7508,8 @@ const CustomFx = {
   load() { if (MIRROR) return; try { this.defs = JSON.parse(localStorage.getItem(this.KEY)) || {}; } catch (e) { this.defs = {}; } Object.values(this.defs).forEach(d => this.hook(d)); },
   save() { if (MIRROR) return; try { localStorage.setItem(this.KEY, JSON.stringify(this.defs)); } catch (e) {} },
   // a viewer's first chat of the day (and their "Play my Effect" redeem) plays it, if it's made for someone
-  hook(d) { if (d.mode === "toggle") return; const u = ((d.trigger && d.trigger.user) || "").toLowerCase().replace(/^@/, ""); if (!u) return;
+  KEEP: { mystory2d: 1 },                                              // viewers whose built-in effect replaced an older made one: theirs always plays
+  hook(d) { if (d.mode === "toggle") return; const u = ((d.trigger && d.trigger.user) || "").toLowerCase().replace(/^@/, ""); if (!u || this.KEEP[u]) return;
     if (!(u in this.origFirst)) this.origFirst[u] = AutoFx.FIRST_OF_DAY[u] || null;
     AutoFx.FIRST_OF_DAY[u] = () => this.run(d.id, u); },
   unhook(d) { const u = ((d.trigger && d.trigger.user) || "").toLowerCase().replace(/^@/, ""); if (!u || !(u in this.origFirst)) return;
@@ -8531,7 +8532,7 @@ window.KZDirect = function (opt) {
 (() => {
   const qs = new URLSearchParams(location.search), key = qs.get("ctl");
   if (!key || !window.WebSocket) return;
-  const PAGE = "html3", VERSION = "95c5168", INST = Math.random().toString(36).slice(2, 8);
+  const PAGE = "html3", VERSION = "3ac3158", INST = Math.random().toString(36).slice(2, 8);
   const QUICK = { mir: 1, rtt: 1 };                                 // sent many times a second: only the newest matters
   let said = false, direct = null;
   const seen = new Set(), seenList = [], fresh = id => { if (!id) return true; if (seen.has(id)) return false; seen.add(id); seenList.push(id); if (seenList.length > 800) seen.delete(seenList.shift()); return true; };
