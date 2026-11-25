@@ -6926,18 +6926,26 @@ const Emotes = {
     .replace(/^(https:\/\/cdn\.7tv\.app\/emote\/[^/]+\/)[123]x\.webp$/, (m, a) => a + "4x.webp").replace(/^(https:\/\/cdn\.betterttv\.net\/emote\/[^/]+\/)[12]x$/, (m, a) => a + "3x"); },
   // random numbers that come out the same for the same seed
   rng(seed) { let a = seed >>> 0; return () => { a = (a + 0x6D2B79F5) >>> 0; let t = a; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; },
-  // its whole flight, from its seed: a slow wide wander (kept inside the screen) with a little bobbing and rocking;
+  // its whole flight, from its seed: a slow drift through a chain of random places anywhere on the screen (corners
+  // included, any of them as likely as anywhere else), on a smooth curve, with a little bobbing and rocking on top;
   // life: how many ms it stays before it starts to leave
-  plan(seed, life) { const r = this.rng(seed), f = (a, b) => a + (b - a) * r(), m = this.S / 2 + 70;
-    const Ax = f(260, 700), Ay = f(140, 380), cx = f(m + Ax, 2560 - m - Ax), cy = f(m + Ay, 1440 - m - Ay);
-    const p = { cx, cy, Ax, Ay, wx: 6.2832 / Math.max(f(18, 32), 6.2832 * Ax / 120), wy: 6.2832 / Math.max(f(14, 26), 6.2832 * Ay / 100), px: f(0, 6.2832), py: f(0, 6.2832),      // (never faster than a gentle drift)
-      bx: f(10, 22), by: f(14, 28), bwx: 6.2832 / f(3.2, 5), bwy: 6.2832 / f(2.8, 4.5), bpx: f(0, 6.2832), bpy: f(0, 6.2832),
+  plan(seed, life) { const r = this.rng(seed), f = (a, b) => a + (b - a) * r(), m = this.S / 2 + 20, X = () => f(m, 2560 - m), Y = () => f(m, 1440 - m);
+    const sp = f(65, 105), pts = [[X(), Y()]], ts = [0];
+    while (ts[ts.length - 1] < life / 1000 + 4 || pts.length < 4) { const [px, py] = pts[pts.length - 1]; let q, d, n = 0;
+      do { q = [X(), Y()]; d = Math.hypot(q[0] - px, q[1] - py); } while ((d < 300 || d > 1100) && ++n < 12);      // (not too short a hop, nor all the way across)
+      pts.push(q); ts.push(ts[ts.length - 1] + d / sp); }
+    const p = { pts, ts, m, bx: f(10, 22), by: f(14, 28), bwx: 6.2832 / f(3.2, 5), bwy: 6.2832 / f(2.8, 4.5), bpx: f(0, 6.2832), bpy: f(0, 6.2832),
       rot: f(.08, .22) * (r() < .5 ? -1 : 1), rw: 6.2832 / f(3, 6), rp: f(0, 6.2832), ej: f(-.35, .35), life: life / 1000 };
     return this.aim(p); },
   // when its time is up it drifts off the nearest edge (from where it will be then)
   aim(p) { const q = this.wander(p, p.life), dl = q.x, dr = 2560 - q.x, dt = q.y, db = 1440 - q.y, mn = Math.min(dl, dr, dt, db);
     const a = (mn === dl ? Math.PI : mn === dr ? 0 : mn === dt ? -Math.PI / 2 : Math.PI / 2) + p.ej; p.ex = Math.cos(a); p.ey = Math.sin(a); return p; },
-  wander(p, t) { return { x: p.cx + p.Ax * Math.sin(p.wx * t + p.px) + p.bx * Math.sin(p.bwx * t + p.bpx), y: p.cy + p.Ay * Math.sin(p.wy * t + p.py) + p.by * Math.sin(p.bwy * t + p.bpy) }; },
+  wander(p, t) { const P = p.pts, T = p.ts; let i = 0; while (i < T.length - 2 && T[i + 1] <= t) i++;
+    const u = Math.max(0, Math.min(1, (t - T[i]) / (T[i + 1] - T[i] || 1))), e = u * u * (3 - 2 * u) * .35 + u * .65;        // (eases a touch at each place, never stops)
+    const a = P[Math.max(0, i - 1)], b = P[i], c = P[i + 1], d = P[Math.min(P.length - 1, i + 2)], cr = (k) => { const e2 = e * e, e3 = e2 * e;
+      return .5 * (2 * b[k] + (-a[k] + c[k]) * e + (2 * a[k] - 5 * b[k] + 4 * c[k] - d[k]) * e2 + (-a[k] + 3 * b[k] - 3 * c[k] + d[k]) * e3); };
+    const m = this.S / 2 + 4, cl = (v, hi) => Math.max(m, Math.min(hi - m, v));          // (always all of it on the screen)
+    return { x: cl(cr(0) + p.bx * Math.sin(p.bwx * t + p.bpx), 2560), y: cl(cr(1) + p.by * Math.sin(p.bwy * t + p.bpy), 1440) }; },
   // where it is t seconds after it appeared: x, y, r (how far it's rocked over), k (its size, 0.2 … 1: it pops up from chat size)
   at(e, t) { const p = e.p, q = this.wander(p, t); q.k = 1;
     if (t < .5) { const u = t / .5 - 1, c = 1.9; q.k = .2 + .8 * (1 + (c + 1) * u * u * u + c * u * u); }
@@ -8560,7 +8568,7 @@ window.KZDirect = function (opt) {
 (() => {
   const qs = new URLSearchParams(location.search), key = qs.get("ctl");
   if (!key || !window.WebSocket) return;
-  const PAGE = "html3", VERSION = "801a179", INST = Math.random().toString(36).slice(2, 8);
+  const PAGE = "html3", VERSION = "49e4ff7", INST = Math.random().toString(36).slice(2, 8);
   const QUICK = { mir: 1, rtt: 1 };                                 // sent many times a second: only the newest matters
   let said = false, direct = null;
   const seen = new Set(), seenList = [], fresh = id => { if (!id) return true; if (seen.has(id)) return false; seen.add(id); seenList.push(id); if (seenList.length > 800) seen.delete(seenList.shift()); return true; };
