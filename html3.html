@@ -7065,17 +7065,21 @@ window.Emotes = Emotes;
    A tank alone for 5 minutes drives off. OBS decides everything and tells the touchpad copy.
    Art: tank_green / tank_blue (📍 the turret line marked) and their _drive animations; drawn stand-ins until made. */
 const Tanks = {
-  slots: [null, null], running: false, fx: [], shells: [], COST: 1000, H: 175, GY: 1440 - 14,
+  slots: [null, null], running: false, fx: [], shells: [], COST: 300, H: 175, GY: 1440 - 14,
   busy() { return !!(this.slots[0] || this.slots[1] || this.shells.length || this.fx.length); },
   // ---- from chat (OBS)
+  q: [[], []],                                                                         // who's waiting for each side
   cmd(n, login, name, color) { if (MIRROR) return; const k = String(login || "").toLowerCase(); if (!k) return; const s = n - 1;
     if (this.slots.some(t => t && t.k === k && !t.dead)) return this.say(this.slots.find(t => t && t.k === k), "already out");
-    if (this.slots[s] && !this.slots[s].dead) return;                                     // that side is taken
+    if (this.slots[s]) {                                                                  // that side is taken: in line for it (they get it when it frees up)
+      if (this.q[s].some(x => x.k === k) || this.q[1 - s].some(x => x.k === k)) return;
+      this.q[s].push({ k, login, name: name || login, color }); const t = this.slots[s], msg = (name || login) + " is #" + this.q[s].length + " in line for tank " + n;
+      this.pop(t, msg, "#c4b5fd", performance.now()); Mirror.fwd("tank.pop", [s, msg]); return; }
     const team = (Scrap.picked && Scrap.picked[k]) || (Scrap.teams && Scrap.teams[k]) || (s ? "blue" : "green");
     const c = color || TWITCH_DEFAULTS[k.length % TWITCH_DEFAULTS.length];
     this.add(s, k, name || login, c, team === "blue" ? "blue" : "green"); Mirror.fwd("tank.add", [s, k, name || login, c, team === "blue" ? "blue" : "green"]); },
   // !leave: out of the fight. Not in the middle of a battle: then they leave as soon as it's over
-  leaveCmd(login) { if (MIRROR) return; const k = String(login || "").toLowerCase(), t = this.slots.find(x => x && x.k === k && !x.dead && !x.leaving); if (!t) return;
+  leaveCmd(login) { if (MIRROR) return; const k = String(login || "").toLowerCase(); this.q.forEach(l => { const i = l.findIndex(x => x.k === k); if (i >= 0) l.splice(i, 1); }); const t = this.slots.find(x => x && x.k === k && !x.dead && !x.leaving); if (!t) return;
     const e = this.slots[1 - t.s]; if (e && !e.dead && !e.leaving) { t.wantLeave = true; this.say(t, "leaving after this battle"); Mirror.fwd("tank.say", [t.s, "leaving after this battle"]); return; }
     t.leaving = true; Mirror.fwd("tank.go", [t.s]); },
   repairCmd(login) { if (MIRROR) return; const k = String(login || "").toLowerCase(), s = this.slots.findIndex(t => t && t.k === k && !t.dead); if (s < 0) return;
@@ -7101,7 +7105,7 @@ const Tanks = {
   // wins, kept for the !tankleaderboard (All Time)
   wins: (() => { try { return JSON.parse(localStorage.getItem("tankWins")) || {}; } catch (e) { return {}; } })(),
   win(t) { const u = this.wins[t.k] || (this.wins[t.k] = { name: t.name, color: t.color, w: 0 }); u.name = t.name; u.color = t.color; u.w++;
-    t.streak = (t.streak || 0) + 1; u.best = Math.max(u.best || 0, t.streak); try { localStorage.setItem("tankWins", JSON.stringify(this.wins)); } catch (e) {} },
+    u.best = Math.max(u.best || 0, t.streak || 0); try { localStorage.setItem("tankWins", JSON.stringify(this.wins)); } catch (e) {} },
   // !tankleaderboard: the top 10 by wins, for 20 seconds (in the scroop board's place)
   // (wins, and their best win streak: wins in a row with one tank, until it's destroyed or leaves)
   board() { const b = el("div", "tb"), top = Object.values(this.wins).sort((a, c) => c.w - a.w || (c.best || 0) - (a.best || 0)).slice(0, 10);
@@ -7143,7 +7147,8 @@ const Tanks = {
     if (e.hp <= 0) this.kill(e, now); },
   kill(t, now) { t.dead = now; t.turret = true;                            // (so the turret is blown off below)
     if (this.sp("tank_" + t.team + "_destroyed")) { t.obl = true; t.turret = false; t.play = null; }        // its own destruction animation shows it all
-    { const w = this.slots[1 - t.s]; if (!MIRROR && w && !w.dead && !/^test\d$/.test(w.k)) this.win(w);
+    { const w = this.slots[1 - t.s]; if (w && !w.dead) w.streak = (w.streak || 0) + 1;          // (its win streak: wins in a row with this tank)
+      if (!MIRROR && w && !w.dead && !/^test\d$/.test(w.k)) this.win(w);
       if (w && !w.dead) setTimeout(() => { if (this.slots[w.s] !== w || w.dead) return;                                  // the battle's over: the winner is back to 100% (or leaves, if they asked to)
         if (!MIRROR && w.wantLeave) { w.leaving = true; Mirror.fwd("tank.go", [w.s]); return; }
         if (!w.leaving) { w.hp = 1; w.tracks = w.turret = true; w.tgone = false; w.parts = []; w.play = null; this.say(w, "🏆 back to 100%"); if (!this.slots[1 - w.s] || this.slots[1 - w.s].dead) w.park = true; } }, 1800);
@@ -7216,6 +7221,8 @@ const Tanks = {
       if (t.parkAt && now >= t.parkAt) { t.parkAt = 0; const e = this.slots[1 - t.s]; if (!e || e.dead || e.leaving) t.park = true; }
       if (!MIRROR && t.wantTeam && !t.dead) { const e = this.slots[1 - t.s]; if (!e || e.dead || e.leaving) this.recolor(t.k, t.wantTeam, true); }      // the battle's over: the switch they asked for
     });
+    // OBS: a side that's free goes to the next one waiting for it
+    if (!MIRROR) [0, 1].forEach(s => { if (!this.slots[s] && this.q[s].length) { const n = this.q[s].shift(); this.cmd(s + 1, n.login, n.name, n.color); } });
     // OBS: they take turns firing while both are out and in place
     if (!MIRROR) this.slots.forEach(t => { const e = t && this.slots[1 - t.s]; if (!t || !e || t.dead || e.dead || t.leaving || e.leaving) return;
       const inPlace = x => x.s ? x.x < 2560 + 40 : x.x > -40; if (!inPlace(t) || !inPlace(e)) { t.nextShot = Math.max(t.nextShot, now + 1200); return; }
@@ -7270,7 +7277,8 @@ const Tanks = {
     // name (their Twitch color) and health bar above it
     const cx = t.park ? Math.max(150, Math.min(2410, this.muzzle(t)[0] - dir * 60)) : this.cx(t), ny = top - 70, bw = 260;       // (parked: over its barrel, the part that shows)
     g.textAlign = "center"; g.textBaseline = "middle"; g.font = "900 40px 'Segoe UI', sans-serif"; g.lineWidth = 7; g.strokeStyle = "#000"; g.strokeText(t.name, cx, ny); g.fillStyle = t.color; g.fillText(t.name, cx, ny);
-    if (!t.park) {                                                                       // (parked, waiting for the next battle: just its name)
+    if (t.park) { g.font = "800 26px 'Segoe UI', sans-serif"; g.lineWidth = 6; g.strokeStyle = "#000"; const ws = "Win Streak: " + (t.streak || 0); g.strokeText(ws, cx, ny + 40); g.fillStyle = "#fde68a"; g.fillText(ws, cx, ny + 40); }
+    if (!t.park) {                                                                       // (parked, waiting for the next battle: its name and win streak)
     g.fillStyle = "#000b"; g.fillRect(cx - bw / 2 - 4, ny + 26, bw + 8, 22); g.fillStyle = t.hp > .6 ? "#4ade80" : t.hp > .3 ? "#facc15" : "#ef4444"; g.fillRect(cx - bw / 2, ny + 30, bw * Math.max(0, t.hp), 14);
     g.font = "800 22px 'Segoe UI', sans-serif"; g.fillStyle = "#fff"; g.fillText(Math.round(t.hp * 100) + "%" + (t.tracks ? "" : " · tracks off") + (t.turret || t.dead ? "" : " · turret on fire"), cx, ny + 64); }
     if (t.say && now - t.sayAt < 3500) { const a2 = Math.min(1, (3500 - (now - t.sayAt)) / 400); g.globalAlpha = a2; g.font = "800 30px 'Segoe UI', sans-serif"; g.lineWidth = 6; g.strokeText(t.say, cx, ny - 46); g.fillStyle = "#fde68a"; g.fillText(t.say, cx, ny - 46); g.globalAlpha = 1; } },
@@ -8780,7 +8788,7 @@ Mirror.ON = {
   emo: (id, url, seed, life) => Emotes.add(id, url, seed, life, Mirror.lag), "emo.x": (id, x, y, vx, vy) => { Emotes.shatter(id, x, y, vx, vy); }, "emo.off": () => Emotes.clear(),
   "plane.boom": () => { Plane.boom(performance.now()); },
   "tank.add": (s, k, n, c, team) => Tanks.add(s, k, n, c, team), "tank.fire": (...a) => Tanks.fire(...a), "tank.fix": s => Tanks.fix(s), "tank.go": s => { const t = Tanks.slots[s]; if (t) t.leaving = true; },
-  "tank.say": (s, text) => Tanks.say(Tanks.slots[s], text), "tank.team": (k, team) => Tanks.recolor(k, team, true),
+  "tank.say": (s, text) => Tanks.say(Tanks.slots[s], text), "tank.pop": (s, text) => { const t = Tanks.slots[s]; if (t) Tanks.pop(t, text, "#c4b5fd", performance.now()); }, "tank.team": (k, team) => Tanks.recolor(k, team, true),
   salv: (login, name, color, n, pts) => Scrap.bubble(login, name, color, n, pts), salvboard: html => Scrap.salvBoard(html),
   flak: (x, born) => Flak.go(x, born), "flak.loot": (name, color, i, n, x, y) => Flak.show(name, color, i, n, x, y), "flak.shot": (tx, ty, ex, ey, air) => Flak.shoot(tx, ty, ex, ey, air),
   "dice.fx": (kind, i, x, y, face) => { const c = Dice.list[i]; if (c && c.local) return; Dice.puff(kind, { x, y, face }, true); }
@@ -8963,7 +8971,7 @@ window.KZDirect = function (opt) {
 (() => {
   const qs = new URLSearchParams(location.search), key = qs.get("ctl");
   if (!key || !window.WebSocket) return;
-  const PAGE = "html3", VERSION = "e39307f", INST = Math.random().toString(36).slice(2, 8);
+  const PAGE = "html3", VERSION = "b97e71c", INST = Math.random().toString(36).slice(2, 8);
   const QUICK = { mir: 1, rtt: 1 };                                 // sent many times a second: only the newest matters
   let said = false, direct = null;
   const seen = new Set(), seenList = [], fresh = id => { if (!id) return true; if (seen.has(id)) return false; seen.add(id); seenList.push(id); if (seenList.length > 800) seen.delete(seenList.shift()); return true; };
