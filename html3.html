@@ -2449,18 +2449,22 @@ const Scrap = {
     if (Date.now() - (this.data.t || 0) > this.RESET) this.data = { t: Date.now(), users: {} };
     const k = (login || name).toLowerCase(), asked = Date.now();
     // the name shows in the team color (Colonial green, BlueWarden blue); no team: their Twitch color
-    const go = () => { const team = this.teams[k] || "";
+    const go = () => { const team = this.picked[k] || this.teams[k] || "";
       this.run(p, { name, k, team, color: this.TEAMCOL[team] || color || TWITCH_DEFAULTS[k.length % TWITCH_DEFAULTS.length], twitch: color || TWITCH_DEFAULTS[k.length % TWITCH_DEFAULTS.length] }); };
     if (test) return go();
     // Stream Avatars reports this viewer's nametag when they type !scroop; give it up to 3 s to arrive
     // (if it comes later, the soldier's uniform still changes to match: see saMessage)
-    const wait = () => (this.teamAt[k] || 0) >= asked - 1000 || Date.now() - asked > 3000 ? go() : setTimeout(wait, 100);
+    const wait = () => this.picked[k] || (this.teamAt[k] || 0) >= asked - 1000 || Date.now() - asked > 3000 ? go() : setTimeout(wait, 100);
     wait();
   },
+  /* !green / !blue in chat: that viewer's soldier wears that color from now on (and over whatever Stream Avatars says) */
+  picked: (() => { try { return JSON.parse(localStorage.getItem("scroopPicked")) || {}; } catch (e) { return {}; } })(),
+  pick(login, team) { const k = (login || "").toLowerCase(); if (!k || (team !== "green" && team !== "blue")) return;
+    this.picked[k] = team; try { localStorage.setItem("scroopPicked", JSON.stringify(this.picked)); } catch (e) {} this.saMessage(k + "|" + team, true); },
   /* a message from the Stream Avatars script: "chattername|green", "chattername|blue" or "chattername|none" */
-  saMessage(text) {
+  saMessage(text, mine) {
     const [n, t] = String(text || "").split("|"); const k = (n || "").trim().toLowerCase(); if (!k) return;
-    const team = t === "green" || t === "blue" ? t : "";
+    const team = !mine && this.picked[k] ? this.picked[k] : t === "green" || t === "blue" ? t : "";      // (a color they picked with !green / !blue wins)
     this.setTeam(k, team); this.teamAt[k] = Date.now();
     // a soldier already out for this viewer switches to the right uniform
     document.querySelectorAll(".scroop").forEach(w => { if (w.dataset.k !== k) return;
@@ -8000,6 +8004,7 @@ const Chat = {
       else if (/^!dice\b/i.test(msg)) { Dice.roll(login); Lurk.leave(login); }
       else if (/^!snow\b/i.test(msg)) { Face.chatSnow(tags["display-name"] || login, tags.color || chatColors[tags["user-id"]]); Lurk.leave(login); }
       else if (/^!scroopleaderboard\b/i.test(msg)) Scrap.showBoard();
+      else if (/^!(green|blue)\b/i.test(msg)) Scrap.pick(login, msg.slice(1).split(/\s/)[0].toLowerCase());          // their !scroop soldier's color
       else if (/^!scroop\b/i.test(msg) || msg.includes("kruuuuCatch1")) Scrap.dig(tags["display-name"] || login, login, tags.color || chatColors[tags["user-id"]]);   // lurkers can scroop without leaving the tower
       else Lurk.leave(login);
       return;
@@ -8584,7 +8589,7 @@ window.KZDirect = function (opt) {
 (() => {
   const qs = new URLSearchParams(location.search), key = qs.get("ctl");
   if (!key || !window.WebSocket) return;
-  const PAGE = "html3", VERSION = "5068aa6", INST = Math.random().toString(36).slice(2, 8);
+  const PAGE = "html3", VERSION = "983825d", INST = Math.random().toString(36).slice(2, 8);
   const QUICK = { mir: 1, rtt: 1 };                                 // sent many times a second: only the newest matters
   let said = false, direct = null;
   const seen = new Set(), seenList = [], fresh = id => { if (!id) return true; if (seen.has(id)) return false; seen.add(id); seenList.push(id); if (seenList.length > 800) seen.delete(seenList.shift()); return true; };
