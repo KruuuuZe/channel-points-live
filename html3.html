@@ -414,6 +414,7 @@ body.fit #stage{background:radial-gradient(1200px 700px at 30% 20%,#1a103322,tra
 #mediccv{position:absolute;inset:0;width:2560px;height:1440px;pointer-events:none;z-index:9}
 #traincv{position:absolute;inset:0;width:2560px;height:1440px;pointer-events:none;z-index:9}
 #planecv{position:absolute;inset:0;width:2560px;height:1440px;pointer-events:none;z-index:9}
+#flakloot{position:absolute;inset:0;pointer-events:none;z-index:10} #flakloot .loot .who{margin-right:6px}
 #flakcv{position:absolute;inset:0;width:2560px;height:1440px;pointer-events:none;z-index:9}
 /* 😀 floating emotes (under the plane and its bullets): each one a picture, so animated ones keep moving; .emoX: one that's been shot, in shards */
 #emo{position:absolute;inset:0;pointer-events:none;z-index:8}
@@ -526,7 +527,7 @@ body.fit #stage{background:radial-gradient(1200px 700px at 30% 20%,#1a103322,tra
   <canvas id="flagcv" width="2560" height="1440"></canvas>
   <canvas id="vincv" width="2560" height="1440"></canvas>
   <div id="emo"></div>
-  <canvas id="flakcv" width="2560" height="1440"></canvas>
+  <canvas id="flakcv" width="2560" height="1440"></canvas><div id="flakloot"></div>
   <canvas id="planecv" width="2560" height="1440"></canvas>
   <canvas id="mediccv" width="2560" height="1440"></canvas>
   <div id="svid"><div class="frm"><div class="plate"></div></div><div class="box"></div></div>
@@ -2434,6 +2435,14 @@ const Scrap = {
       }, .34);
     }, i * 260);
   },
+  // loot into a viewer's totals (today's board and All Time): from a scroop, or from shooting the plane down with !flak
+  credit(k, name, color, l, n) { this.build(); if (Date.now() - (this.data.t || 0) > this.RESET) this.data = { t: Date.now(), users: {} };
+    for (const book of [this.data.users, this.all.users]) {
+      const u = book[k] || (book[k] = { name, color, pts: 0, salv: 0, comp: 0, sulf: 0, rare: 0 });
+      u.name = name; u.color = color; u[l.k] = (u[l.k] || 0) + n; u.pts += n * l.pts;
+      if (l.gold && !MIRROR) this.goldAdd(l.k, n);                         // the running total of golden fruit scrooped
+    }
+    this.save(); },
   roll() {
     const g = Math.random();
     if (g < .01) return { l: GOLD_BANANA, n: 1 };                       // 1%: the Golden Banana
@@ -2530,12 +2539,7 @@ const Scrap = {
       c: [105, 110, 120], s: rand(4, 7), drag: .95, g: .04 });
     kick();
     const l = SCRAP_LOOT[job.roll[0]] || LOOT[0], n = job.roll[1];
-    for (const book of [this.data.users, this.all.users]) {
-      const u = book[job.k] || (book[job.k] = { name: job.name, color: job.color, pts: 0, salv: 0, comp: 0, sulf: 0, rare: 0 });
-      u.name = job.name; u.color = job.color; u[l.k] = (u[l.k] || 0) + n; u.pts += n * l.pts;
-      if (l.gold && !MIRROR) this.goldAdd(l.k, n);                         // the running total of golden fruit scrooped
-    }
-    this.save();
+    this.credit(job.k, job.name, job.color, l, n);
     const sx = ox + 95, sy = 1440 - 90, ex = ox + 40, ey = 1440 - (l.rare ? 400 : 330);
     const o = el("div", "loot" + (l.rare ? " rare" : "")); o.style.setProperty("--lc", l.c);
     const art = l.gold && ChefArt.sprites[l.art];
@@ -7033,9 +7037,11 @@ window.Emotes = Emotes;
    Then it sinks back down. No sound. Art: flak_cannon (📍 its barrel end marked) and flak_fire (the recoil).
    OBS decides everything and tells the touchpad copy (where it rises; then where the shot goes). */
 const Flak = {
-  busy: false, wait: 0, H: 420, V: 3800, cur: null, running: false,
-  order(who) { if (MIRROR) return; if (this.busy) { if (this.wait < 3) this.wait++; return; } this.go(rand(260, 2300)); },
-  go(x, born) { this.busy = true; const now = performance.now(); this.cur = { x, at: now - (+born || 0), aim: -Math.PI / 4, shot: null, fired: false, bursts: [], smoke: [], hitDone: false };
+  busy: false, H: 420, V: 3800, cur: null, running: false,
+  order(login, name, color) { if (MIRROR) return; const by = { login: String(login || "").toLowerCase(), name: name || login || "", color: color || "" };
+    if (this.busy) { if (this.q.length < 3) this.q.push(by); return; } this.go(rand(260, 2300), 0, by); },
+  q: [],
+  go(x, born, by) { this.busy = true; const now = performance.now(); this.cur = { x, by: by || null, at: now - (+born || 0), aim: -Math.PI / 4, shot: null, fired: false, bursts: [], smoke: [], hitDone: false };
     if (!MIRROR) Mirror.fwd("flak", [x, 0]); this.start(); },
   sp(k) { const a = ChefArt.sprites[k]; return a && a.img && a.img.complete && a.img.naturalWidth ? a : null; },
   // where the gun stands (its base, middle) and how high it has risen (0..1)
@@ -7052,7 +7058,7 @@ const Flak = {
       if (!c) { this.running = false; return; } const t = now - c.at;
       try { this.tick(c, t, now); this.draw(g, c, t, now); } catch (e) { console.error(e); }
       if (t > this.T.down + 200 && !c.shot?.live && !c.bursts.length && !c.smoke.length) { this.cur = null; this.busy = false; g.clearRect(0, 0, 2560, 1440); this.running = false;
-        if (!MIRROR && this.wait > 0) { this.wait--; setTimeout(() => this.order(), 400); } return; }
+        if (!MIRROR && this.q.length) { const n = this.q.shift(); setTimeout(() => this.order(n.login, n.name, n.color), 400); } return; }
       requestAnimationFrame(step); };
     requestAnimationFrame(step); },
   // the plane, if it can be aimed at
@@ -7071,13 +7077,26 @@ const Flak = {
     const s = c.shot; if (s && s.live) { const k = (now - s.at) / 1000; s.x = s.x0 + s.ux * this.V * k; s.y = s.y0 + s.uy * this.V * k;
       if (k * this.V >= s.d && !s.reached) { s.reached = true;
         if (s.air) { s.live = false; this.burst(c, s.tx, s.ty, now); }
-        else if (c.hit && !c.hitDone && !MIRROR) { c.hitDone = true; const P2 = this.target(); if (P2 && Math.hypot(P2.x - s.tx, P2.y - s.ty) < 600) { s.live = false; this.burst(c, P2.x, P2.y, now); P2.boom(now); } } }
+        else if (c.hit && !c.hitDone && !MIRROR) { c.hitDone = true; const P2 = this.target(); if (P2 && Math.hypot(P2.x - s.tx, P2.y - s.ty) < 600) { s.live = false; this.burst(c, P2.x, P2.y, now); if (P2.boom(now)) this.loot(c.by, P2.x, P2.y); } } }
       if (s.x < -300 || s.x > 2860 || s.y < -300 || s.y > 1740) s.live = false; } },
   // the shot leaves the barrel toward (tx, ty) and keeps going (air: it bursts there, up in the sky)
   shoot(tx, ty, ex, ey, air) { const c = this.cur; if (!c) return; c.fired = true; const now = performance.now(), t = now - c.at, G = this.geo(c, c.aim, 1);
     c.aim = Math.atan2(ty - G.py, tx - G.px); const G2 = this.geo(c, c.aim, 1), dx = tx - G2.mx, dy = ty - G2.my, d = Math.hypot(dx, dy) || 1;
     c.shot = { at: now, x0: G2.mx, y0: G2.my, x: G2.mx, y: G2.my, ux: dx / d, uy: dy / d, d, tx, ty, air: !!+air, live: true }; c.fireAt = now;
     for (let i = 0; i < 14; i++) c.smoke.push({ x: G2.mx + rand(-20, 20), y: G2.my + rand(-20, 20), vx: dx / d * rand(40, 160) + rand(-40, 40), vy: dy / d * rand(40, 160) + rand(-60, 10), r: rand(30, 70), at: now, life: rand(900, 1700) }); },
+  // whoever shot the plane down wins loot, the same kinds and odds as a scroop pile, added to their scrap totals; it
+  // shows where the plane was: their name (in their Twitch color) and what they got
+  loot(by, x, y) { if (!by) return; if (by.login === "test") by = { login: "", name: by.name, color: by.color };          // (the test bar's: shown, not added to anyone)
+    const r = Scrap.roll(), i = SCRAP_LOOT.indexOf(r.l), color = by.color || TWITCH_DEFAULTS[(by.name || "").length % TWITCH_DEFAULTS.length];
+    if (by.login) Scrap.credit(by.login, by.name, color, r.l, r.n);
+    this.show(by.name, color, i, r.n, x, y); Mirror.fwd("flak.loot", [by.name, color, i, r.n, Math.round(x), Math.round(y)]); },
+  show(name, color, i, n, x, y) { const l = SCRAP_LOOT[i] || LOOT[0], o = el("div", "loot" + (l.rare ? " rare" : "")); o.style.setProperty("--lc", l.c);
+    const art = l.gold && ChefArt.sprites[l.art]; const who = el("span", "who", name); who.style.color = color; who.style.textShadow = "0 3px 0 #000,0 0 14px " + color; o.append(who);
+    if (art) { const im = document.createElement("img"); im.src = art.img.src; im.className = "gb"; o.append(im); } else o.insertAdjacentHTML("beforeend", l.svg);
+    o.append((l.gold ? "" : "+" + n + " ") + l.name + (l.gold ? "!" : "")); x = Math.max(260, Math.min(2300, x)); y = Math.max(90, Math.min(1350, y)); o.style.left = x + "px"; o.style.top = y + "px"; $("#flakloot").append(o);
+    o.animate([{ transform: "translate(-50%,-50%) scale(.3)", opacity: 0 }, { transform: "translate(-50%,-80%) scale(1.15)", opacity: 1, offset: .08 }, { transform: "translate(-50%,-110%) scale(1)", opacity: 1, offset: .2 },
+      { transform: "translate(-50%,-150%) scale(1)", opacity: 1, offset: .85 }, { transform: "translate(-50%,-170%) scale(1)", opacity: 0 }], { duration: 4200, easing: "ease-out", fill: "forwards" });
+    setTimeout(() => o.remove(), 4300); },
   // a flak burst: a flash, then a thick black puff with a few sparks
   burst(c, x, y, now) { c.bursts.push({ x, y, at: now }); for (let i = 0; i < 10; i++) c.smoke.push({ x: x + rand(-40, 40), y: y + rand(-40, 40), vx: rand(-90, 90), vy: rand(-90, 50), r: rand(50, 110), at: now, life: rand(1400, 2400), dark: 1 }); },
   draw(g, c, t, now) { const T = this.T, r = this.rise(t), G = this.geo(c, c.aim, r), base = this.sp("flak_cannon"), fire = this.sp("flak_fire");
@@ -7851,7 +7870,7 @@ document.querySelectorAll("#testbar [data-t]").forEach(b => b.onclick = () => {
   else if (t === "bolt") Bolt.run();
   else if (t === "train") Train.run();
   else if (t === "flags") Flags.run();
-  else if (t === "flak") Flak.order("test");
+  else if (t === "flak") Flak.order("test", "Test", "#a3e635");
   else if (t === "emote") { if (!Emotes.on) Emotes.toggle(true); Emotes.spawn("https://static-cdn.jtvnw.net/emoticons/v2/" + ["25", "354", "425618"][Math.floor(Math.random() * 3)] + "/default/dark/2.0"); }
   else if (t === "vinnie") Vinnie.run();
   else if (t === "medic") Medic.run();
@@ -8086,7 +8105,7 @@ const Chat = {
       else if (/^!dice\b/i.test(msg)) { Dice.roll(login); Lurk.leave(login); }
       else if (/^!snow\b/i.test(msg)) { Face.chatSnow(tags["display-name"] || login, tags.color || chatColors[tags["user-id"]]); Lurk.leave(login); }
       else if (/^!scroopleaderboard\b/i.test(msg)) Scrap.showBoard();
-      else if (/^!flak\b/i.test(msg)) Flak.order(login);
+      else if (/^!flak\b/i.test(msg)) Flak.order(login, tags["display-name"] || login, tags.color || chatColors[tags["user-id"]]);
       else if (/^!(green|blue)\b/i.test(msg)) Scrap.pick(login, msg.slice(1).split(/\s/)[0].toLowerCase());          // their !scroop soldier's color
       else if (/^!scroop\b/i.test(msg) || msg.includes("kruuuuCatch1")) Scrap.dig(tags["display-name"] || login, login, tags.color || chatColors[tags["user-id"]]);   // lurkers can scroop without leaving the tower
       else Lurk.leave(login);
@@ -8492,7 +8511,7 @@ Mirror.ON = {
   "bag.hit": (dx, p) => PunchBag.hit(dx, p),
   emo: (id, url, seed, life) => Emotes.add(id, url, seed, life, Mirror.lag), "emo.x": (id, x, y, vx, vy) => { Emotes.shatter(id, x, y, vx, vy); }, "emo.off": () => Emotes.clear(),
   "plane.boom": () => { Plane.boom(performance.now()); },
-  flak: (x, born) => Flak.go(x, born), "flak.shot": (tx, ty, ex, ey, air) => Flak.shoot(tx, ty, ex, ey, air),
+  flak: (x, born) => Flak.go(x, born), "flak.loot": (name, color, i, n, x, y) => Flak.show(name, color, i, n, x, y), "flak.shot": (tx, ty, ex, ey, air) => Flak.shoot(tx, ty, ex, ey, air),
   "dice.fx": (kind, i, x, y, face) => { const c = Dice.list[i]; if (c && c.local) return; Dice.puff(kind, { x, y, face }, true); }
 };
 // the app's own chat reader feeds the copy's chat box (the copy doesn't connect to chat itself)
@@ -8673,7 +8692,7 @@ window.KZDirect = function (opt) {
 (() => {
   const qs = new URLSearchParams(location.search), key = qs.get("ctl");
   if (!key || !window.WebSocket) return;
-  const PAGE = "html3", VERSION = "c38068e", INST = Math.random().toString(36).slice(2, 8);
+  const PAGE = "html3", VERSION = "d2dad07", INST = Math.random().toString(36).slice(2, 8);
   const QUICK = { mir: 1, rtt: 1 };                                 // sent many times a second: only the newest matters
   let said = false, direct = null;
   const seen = new Set(), seenList = [], fresh = id => { if (!id) return true; if (seen.has(id)) return false; seen.add(id); seenList.push(id); if (seenList.length > 800) seen.delete(seenList.shift()); return true; };
