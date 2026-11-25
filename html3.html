@@ -7132,8 +7132,7 @@ const Plane = {
       blobs: Array.from({ length: 8 }, (v, i) => [(r() - .5) * 210, (r() - .5) * 130, 120 + r() * 150, i ? r() * .18 : 0]),
       rays: Array.from({ length: 18 }, () => [r() * 6.2832, 500 + r() * 900, 30 + r() * 70]) };
     this.shown = this.leaving = false; this.dead = now + 1500; this.down = true; this.again = false; this.man = this.want = null; this.start();
-    if (!MIRROR) { try { Sound.init(); const C = Sound.ctx; if (C) { const t = C.currentTime; Sound.burst(t, .6, .5, "lowpass", 1500, 70); Sound.tone(t, .5, .5, 150, 32); Sound.burst(t + .04, 1, .15, "bandpass", 520, 110); } } catch (e) {}
-      Mirror.fwd("plane.boom", []); }
+    if (!MIRROR) Mirror.fwd("plane.boom", []);                         // (silent)
     return true; },
   // the explosion: its picture (plane_boom) played once, or drawn: a flash, a fireball that swells and cools to smoke, a
   // ring, and pieces of the plane flung out and falling
@@ -8568,7 +8567,7 @@ window.KZDirect = function (opt) {
 (() => {
   const qs = new URLSearchParams(location.search), key = qs.get("ctl");
   if (!key || !window.WebSocket) return;
-  const PAGE = "html3", VERSION = "49e4ff7", INST = Math.random().toString(36).slice(2, 8);
+  const PAGE = "html3", VERSION = "b3a37db", INST = Math.random().toString(36).slice(2, 8);
   const QUICK = { mir: 1, rtt: 1 };                                 // sent many times a second: only the newest matters
   let said = false, direct = null;
   const seen = new Set(), seenList = [], fresh = id => { if (!id) return true; if (seen.has(id)) return false; seen.add(id); seenList.push(id); if (seenList.length > 800) seen.delete(seenList.shift()); return true; };
