@@ -402,7 +402,7 @@ body.fit #stage{background:radial-gradient(1200px 700px at 30% 20%,#1a103322,tra
 #lli .tl .vid{position:absolute;inset:0;background:#000;border-radius:6px;overflow:hidden}
 #lli .tl.drag{transition:opacity .6s} #lli .tl .rz{position:absolute;right:-10px;bottom:-10px;width:120px;height:120px;z-index:3;background:linear-gradient(135deg,transparent 52%,#a3e635 52% 60%,transparent 60% 70%,#a3e635 70% 78%,transparent 78%)}
 #lli .tl .vid iframe,#lli .tl .vid img{width:100%;height:100%;border:0;display:block;object-fit:cover}
-#lli .tl .fr{position:absolute;inset:-18px;border:14px solid #2d2c22;border-radius:14px;box-shadow:inset 0 0 0 3px #6f6a4e,0 14px 40px #000c;
+#lli .tl .fr{position:absolute;inset:-12px;border:14px solid #2d2c22;border-radius:14px;box-shadow:inset 0 0 0 3px #6f6a4e,0 14px 40px #000c;
   background:radial-gradient(circle,#a39d78 3px,transparent 4px) 0 0/40px 40px;-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude;padding:0}
 #lli .tl .fr.art{border:0;background:none;box-shadow:none;-webkit-mask:none;mask:none;inset:-6%}
 #lli .tl .fr.art img{width:100%;height:100%;display:block}
@@ -6754,6 +6754,14 @@ const LiveLook = {
   // Twitch's player script, once
   ready() { if (window.Twitch && Twitch.Player) return Promise.resolve(); if (this.apiWait) return this.apiWait;
     return this.apiWait = new Promise(ok => { const sc = document.createElement("script"); sc.src = "https://player.twitch.tv/js/embed/v1.js"; sc.onload = ok; sc.onerror = ok; document.head.append(sc); }); },
+  // the frame picture's window (the see-through middle), as parts of the picture, so the frame is placed with that
+  // window exactly on the video at any size (its inner edge overlapping the video by a hair: no gap shows)
+  hole(a) { if (!a || !a.img || !a.img.complete || !a.img.naturalWidth) return null; if (a._hole) return a._hole; const im = a.img, W = Math.min(800, im.naturalWidth), H = Math.round(W * im.naturalHeight / im.naturalWidth);
+    const c = document.createElement("canvas"); c.width = W; c.height = H; const g = c.getContext("2d", { willReadFrequently: true }); g.drawImage(im, 0, 0, W, H); const d = g.getImageData(0, 0, W, H).data, A = (x, y) => d[(y * W + x) * 4 + 3] > 60;
+    const cx = W >> 1, cy = H >> 1; if (A(cx, cy)) return a._hole = { l: .06 / 1.12, t: .06 / 1.12, r: 1.06 / 1.12, b: 1.06 / 1.12 };       // (no window in the middle: as before)
+    const far = (x0, y0, dx, dy) => { let x = x0, y = y0; while (x > 0 && y > 0 && x < W - 1 && y < H - 1 && !A(x + dx, y + dy)) { x += dx; y += dy; } return dx ? x : y; };
+    let l = 0, rr = W, t = 0, b = H; [.3, .5, .7].forEach(f => { const y = Math.round(H * f), x = Math.round(W * f); l = Math.max(l, far(cx, y, -1, 0)); rr = Math.min(rr, far(cx, y, 1, 0)); t = Math.max(t, far(x, cy, 0, -1)); b = Math.min(b, far(x, cy, 0, 1)); });
+    const px = 2 / W, py = 2 / H; return a._hole = { l: l / W + px, t: t / H + py, r: (rr + 1) / W - px, b: (b + 1) / H - py }; },
   frameArt() { const a = ChefArt.sprites.lli_frame; return a && a.img && a.img.complete ? a.url || a.img.src : null; },
   render() { const box = $("#lli"), S = this.st, W = 2560, H = 1440, art = this.frameArt();
     box.classList.toggle("on", !!S.on && this.shown);
@@ -6774,6 +6782,9 @@ const LiveLook = {
         rects.push({ l: rx + c * (tw + gx), t: oy + r * (th + gy), w: tw, h: th, o: 1, s: 1, small: tw < 900 }); }); }
     else { const tw = 1960, th = tw * 9 / 16, l = (W - tw) / 2, t = 210;
       want.forEach((x, i) => { const d = i - cur; rects.push({ l: l + d * (tw + 260), t: t + Math.abs(d) * 40, w: tw, h: th, o: d === 0 ? 1 : 0, s: d === 0 ? 1 : .86, small: false }); }); }
+    // just one stream: the top-left quarter of the screen (its frame and name plate kept inside it)
+    if (n === 1) { const f = this.overF(), G = 20, w = Math.min((1280 - 2 * G) / (1 + f.x0 + f.x1), (720 - 2 * G) / (1 + f.y0 + f.y1) * 16 / 9), h = w * 9 / 16;
+      rects[0] = { l: G + f.x0 * w, t: G + f.y0 * h, w, h, o: 1, s: 1, small: false }; }
     // moved or resized on the touchpad (long-press to move, the bottom-right corner to resize): those win over the layout
     want.forEach((x, i) => { const p = (S.pos || {})[x.login.toLowerCase()], r = rects[i]; if (!p || r.o !== 1) return;
       r.l = +p.l || 0; r.t = +p.t || 0; r.w = Math.max(320, +p.w || r.w); r.h = r.w * 9 / 16; r.s = 1; r.small = r.w < 900; });
@@ -6784,10 +6795,16 @@ const LiveLook = {
         t = { el, login: k, player: null }; this.tiles.set(k, t); this.load(t, x); requestAnimationFrame(() => requestAnimationFrame(() => this.place(t, r))); }
       else this.place(t, r);
       t.rect = r; t.el.classList.toggle("drag", S.drag === k);
-      const fr = t.el.querySelector(".fr"); if (art) { if (!fr.classList.contains("art")) { fr.className = "fr art"; fr.innerHTML = '<img alt="">'; } fr.querySelector("img").src = art; }
+      const fr = t.el.querySelector(".fr"); if (art) { if (!fr.classList.contains("art")) { fr.className = "fr art"; fr.innerHTML = '<img alt="">'; } fr.querySelector("img").src = art;
+        const ho = this.hole(ChefArt.sprites.lli_frame); if (ho) { const hw = ho.r - ho.l, hh = ho.b - ho.t, pc = v => (v * 100).toFixed(3) + "%";
+          fr.style.inset = pc(-ho.t / hh) + " " + pc(-(1 - ho.r) / hw) + " " + pc(-(1 - ho.b) / hh) + " " + pc(-ho.l / hw); } }
       t.el.querySelector(".nm").textContent = x.name || x.login; t.el.querySelector(".v").textContent = "";                         // (no viewer counts on stream)
       const loud = (S.loud || []).map(z => z.toLowerCase()).includes(k); t.el.classList.toggle("loud", loud); t.el.querySelector(".m").textContent = loud ? "🔊" : "🔇"; t.el.classList.toggle("small", !!r.small);
       t.vol = Math.max(0, Math.min(1, +((S.vol || {})[k] ?? 1))); this.mute(t, !loud); }); },
+  // how far the frame sticks out around a video this wide
+  over(w) { const f = this.overF(); return w * Math.max(f.x0, f.x1); },
+  overF() { const ho = this.frameArt() && this.hole(ChefArt.sprites.lli_frame); if (!ho) return { x0: 12 / 1100, x1: 12 / 1100, y0: 12 / 620, y1: 12 / 620 };       // (each side, as a part of the video's width or height)
+    const hw = ho.r - ho.l, hh = ho.b - ho.t; return { x0: ho.l / hw, x1: (1 - ho.r) / hw, y0: ho.t / hh, y1: (1 - ho.b) / hh }; },
   place(t, r) { const s = t.el.style; s.left = r.l + "px"; s.top = r.t + "px"; s.width = r.w + "px"; s.height = r.h + "px"; s.opacity = r.o; s.transform = `scale(${r.s})`; },
   load(t, x) { const vid = t.el.querySelector(".vid");
     if (MIRROR || !/github\.io$|^localhost$|^127\./.test(location.hostname)) { if (x.thumb) { const im = document.createElement("img"); im.src = String(x.thumb).replace("{width}", "640").replace("{height}", "360"); vid.append(im); } return; }    // the touchpad copy: a picture, not the video
@@ -8567,7 +8584,7 @@ window.KZDirect = function (opt) {
 (() => {
   const qs = new URLSearchParams(location.search), key = qs.get("ctl");
   if (!key || !window.WebSocket) return;
-  const PAGE = "html3", VERSION = "b3a37db", INST = Math.random().toString(36).slice(2, 8);
+  const PAGE = "html3", VERSION = "481c6e8", INST = Math.random().toString(36).slice(2, 8);
   const QUICK = { mir: 1, rtt: 1 };                                 // sent many times a second: only the newest matters
   let said = false, direct = null;
   const seen = new Set(), seenList = [], fresh = id => { if (!id) return true; if (seen.has(id)) return false; seen.add(id); seenList.push(id); if (seenList.length > 800) seen.delete(seenList.shift()); return true; };
