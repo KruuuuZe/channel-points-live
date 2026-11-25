@@ -7080,7 +7080,8 @@ const Tanks = {
     if (sh.brk === "tracks" && e.tracks) { e.tracks = false; this.part(e, "tracks", now); }
     if (sh.brk === "turret" && e.turret) { e.turret = false; this.part(e, "turret", now); }
     if (e.hp <= 0) this.kill(e, now); },
-  kill(t, now) { t.dead = now; if (t.turret) { t.turret = false; this.part(t, "turret", now); } this.boom(this.cx(t), this.GY - this.H * .5, 2.2, now); this.say(t, "💥 destroyed");
+  kill(t, now) { t.dead = now;
+    { const w = this.slots[1 - t.s]; if (!MIRROR && w && !w.dead) Flak.loot({ login: /^test\d$/.test(w.k) ? "test" : w.k, name: w.name, color: w.color }, this.cx(t), this.GY - this.H - 160); }     // the winner's loot, as for !flak if (t.turret) { t.turret = false; this.part(t, "turret", now); } this.boom(this.cx(t), this.GY - this.H * .5, 2.2, now); this.say(t, "💥 destroyed");
     setTimeout(() => { if (this.slots[t.s] === t) this.slots[t.s] = null; }, 4500); },
   // a piece blown off: it flies off spinning and falls (the turret) or drops and rolls away (the tracks)
   part(t, which, now) { const dir = t.s ? 1 : -1; t.parts.push({ which, at: now, vx: which === "turret" ? dir * rand(150, 380) : dir * rand(40, 110), vy: which === "turret" ? -rand(700, 900) : -rand(80, 160), spin: rand(-6, 6) * (which === "turret" ? 1 : .2) });
@@ -8842,7 +8843,7 @@ window.KZDirect = function (opt) {
 (() => {
   const qs = new URLSearchParams(location.search), key = qs.get("ctl");
   if (!key || !window.WebSocket) return;
-  const PAGE = "html3", VERSION = "55cbae3", INST = Math.random().toString(36).slice(2, 8);
+  const PAGE = "html3", VERSION = "6a61e0f", INST = Math.random().toString(36).slice(2, 8);
   const QUICK = { mir: 1, rtt: 1 };                                 // sent many times a second: only the newest matters
   let said = false, direct = null;
   const seen = new Set(), seenList = [], fresh = id => { if (!id) return true; if (seen.has(id)) return false; seen.add(id); seenList.push(id); if (seenList.length > 800) seen.delete(seenList.shift()); return true; };
