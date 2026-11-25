@@ -7061,6 +7061,9 @@ const Tanks = {
     this.fix(s); Mirror.fwd("tank.fix", [s]); },
   // ---- what happens (in OBS and the copy alike)
   add(s, k, name, color, team) { const now = performance.now(), o = this.slots[1 - s]; if (o) o.park = false;           // (a parked winner drives back in to fight)
+    // OBS: the app says which of this team's tank pictures OBS doesn't have (they show as the other team's, or stand-ins)
+    if (!MIRROR) { const miss = ChefArt.NAMES.filter(n => n.startsWith("tank_" + team) && (n === "tank_" + team || n.startsWith("tank_" + team + "_")) && !ChefArt.sprites[n]);
+      if (miss.length && window.remoteSend) window.remoteSend({ cmd: "artMissing", what: "🪖 The " + team + " team's tank", names: miss }); }
     this.slots[s] = { s, k, name, color, team, hp: 1, tracks: true, turret: true, x: s ? 2560 + 500 : -500, home: 0, born: now, last: now, nextShot: now + 2200 + Math.random() * 1200, recoil: 0, say: null, sayAt: 0, parts: [], dead: 0, shake: 0 };
     this.start(); },
   fix(s) { const t = this.slots[s]; if (!t || t.dead) return; t.hp = 1; t.tracks = t.turret = true; t.tgone = false; t.parts = []; t.play = null; t.last = performance.now(); this.say(t, "🔧 repaired! −" + fmt(this.COST) + " scrap");
@@ -7127,7 +7130,9 @@ const Tanks = {
   // ---- where things are
   cx(t) { return t.x + (t.s ? -1 : 1) * this.size(t).w / 2; },             // its middle (x is the edge it sits against)
   art(t, moving) { const a = this.sp("tank_" + t.team), d = this.sp("tank_" + t.team + "_drive"); return { still: a, drive: moving ? d : null }; },
-  sp(k) { const a = ChefArt.sprites[k]; return a && a.img && a.img.complete && a.img.naturalWidth ? a : null; },
+  // a picture; if this team's tank picture isn't there but the other team's is, that one (better than the stand-in)
+  sp(k) { const ok = a => a && a.img && a.img.complete && a.img.naturalWidth ? a : null, a = ok(ChefArt.sprites[k]); if (a) return a;
+    const m = /^tank_(green|blue)(.*)$/.exec(k); return m ? ok(ChefArt.sprites["tank_" + (m[1] === "green" ? "blue" : "green") + m[2]]) : null; },
   // a tank picture's shape: the part that's tank (not background), where the turret line is, the tracks line, the barrel end
   cut(a) { if (a._cut) return a._cut; const W = Math.min(600, a.img.naturalWidth), Hh = Math.round(W * a.img.naturalHeight / a.img.naturalWidth), c = document.createElement("canvas"); c.width = W; c.height = Hh;
     const g = c.getContext("2d", { willReadFrequently: true }); g.drawImage(a.img, 0, 0, W, Hh); const d = g.getImageData(0, 0, W, Hh).data, A = (x, y) => d[(y * W + x) * 4 + 3] > 60;
@@ -8912,7 +8917,7 @@ window.KZDirect = function (opt) {
 (() => {
   const qs = new URLSearchParams(location.search), key = qs.get("ctl");
   if (!key || !window.WebSocket) return;
-  const PAGE = "html3", VERSION = "7405725", INST = Math.random().toString(36).slice(2, 8);
+  const PAGE = "html3", VERSION = "68141da", INST = Math.random().toString(36).slice(2, 8);
   const QUICK = { mir: 1, rtt: 1 };                                 // sent many times a second: only the newest matters
   let said = false, direct = null;
   const seen = new Set(), seenList = [], fresh = id => { if (!id) return true; if (seen.has(id)) return false; seen.add(id); seenList.push(id); if (seenList.length > 800) seen.delete(seenList.shift()); return true; };
