@@ -351,7 +351,7 @@ const Scroop = {
       list.slice(0, 10).forEach((u, i) => {
         const li = el("li", "row"); li.style.setProperty("--c", "#e2b26b");
         const nm = el("span", "nm", u.name); if (u.color) nm.style.color = u.color;
-        li.append(el("span", "rk", (i + 1) + "."), icon("i-hammer"), nm, el("span", "vl", fmt(u.pts)), el("span", "nt", "pts"));
+        li.append(el("span", "rk", (i + 1) + "."), icon("i-hammer"), nm, el("span", "vl", fmt(u.pts)), el("span", "nt", "salvage"));
         ul.append(li);
       });
     };
@@ -871,7 +871,7 @@ window.KZDirect = function (opt) {
 (() => {
   const qs = new URLSearchParams(location.search), key = qs.get("ctl");
   if (!key || !window.WebSocket) return;
-  const PAGE = "html2", VERSION = "9c3a572", INST = Math.random().toString(36).slice(2, 8);
+  const PAGE = "html2", VERSION = "9f57b04", INST = Math.random().toString(36).slice(2, 8);
   const QUICK = { mir: 1, rtt: 1 };                                 // sent many times a second: only the newest matters
   let said = false, direct = null;
   const seen = new Set(), seenList = [], fresh = id => { if (!id) return true; if (seen.has(id)) return false; seen.add(id); seenList.push(id); if (seenList.length > 800) seen.delete(seenList.shift()); return true; };

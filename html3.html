@@ -2448,11 +2448,12 @@ const Scrap = {
       if (l.gold && !MIRROR) this.goldAdd(l.k, n);                         // the running total of golden fruit scrooped
     }
     this.save(); },
-  // !salvage: a bubble across the top with how much salvage they have (All Time) and their scrap points, for 5 seconds,
-  // in their Twitch color; several at once line up side by side
-  bubble(login, name, color, n, pts) { if (!MIRROR) { this.build(); const u = this.all.users[String(login || "").toLowerCase()] || {}; n = u.salv || 0; pts = u.pts || 0; color = color || TWITCH_DEFAULTS[(name || "").length % TWITCH_DEFAULTS.length]; Mirror.fwd("salv", [login, name, color, n, pts]); }
+  // !salvage: a bubble across the top with how much salvage they have (All Time: everything they've won, scrooping, with
+  // !flak and in tank battles, is salvage; it's what !repair spends), for 5 seconds, in their Twitch color; several at
+  // once line up side by side
+  bubble(login, name, color, n, pts) { if (!MIRROR) { this.build(); const u = this.all.users[String(login || "").toLowerCase()] || {}; n = u.pts || 0; pts = 0; color = color || TWITCH_DEFAULTS[(name || "").length % TWITCH_DEFAULTS.length]; Mirror.fwd("salv", [login, name, color, n, pts]); }
     const box = $("#salvbar"); if (!box) return; const b = el("div", "sb"); b.style.setProperty("--uc", css(bright(color || "#ffffff")));
-    b.insertAdjacentHTML("beforeend", LOOT[0].svg); const nm = el("b", null, name); b.append(nm, el("span", null, fmt(n) + " Salvage"), el("small", null, "· " + fmt(pts) + " pts")); box.append(b);
+    b.insertAdjacentHTML("beforeend", LOOT[0].svg); const nm = el("b", null, name); b.append(nm, el("span", null, fmt(n) + " Salvage")); box.append(b);
     b.animate([{ transform: "translateY(-40px) scale(.7)", opacity: 0 }, { transform: "none", opacity: 1, offset: .06 }, { transform: "none", opacity: 1, offset: .92 }, { transform: "translateY(-20px)", opacity: 0 }], { duration: 5000, easing: "ease-out", fill: "forwards" });
     setTimeout(() => b.remove(), 5050); },
   roll() {
@@ -7068,7 +7069,7 @@ const Tanks = {
     t.leaving = true; Mirror.fwd("tank.go", [t.s]); },
   repairCmd(login) { if (MIRROR) return; const k = String(login || "").toLowerCase(), s = this.slots.findIndex(t => t && t.k === k && !t.dead); if (s < 0) return;
     const t = this.slots[s]; Scrap.build(); const u = Scrap.all && Scrap.all.users[k], have = u ? u.pts || 0 : 0;
-    if (have < this.COST) { this.say(t, "needs " + fmt(this.COST) + " scrap (has " + fmt(have) + ")"); Mirror.fwd("tank.say", [s, "needs " + fmt(this.COST) + " scrap (has " + fmt(have) + ")"]); return; }
+    if (have < this.COST) { this.say(t, "needs " + fmt(this.COST) + " salvage (has " + fmt(have) + ")"); Mirror.fwd("tank.say", [s, "needs " + fmt(this.COST) + " salvage (has " + fmt(have) + ")"]); return; }
     u.pts -= this.COST; const d = Scrap.data && Scrap.data.users[k]; if (d) d.pts = Math.max(0, (d.pts || 0) - this.COST); Scrap.save();
     this.fix(s); Mirror.fwd("tank.fix", [s]); },
   // !green / !blue: their tank switches team at once; in the middle of a battle, as soon as it's over (OBS, then the copy)
@@ -7084,7 +7085,7 @@ const Tanks = {
       if (miss.length && window.remoteSend) window.remoteSend({ cmd: "artMissing", what: "🪖 The " + team + " team's tank", names: miss }); }
     this.slots[s] = { s, k, name, color, team, hp: 1, tracks: true, turret: true, x: s ? 2560 + 500 : -500, home: 0, born: now, last: now, nextShot: now + 2200 + Math.random() * 1200, recoil: 0, say: null, sayAt: 0, parts: [], dead: 0, shake: 0 };
     this.start(); },
-  fix(s) { const t = this.slots[s]; if (!t || t.dead) return; t.hp = 1; t.tracks = t.turret = true; t.tgone = false; t.parts = []; t.play = null; t.last = performance.now(); this.say(t, "🔧 repaired! −" + fmt(this.COST) + " scrap");
+  fix(s) { const t = this.slots[s]; if (!t || t.dead) return; t.hp = 1; t.tracks = t.turret = true; t.tgone = false; t.parts = []; t.play = null; t.last = performance.now(); this.say(t, "🔧 repaired! −" + fmt(this.COST) + " salvage");
     for (let i = 0; i < 18; i++) this.fx.push({ k: "spark", x: this.cx(t) + rand(-120, 120), y: this.GY - rand(40, 220), vx: rand(-200, 200), vy: rand(-320, -60), at: performance.now(), life: rand(500, 900), c: "#a3e635" }); },
   // wins, kept for the !tankleaderboard (All Time)
   wins: (() => { try { return JSON.parse(localStorage.getItem("tankWins")) || {}; } catch (e) { return {}; } })(),
@@ -7179,7 +7180,9 @@ const Tanks = {
   // with its tracks where the still's are, on the ground)
   frame(g, a, i, w, top, st) { const c = this.cutA(a), n = a.frames || 1, fw = a.img.naturalWidth / n, fh = a.img.naturalHeight, f = Math.min(n - 1, Math.max(0, i)) * fw;
     if (st) { const s = this.cut(st), iw = st.img.naturalWidth, ih = st.img.naturalHeight, ks = this.H / ((s.y1 - s.y0) * ih), bw = (s.bx1 - s.bx0) * iw * ks, bc = ((s.bx0 + s.bx1) / 2 - s.x0) * iw * ks, gy = top + (s.by1 - s.y0) * ih * ks;
-      const k = bw / Math.max(1, (c.bx1 - c.bx0) * fw), ac = (c.bx0 + c.bx1) / 2 * fw * k; g.drawImage(a.img, f, 0, fw, fh, bc - ac, gy - c.by1 * fh * k, fw * k, fh * k); return; }
+      // (if the tracks' length in this animation can't be told well, the sizes disagree a lot: then it's sized like the still by its height, and set on the ground)
+      let k = bw / Math.max(1, (c.bx1 - c.bx0) * fw); const kh = this.H / Math.max(1, (c.y1 - c.y0) * fh); if (!(k / kh > .6 && k / kh < 1.6)) k = Math.min(kh, w / Math.max(1, (c.x1 - c.x0) * fw));
+      const ac = (c.bx0 + c.bx1) / 2 * fw * k; g.drawImage(a.img, f, 0, fw, fh, bc - ac, gy - c.by1 * fh * k, fw * k, fh * k); return; }
     const k = this.H / ((c.y1 - c.y0) * fh), dw = (c.x1 - c.x0) * fw * k; g.drawImage(a.img, f, 0, fw, fh, (w - dw) / 2 - c.x0 * fw * k, top - c.y0 * fh * k, fw * k, fh * k); },
   size(t) { const a = this.sp("tank_" + t.team); if (!a) return { w: this.H * 1.75, h: this.H }; const c = this.cut(a), iw = a.img.naturalWidth, ih = a.img.naturalHeight, k = this.H / ((c.y1 - c.y0) * ih); return { w: (c.x1 - c.x0) * iw * k, h: this.H, k }; },
   muzzle(t) { const dir = t.s ? -1 : 1, z = this.size(t), a = this.sp("tank_" + t.team), left = t.s ? t.x - z.w : t.x;
@@ -8943,7 +8946,7 @@ window.KZDirect = function (opt) {
 (() => {
   const qs = new URLSearchParams(location.search), key = qs.get("ctl");
   if (!key || !window.WebSocket) return;
-  const PAGE = "html3", VERSION = "9c3a572", INST = Math.random().toString(36).slice(2, 8);
+  const PAGE = "html3", VERSION = "9f57b04", INST = Math.random().toString(36).slice(2, 8);
   const QUICK = { mir: 1, rtt: 1 };                                 // sent many times a second: only the newest matters
   let said = false, direct = null;
   const seen = new Set(), seenList = [], fresh = id => { if (!id) return true; if (seen.has(id)) return false; seen.add(id); seenList.push(id); if (seenList.length > 800) seen.delete(seenList.shift()); return true; };
