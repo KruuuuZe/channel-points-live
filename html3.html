@@ -528,7 +528,7 @@ body.fit #stage{background:radial-gradient(1200px 700px at 30% 20%,#1a103322,tra
   <canvas id="planecv" width="2560" height="1440"></canvas>
   <canvas id="mediccv" width="2560" height="1440"></canvas>
   <div id="svid"><div class="frm"><div class="plate"></div></div><div class="box"></div></div>
-  <div id="lli"><div class="bd"></div><div class="hd"><i></i>LIVE LOOK-IN</div></div>
+  <div id="lli"><div class="bd"></div></div>
   <canvas id="gemcv" width="2560" height="1440"></canvas>
   <canvas id="dicecv" width="2560" height="1440"></canvas>
   <canvas id="tankcv" width="2560" height="1440"></canvas>
@@ -8584,7 +8584,7 @@ window.KZDirect = function (opt) {
 (() => {
   const qs = new URLSearchParams(location.search), key = qs.get("ctl");
   if (!key || !window.WebSocket) return;
-  const PAGE = "html3", VERSION = "ee8d722", INST = Math.random().toString(36).slice(2, 8);
+  const PAGE = "html3", VERSION = "2632dde", INST = Math.random().toString(36).slice(2, 8);
   const QUICK = { mir: 1, rtt: 1 };                                 // sent many times a second: only the newest matters
   let said = false, direct = null;
   const seen = new Set(), seenList = [], fresh = id => { if (!id) return true; if (seen.has(id)) return false; seen.add(id); seenList.push(id); if (seenList.length > 800) seen.delete(seenList.shift()); return true; };
