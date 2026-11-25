@@ -7077,15 +7077,18 @@ const Tanks = {
     for (let i = 0; i < 18; i++) this.fx.push({ k: "spark", x: this.cx(t) + rand(-120, 120), y: this.GY - rand(40, 220), vx: rand(-200, 200), vy: rand(-320, -60), at: performance.now(), life: rand(500, 900), c: "#a3e635" }); },
   // wins, kept for the !tankleaderboard (All Time)
   wins: (() => { try { return JSON.parse(localStorage.getItem("tankWins")) || {}; } catch (e) { return {}; } })(),
-  win(t) { const u = this.wins[t.k] || (this.wins[t.k] = { name: t.name, color: t.color, w: 0 }); u.name = t.name; u.color = t.color; u.w++; try { localStorage.setItem("tankWins", JSON.stringify(this.wins)); } catch (e) {} },
+  win(t) { const u = this.wins[t.k] || (this.wins[t.k] = { name: t.name, color: t.color, w: 0 }); u.name = t.name; u.color = t.color; u.w++;
+    t.streak = (t.streak || 0) + 1; u.best = Math.max(u.best || 0, t.streak); try { localStorage.setItem("tankWins", JSON.stringify(this.wins)); } catch (e) {} },
   // !tankleaderboard: the top 10 by wins, for 20 seconds (in the scroop board's place)
-  board() { const b = document.createElement("div"), top = Object.values(this.wins).sort((a, c) => c.w - a.w).slice(0, 10);
-    b.append(el("h4", null, "🪖 TANK BATTLE · TOP 10 WINS"));
+  // (wins, and their best win streak: wins in a row with one tank, until it's destroyed or leaves)
+  board() { const b = document.createElement("div"), top = Object.values(this.wins).sort((a, c) => c.w - a.w || (c.best || 0) - (a.best || 0)).slice(0, 10);
+    b.append(el("h4", null, "🪖 TANK BATTLE · TOP 10"));
     if (!top.length) b.append(el("div", "none", "No tank wins yet…"));
-    top.forEach((u, i) => { const row = el("div", "r"), n = el("b", null, (i + 1) + ". " + u.name); row.style.setProperty("--uc", css(bright(u.color || "#ffffff"))); row.append(n, el("span", null, fmt(u.w) + (u.w === 1 ? " win" : " wins"))); b.append(row); });
+    else { const hd = el("div", "r"); hd.style.cssText = "font-size:15px;color:#c9b8ff;letter-spacing:.1em"; hd.append(el("span", null, "PLAYER"), el("span", null, "WINS · BEST STREAK")); hd.firstChild.style.color = "#c9b8ff"; b.append(hd); }
+    top.forEach((u, i) => { const row = el("div", "r"), n = el("b", null, (i + 1) + ". " + u.name); row.style.setProperty("--uc", css(bright(u.color || "#ffffff"))); row.append(n, el("span", null, fmt(u.w) + " · 🔥" + fmt(u.best || 0))); b.append(row); });
     Scrap.showBoard(b.innerHTML); },
   // a hit animation on the tank (its art), if made; a floating label over it
-  anim(t, n, now) { if (this.sp("tank_" + t.team + "_" + n)) t.play = { n, at: now }; },
+  anim(t, n, now) { if (t.tracks && t.turret && this.sp("tank_" + t.team + "_" + n)) t.play = { n, at: now }; },       // (made from the whole tank: not once it's broken)
   pop(t, text, color, now) { const n = now - (t.popAt || 0) < 700 ? (t.popN || 0) + 1 : 0; t.popAt = now; t.popN = n;           // (two at once: the second above the first)
     this.fx.push({ k: "label", x: this.cx(t), y: this.GY - this.H - 175 - n * 56, text, color, at: now, life: 1600, big: /CRIT|BOUNCE/.test(text) }); },
   say(t, text) { if (!t) return; t.say = text; t.sayAt = performance.now(); },
@@ -7171,7 +7174,7 @@ const Tanks = {
   muzzle(t) { const dir = t.s ? -1 : 1, z = this.size(t), a = this.sp("tank_" + t.team), left = t.s ? t.x - z.w : t.x;
     if (t.tgone) return [this.cx(t) + dir * z.w * .45, this.GY - this.H * .45];
     if (!a) { const f = z.w * .68 + this.H * .62; return [t.s ? left + z.w - f : left + f, this.GY - this.H * .72 + (t.tracks ? 0 : 22)]; }
-    const c = this.cut(a), fx = (c.mx - c.x0) / (c.x1 - c.x0), fy = (c.my - c.y0) / (c.y1 - c.y0); return [t.s ? left + (1 - fx) * z.w : left + fx * z.w, this.GY - this.H + fy * this.H + (t.tracks ? 0 : 22)]; },
+    const c = this.cut(a), fx = (c.mx - c.x0) / (c.x1 - c.x0), fy = (c.my - c.y0) / (c.y1 - c.y0); return [t.s ? left + (1 - fx) * z.w : left + fx * z.w, this.GY - this.H + fy * this.H]; },
   // ---- running
   start() { if (this.running) return; this.running = true; const cv = $("#tankcv"), g = cv.getContext("2d"); let last = performance.now();
     const step = now => { const dt = Math.min(.05, (now - last) / 1000); last = now; g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, 2560, 1440);
@@ -7212,8 +7215,8 @@ const Tanks = {
     // last frame of the one that matches how it's broken (so it stays looking like its art), else the cut-up picture
     let an = null, fi = 0; if (t.obl && A("destroyed")) { an = A("destroyed"); fi = Math.min((an.frames || 1) - 1, Math.floor((now - t.dead) / (an.ms || 90))); }
     else if (t.play) { const p = A(t.play.n), f = p ? Math.floor((now - t.play.at) / (p.ms || 80)) : 99; if (p && f < (p.frames || 1)) { an = p; fi = f; } else t.play = null; }
-    if (!an && !dv && a && !t.dead) { if (!t.turret && t.tracks && A("turretfire")) { an = A("turretfire"); fi = Math.floor(now / (an.ms || 90)) % (an.frames || 1); }       // the turret burning (loops)
-      else if (t.turret && !t.tracks && A("tracksoff")) { an = A("tracksoff"); fi = (an.frames || 1) - 1; } }                                                       // sitting on its bare wheels
+    if (!an && !dv && a && !t.dead) { if (!t.tracks && A("tracksoff")) { an = A("tracksoff"); fi = (an.frames || 1) - 1; }                                 // sitting on its bare wheels (a burning turret gets drawn flames on top)
+      else if (!t.turret && A("turretfire")) { an = A("turretfire"); fi = Math.floor(now / (an.ms || 90)) % (an.frames || 1); } }                        // the turret burning (loops)
     g.save(); g.translate(left + sh, 0); if (t.s) { g.translate(w, 0); g.scale(-1, 1); }
     // worn: darker as its health goes; burnt black once destroyed
     g.filter = t.obl ? "none" : t.dead ? "brightness(.25) saturate(.3)" : t.hp < 1 ? `brightness(${(.55 + .45 * t.hp).toFixed(2)})` : "none";
@@ -7222,7 +7225,8 @@ const Tanks = {
     else if (dv) this.frame(g, dv, Math.floor(now / (dv.ms || 80)) % (dv.frames || 1), w, top, a);
     else if (a) { const c = this.cut(a), iw = a.img.naturalWidth, ih = a.img.naturalHeight, sx = c.x0 * iw, sw = (c.x1 - c.x0) * iw, Y = f => (f - c.y0) / (c.y1 - c.y0) * H;
       const slice = (f0, f1, dx, dy) => { const h0 = Y(f0), h1 = Y(f1); if (h1 - h0 < 1) return; g.drawImage(a.img, sx, f0 * ih, sw, (f1 - f0) * ih, dx, top + h0 + dy, w, h1 - h0); };
-      if (t.tracks) slice(c.trk, c.y1, 0, 0); slice(c.ring, c.trk, 0, sag); if (!t.tgone) slice(c.y0, c.ring, -rc, sag); }
+      slice(c.trk, c.y1, 0, 0); slice(c.ring, c.trk, 0, 0); if (!t.tgone) slice(c.y0, c.ring, -rc, 0);                    // (always whole: never a straight cut along it)
+      if (!t.tracks) { const ff = g.filter; g.filter = "brightness(.35)"; slice(c.trk, c.y1, 0, 0); g.filter = ff; } }
     else this.drawn(g, t, w, H, top, rc, sag);
     g.filter = "none";
     // pieces blown off
@@ -7240,8 +7244,9 @@ const Tanks = {
     // name (their Twitch color) and health bar above it
     const cx = t.park ? Math.max(150, Math.min(2410, this.muzzle(t)[0] - dir * 60)) : this.cx(t), ny = top - 70, bw = 260;       // (parked: over its barrel, the part that shows)
     g.textAlign = "center"; g.textBaseline = "middle"; g.font = "900 40px 'Segoe UI', sans-serif"; g.lineWidth = 7; g.strokeStyle = "#000"; g.strokeText(t.name, cx, ny); g.fillStyle = t.color; g.fillText(t.name, cx, ny);
+    if (!t.park) {                                                                       // (parked, waiting for the next battle: just its name)
     g.fillStyle = "#000b"; g.fillRect(cx - bw / 2 - 4, ny + 26, bw + 8, 22); g.fillStyle = t.hp > .6 ? "#4ade80" : t.hp > .3 ? "#facc15" : "#ef4444"; g.fillRect(cx - bw / 2, ny + 30, bw * Math.max(0, t.hp), 14);
-    g.font = "800 22px 'Segoe UI', sans-serif"; g.fillStyle = "#fff"; g.fillText(Math.round(t.hp * 100) + "%" + (t.tracks ? "" : " · tracks off") + (t.turret || t.dead ? "" : " · turret on fire"), cx, ny + 64);
+    g.font = "800 22px 'Segoe UI', sans-serif"; g.fillStyle = "#fff"; g.fillText(Math.round(t.hp * 100) + "%" + (t.tracks ? "" : " · tracks off") + (t.turret || t.dead ? "" : " · turret on fire"), cx, ny + 64); }
     if (t.say && now - t.sayAt < 3500) { const a2 = Math.min(1, (3500 - (now - t.sayAt)) / 400); g.globalAlpha = a2; g.font = "800 30px 'Segoe UI', sans-serif"; g.lineWidth = 6; g.strokeText(t.say, cx, ny - 46); g.fillStyle = "#fde68a"; g.fillText(t.say, cx, ny - 46); g.globalAlpha = 1; } },
   // stand-in until the art is made (facing right): tracks, hull in the team color, turret and gun
   drawn(g, t, w, H, top, rc, sag) { const col = t.team === "blue" ? ["#2f4a73", "#1d3150"] : ["#55603a", "#343b22"];
@@ -8333,7 +8338,7 @@ const Chat = {
       else if (/^!snow\b/i.test(msg)) { Face.chatSnow(tags["display-name"] || login, tags.color || chatColors[tags["user-id"]]); Lurk.leave(login); }
       else if (/^!scroopleaderboard\b/i.test(msg)) Scrap.showBoard();
       else if (/^!tank[12]\b/i.test(msg)) Tanks.cmd(+msg[5], login, tags["display-name"] || login, tags.color || chatColors[tags["user-id"]]);
-      else if (/^!repair\b/i.test(msg)) Tanks.repairCmd(login);
+      else if (/^!repair\b/i.test(msg) || msg.includes("kruuuuWrench1")) Tanks.repairCmd(login);          // (the wrench emote counts as !repair)
       else if (/^!tankleaderboard\b/i.test(msg)) Tanks.board();
       else if (/^!leave\b/i.test(msg)) Tanks.leaveCmd(login);
       else if (/^!flak\b/i.test(msg)) Flak.order(login, tags["display-name"] || login, tags.color || chatColors[tags["user-id"]]);
@@ -8925,7 +8930,7 @@ window.KZDirect = function (opt) {
 (() => {
   const qs = new URLSearchParams(location.search), key = qs.get("ctl");
   if (!key || !window.WebSocket) return;
-  const PAGE = "html3", VERSION = "ab77886", INST = Math.random().toString(36).slice(2, 8);
+  const PAGE = "html3", VERSION = "7e37522", INST = Math.random().toString(36).slice(2, 8);
   const QUICK = { mir: 1, rtt: 1 };                                 // sent many times a second: only the newest matters
   let said = false, direct = null;
   const seen = new Set(), seenList = [], fresh = id => { if (!id) return true; if (seen.has(id)) return false; seen.add(id); seenList.push(id); if (seenList.length > 800) seen.delete(seenList.shift()); return true; };
