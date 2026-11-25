@@ -7156,9 +7156,9 @@ const Tanks = {
       if (w && !w.dead) setTimeout(() => { if (this.slots[w.s] !== w || w.dead) return;                                  // the battle's over: the winner is back to 100% (or leaves, if they asked to)
         if (!MIRROR && w.wantLeave) { w.leaving = true; Mirror.fwd("tank.go", [w.s]); return; }
         if (!w.leaving) { w.hp = 1; w.tracks = w.turret = true; w.tgone = false; w.parts = []; w.play = null; this.say(w, "🏆 back to 100%"); if (!this.slots[1 - w.s] || this.slots[1 - w.s].dead) w.park = true; } }, 1800);
-      t.by = !MIRROR && w && !w.dead ? { login: /^test\d$/.test(w.k) ? "test" : w.k, name: w.name, color: w.color } : null; }       // the winner's loot, as for !flak: shown where the wreck was, when it's cleared away
+      if (!MIRROR && w && !w.dead) Flak.loot({ login: /^test\d$/.test(w.k) ? "test" : w.k, name: w.name, color: w.color }, this.cx(w), this.GY - this.H - 250); }       // the winner's loot, as for !flak: over the winning tank
     if (t.turret) { t.turret = false; this.part(t, "turret", now); } this.boom(this.cx(t), this.GY - this.H * .5, 2.2, now); this.say(t, "💥 destroyed");
-    const D = t.obl && this.sp("tank_" + t.team + "_destroyed"); setTimeout(() => { if (this.slots[t.s] === t) this.slots[t.s] = null; if (t.by) Flak.loot(t.by, this.cx(t), this.GY - this.H * .7); }, Math.max(4500, D ? (D.frames || 1) * (D.ms || 90) + 2500 : 0)); },
+    const D = t.obl && this.sp("tank_" + t.team + "_destroyed"); setTimeout(() => { if (this.slots[t.s] === t) this.slots[t.s] = null; }, Math.max(4500, D ? (D.frames || 1) * (D.ms || 90) + 2500 : 0)); },
   // a piece blown off: it flies off spinning and falls (the turret) or drops and rolls away (the tracks)
   part(t, which, now) { const dir = t.s ? 1 : -1;
     if (which === "turret" && !t.dead) { this.boom(this.cx(t), this.GY - this.H * .78, .8, now); this.pop(t, "TURRET ON FIRE", "#fb923c", now); return; }       // damaged: it stays on and burns (until repaired)
@@ -8975,7 +8975,7 @@ window.KZDirect = function (opt) {
 (() => {
   const qs = new URLSearchParams(location.search), key = qs.get("ctl");
   if (!key || !window.WebSocket) return;
-  const PAGE = "html3", VERSION = "660105c", INST = Math.random().toString(36).slice(2, 8);
+  const PAGE = "html3", VERSION = "a7f48da", INST = Math.random().toString(36).slice(2, 8);
   const QUICK = { mir: 1, rtt: 1 };                                 // sent many times a second: only the newest matters
   let said = false, direct = null;
   const seen = new Set(), seenList = [], fresh = id => { if (!id) return true; if (seen.has(id)) return false; seen.add(id); seenList.push(id); if (seenList.length > 800) seen.delete(seenList.shift()); return true; };
