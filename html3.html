@@ -7219,12 +7219,14 @@ const Plane = {
         if (!MIRROR && now - this.lastSnd > 90) { this.lastSnd = now; try { Sound.init(); const C = Sound.ctx; if (C) { const t = C.currentTime; Sound.burst(t, .07, .07, "bandpass", 2200, 700); Sound.tone(t, .06, .045, 210, 70, "square"); } } catch (e) {} } }
     }
     if (this.bullets.length) { this.bullets.forEach(b => { b.x += b.vx * dt; b.y += b.vy * dt; }); this.bullets = this.bullets.filter(b => b.x > -100 && b.x < 2660 && b.y > -100 && b.y < 1540); }
-    if (MIRROR && Emotes.list.size) this.strike(now, dt);
+    if (Emotes.list.size) this.strike(now, dt);
   },
   // ---------------- the plane and the floating emotes ----------------
-  // In the touchpad copy only: your phone is where you aim, so it decides what's hit, shows it at once, and tells OBS.
+  // Bullets break emotes both in OBS (what viewers see is what counts: a bullet seen going through one breaks it) and in
+  // the touchpad copy (which tells OBS, so a hit seen on your phone breaks it on stream too); whichever sees it first.
+  // Flying into one is decided in the copy only (your phone is where you steer).
   strike(now, dt) { const hit = [];
-    Emotes.list.forEach(e => { if (e.x == null || !e.ready) return; const rr = (e.hw + e.hh) * .46;
+    Emotes.list.forEach(e => { if (e.x == null || !e.ready || e.t < .15) return; const rr = (e.hw + e.hh) * .5 * Math.max(.35, e.k || 1) + 8;      // (its size as drawn now, plus the bullet's own width)
       for (const b of this.bullets) { if (b.hit) continue;                 // the bullet's path this frame against the emote
         const ax = b.x - b.vx * dt, ay = b.y - b.vy * dt, dx = b.x - ax, dy = b.y - ay, u = Math.max(0, Math.min(1, ((e.x - ax) * dx + (e.y - ay) * dy) / (dx * dx + dy * dy || 1))), cx = ax + dx * u, cy = ay + dy * u;
         if ((cx - e.x) * (cx - e.x) + (cy - e.y) * (cy - e.y) < rr * rr) { b.hit = 1; hit.push([e.id, cx, cy, b.vx, b.vy]); return; } } });
@@ -7232,7 +7234,7 @@ const Plane = {
       hit.forEach(h => { if (Emotes.shatter(h[0], h[1], h[2], h[3], h[4])) this.tell({ cmd: "emoHit", id: h[0], x: Math.round(h[1]), y: Math.round(h[2]), vx: Math.round(h[3]), vy: Math.round(h[4]) }); }); }
     // flying into one, or one popping up right on it: the plane blows up. Only while it blinks, just back, is it safe:
     // one it's touching then can't hurt it until they've been clear of each other once
-    if (this.shown && !this.leaving) { const P = this.pose(now), c = Math.cos(P.pd), s = Math.sin(P.pd), W = this.W, safe = now <= this.safeUntil;
+    if (MIRROR && this.shown && !this.leaving) { const P = this.pose(now), c = Math.cos(P.pd), s = Math.sin(P.pd), W = this.W, safe = now <= this.safeUntil;
       for (const e of Emotes.list.values()) { if (e.x == null || !e.ready) continue; const rr = (e.hw + e.hh) * .36 * (e.k || 1) + W * .11; let touch = false;
         for (const o of [-.3, 0, .3]) { const px = P.x + P.F * o * W * c, py = P.y - o * W * s; if ((px - e.x) * (px - e.x) + (py - e.y) * (py - e.y) < rr * rr) { touch = true; break; } }
         if (!touch) e.pass = 0; else if (safe) e.pass = 1;
@@ -8692,7 +8694,7 @@ window.KZDirect = function (opt) {
 (() => {
   const qs = new URLSearchParams(location.search), key = qs.get("ctl");
   if (!key || !window.WebSocket) return;
-  const PAGE = "html3", VERSION = "d2dad07", INST = Math.random().toString(36).slice(2, 8);
+  const PAGE = "html3", VERSION = "908bd32", INST = Math.random().toString(36).slice(2, 8);
   const QUICK = { mir: 1, rtt: 1 };                                 // sent many times a second: only the newest matters
   let said = false, direct = null;
   const seen = new Set(), seenList = [], fresh = id => { if (!id) return true; if (seen.has(id)) return false; seen.add(id); seenList.push(id); if (seenList.length > 800) seen.delete(seenList.shift()); return true; };
