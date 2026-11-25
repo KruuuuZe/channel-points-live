@@ -6957,7 +6957,7 @@ const Emotes = {
     const fl = document.createElement("b"); fl.className = "emoF"; fl.style.cssText = "left:" + (ix * S - 30).toFixed(1) + "px;top:" + (iy * S - 30).toFixed(1) + "px"; box.append(fl);
     if (fl.animate) fl.animate([{ transform: "scale(.3)", opacity: .95 }, { transform: "scale(3.4)", opacity: 0 }], { duration: 280, easing: "ease-out", fill: "forwards" });
     L.append(box); setTimeout(() => box.remove(), 1150);
-    if (!MIRROR) { if (now - this.popAt > 70) { this.popAt = now; try { Sound.init(); const C = Sound.ctx; if (C) { const t = C.currentTime; Sound.burst(t, .1, .13, "highpass", 1500, 5200); Sound.tone(t, .09, .09, 880, 260, "triangle"); } } catch (x) {} }
+    if (!MIRROR) {                                                     // (silent: only the gun makes a sound)
       Mirror.fwd("emo.x", [id, Math.round(hx), Math.round(hy), Math.round(vx || 0), Math.round(vy || 0)]); }
     return true; },
   // ---- switched off: the ones on screen start drifting off now
@@ -8520,7 +8520,7 @@ window.KZDirect = function (opt) {
 (() => {
   const qs = new URLSearchParams(location.search), key = qs.get("ctl");
   if (!key || !window.WebSocket) return;
-  const PAGE = "html3", VERSION = "1ca35b7", INST = Math.random().toString(36).slice(2, 8);
+  const PAGE = "html3", VERSION = "9394d13", INST = Math.random().toString(36).slice(2, 8);
   const QUICK = { mir: 1, rtt: 1 };                                 // sent many times a second: only the newest matters
   let said = false, direct = null;
   const seen = new Set(), seenList = [], fresh = id => { if (!id) return true; if (seen.has(id)) return false; seen.add(id); seenList.push(id); if (seenList.length > 800) seen.delete(seenList.shift()); return true; };
