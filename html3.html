@@ -7338,16 +7338,24 @@ const Flak = {
   target() { const P = Plane; return P.on && P.shown && !P.leaving && !P.dead && !P.down ? P : null; },
   tick(c, t, now) { const T = this.T, P = this.target();
     // turning toward the plane (or a spot in the sky)
-    if (!c.fired) { if (!c.sky) c.sky = [rand(300, 2260), rand(140, 560)]; const g0 = this.geo(c, c.aim, this.rise(t)), tx = P ? P.x : c.sky[0], ty = P ? P.y : c.sky[1];
-      const want = Math.atan2(ty - g0.py, tx - g0.px), d = Math.atan2(Math.sin(want - c.aim), Math.cos(want - c.aim)); c.aim += d * Math.min(1, .12 * (t > T.up * .5 ? 1 : .3)); }
+    // (it keeps following the plane while it's up, before and after it fires; the shot leads it, aiming where it's going)
+    if (!c.fired || P) { if (!c.sky) c.sky = [rand(300, 2260), rand(140, 560)]; const g0 = this.geo(c, c.aim, this.rise(t)), tx = P ? P.x + P.vx * .25 : c.sky[0], ty = P ? P.y + P.vy * .25 : c.sky[1];
+      const want = Math.atan2(ty - g0.py, tx - g0.px), d = Math.atan2(Math.sin(want - c.aim), Math.cos(want - c.aim)); c.aim += d * Math.min(1, .18 * (t > T.up * .5 ? 1 : .3)); }
     // fire (OBS decides where the shot goes, and tells the copy)
     if (!MIRROR && !c.fired && t >= T.fire) { c.fired = true; const G = this.geo(c, c.aim, 1);
       if (P && now > P.safeUntil) { const hit = Math.random() < .3, d0 = Math.hypot(P.x - G.mx, P.y - G.my), fl = d0 / this.V, px = P.x + P.vx * fl, py = P.y + P.vy * fl;
         let tx = px, ty = py; if (!hit) { const ang = Math.atan2(py - G.my, px - G.mx), side = Math.random() < .5 ? 1 : -1, off = rand(260, 420); tx += -Math.sin(ang) * off * side; ty += Math.cos(ang) * off * side; }
-        c.hit = hit; this.shoot(tx, ty, 0, 0, 0); Mirror.fwd("flak.shot", [Math.round(tx), Math.round(ty), 0, 0, 0]); }
+        c.hit = hit; this.shoot(tx, ty, hit ? 1 : 0, 0, 0); Mirror.fwd("flak.shot", [Math.round(tx), Math.round(ty), hit ? 1 : 0, 0, 0]); }
       else { const sky = c.sky; this.shoot(sky[0], sky[1], 0, 0, 1); Mirror.fwd("flak.shot", [Math.round(sky[0]), Math.round(sky[1]), 0, 0, 1]); } }
     // the shell
-    const s = c.shot; if (s && s.live) { const k = (now - s.at) / 1000; s.x = s.x0 + s.ux * this.V * k; s.y = s.y0 + s.uy * this.V * k;
+    const s = c.shot; if (s && s.live && s.home && !P) { s.home = false; s.x0 = s.x; s.y0 = s.y; s.at = now; s.d = 1e9; }       // (the plane's gone: it flies straight on)
+    if (s && s.live && s.home && P && !s.reached) {                       // a hit: the shell steers onto the plane wherever it flies, and strikes it
+      const dt = Math.min(.05, (now - (s.lt || s.at)) / 1000); s.lt = now; const dx = P.x - s.x, dy = P.y - s.y, dd = Math.hypot(dx, dy) || 1;
+      s.ux += (dx / dd - s.ux) * Math.min(1, dt * 14); s.uy += (dy / dd - s.uy) * Math.min(1, dt * 14); const n = Math.hypot(s.ux, s.uy) || 1; s.ux /= n; s.uy /= n;
+      s.x += s.ux * this.V * dt; s.y += s.uy * this.V * dt; s.tx = P.x; s.ty = P.y;
+      if (dd < 70 || now - s.at > 2500) { s.reached = true; s.live = false; if (!MIRROR) { c.hitDone = true; this.burst(c, P.x, P.y, now); if (P.boom(now)) this.loot(c.by, P.x, P.y); } else this.burst(c, P.x, P.y, now); }
+      return; }
+    if (s && s.live) { const k = (now - s.at) / 1000; s.x = s.x0 + s.ux * this.V * k; s.y = s.y0 + s.uy * this.V * k;
       if (k * this.V >= s.d && !s.reached) { s.reached = true;
         if (s.air) { s.live = false; this.burst(c, s.tx, s.ty, now); }
         else if (c.hit && !c.hitDone && !MIRROR) { c.hitDone = true; const P2 = this.target(); if (P2 && Math.hypot(P2.x - s.tx, P2.y - s.ty) < 600) { s.live = false; this.burst(c, P2.x, P2.y, now); if (P2.boom(now)) this.loot(c.by, P2.x, P2.y); } } }
@@ -7355,7 +7363,7 @@ const Flak = {
   // the shot leaves the barrel toward (tx, ty) and keeps going (air: it bursts there, up in the sky)
   shoot(tx, ty, ex, ey, air) { const c = this.cur; if (!c) return; c.fired = true; const now = performance.now(), t = now - c.at, G = this.geo(c, c.aim, 1);
     c.aim = Math.atan2(ty - G.py, tx - G.px); const G2 = this.geo(c, c.aim, 1), dx = tx - G2.mx, dy = ty - G2.my, d = Math.hypot(dx, dy) || 1;
-    c.shot = { at: now, x0: G2.mx, y0: G2.my, x: G2.mx, y: G2.my, ux: dx / d, uy: dy / d, d, tx, ty, air: !!+air, live: true }; c.fireAt = now;
+    c.shot = { at: now, x0: G2.mx, y0: G2.my, x: G2.mx, y: G2.my, ux: dx / d, uy: dy / d, d, tx, ty, air: !!+air, home: !!+ex && !+air, live: true }; c.fireAt = now;
     for (let i = 0; i < 14; i++) c.smoke.push({ x: G2.mx + rand(-20, 20), y: G2.my + rand(-20, 20), vx: dx / d * rand(40, 160) + rand(-40, 40), vy: dy / d * rand(40, 160) + rand(-60, 10), r: rand(30, 70), at: now, life: rand(900, 1700) }); },
   // whoever shot the plane down wins loot, the same kinds and odds as a scroop pile, added to their scrap totals; it
   // shows where the plane was: their name (in their Twitch color) and what they got
@@ -8394,7 +8402,7 @@ const Chat = {
       else if (/^!leave\b/i.test(msg)) Tanks.leaveCmd(login);
       else if (/^!salvageleaderboard\b/i.test(msg)) { if (Scrap.boardOk("salvage")) Scrap.salvBoard(); }
       else if (/^!salvage\b/i.test(msg)) Scrap.bubble(login, tags["display-name"] || login, tags.color || chatColors[tags["user-id"]]);
-      else if (/^!flak\b/i.test(msg)) Flak.order(login, tags["display-name"] || login, tags.color || chatColors[tags["user-id"]]);
+      else if (/^!flac?k\b/i.test(msg)) Flak.order(login, tags["display-name"] || login, tags.color || chatColors[tags["user-id"]]);
       else if (/^!(green|blue)\b/i.test(msg)) Scrap.pick(login, msg.slice(1).split(/\s/)[0].toLowerCase());          // their !scroop soldier's color
       else if (/^!scroop\b/i.test(msg) || msg.includes("kruuuuCatch1")) Scrap.dig(tags["display-name"] || login, login, tags.color || chatColors[tags["user-id"]]);   // lurkers can scroop without leaving the tower
       else Lurk.leave(login);
@@ -8984,7 +8992,7 @@ window.KZDirect = function (opt) {
 (() => {
   const qs = new URLSearchParams(location.search), key = qs.get("ctl");
   if (!key || !window.WebSocket) return;
-  const PAGE = "html3", VERSION = "e859359", INST = Math.random().toString(36).slice(2, 8);
+  const PAGE = "html3", VERSION = "7a8a03d", INST = Math.random().toString(36).slice(2, 8);
   const QUICK = { mir: 1, rtt: 1 };                                 // sent many times a second: only the newest matters
   let said = false, direct = null;
   const seen = new Set(), seenList = [], fresh = id => { if (!id) return true; if (seen.has(id)) return false; seen.add(id); seenList.push(id); if (seenList.length > 800) seen.delete(seenList.shift()); return true; };
