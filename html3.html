@@ -2450,7 +2450,7 @@ const Scrap = {
     const k = (login || name).toLowerCase(), asked = Date.now();
     // the name shows in the team color (Colonial green, BlueWarden blue); no team: their Twitch color
     const go = () => { const team = this.teams[k] || "";
-      this.run(p, { name, k, team, color: this.TEAMCOL[team] || color || TWITCH_DEFAULTS[k.length % TWITCH_DEFAULTS.length], twitch: color }); };
+      this.run(p, { name, k, team, color: this.TEAMCOL[team] || color || TWITCH_DEFAULTS[k.length % TWITCH_DEFAULTS.length], twitch: color || TWITCH_DEFAULTS[k.length % TWITCH_DEFAULTS.length] }); };
     if (test) return go();
     // Stream Avatars reports this viewer's nametag when they type !scroop; give it up to 3 s to arrive
     // (if it comes later, the soldier's uniform still changes to match: see saMessage)
@@ -2487,7 +2487,7 @@ const Scrap = {
     Sound.init(); MySounds.play("scroop");
     const box = $("#scrap"), uc = css(bright(job.color)), X = p.x - 67;      // the soldier stands just left of the pile, facing it (toward the right edge)
     const w = el("div", "scroop" + (job.team ? " " + job.team : "")); w.style.left = X + "px"; w.style.setProperty("--uc", uc); w.dataset.k = job.k; w._job = job;
-    w.innerHTML = SOLDIER_SVG; w.append(el("div", "tag", job.name)); box.append(w);
+    w.innerHTML = SOLDIER_SVG; { const tg = el("div", "tag", job.name); tg.style.color = job.twitch || job.color; w.append(tg); } box.append(w);       // (the name over his head: in their Twitch name color, whatever their team)
     requestAnimationFrame(() => w.classList.add("on"));
     const arm = w.querySelector(".arm"), SW = 760, HITS = job.hits;
     // raised behind the helmet (-60deg), then down onto the pile (100deg: handle level, head face-down on the scrap)
@@ -8584,7 +8584,7 @@ window.KZDirect = function (opt) {
 (() => {
   const qs = new URLSearchParams(location.search), key = qs.get("ctl");
   if (!key || !window.WebSocket) return;
-  const PAGE = "html3", VERSION = "2632dde", INST = Math.random().toString(36).slice(2, 8);
+  const PAGE = "html3", VERSION = "5068aa6", INST = Math.random().toString(36).slice(2, 8);
   const QUICK = { mir: 1, rtt: 1 };                                 // sent many times a second: only the newest matters
   let said = false, direct = null;
   const seen = new Set(), seenList = [], fresh = id => { if (!id) return true; if (seen.has(id)) return false; seen.add(id); seenList.push(id); if (seenList.length > 800) seen.delete(seenList.shift()); return true; };
