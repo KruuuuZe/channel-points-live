@@ -8758,14 +8758,14 @@ const ChatFeed = {
 };
 
 /* ================= the live chat box on stream (Twitch + Kick) =================
-   Shows the newest chat in the top right corner, 4 lines tall. Its settings (which channels, shown or hidden) come from
+   Shows the newest chat on the right, low down, 4 lines tall. Its settings (which channels, shown or hidden) come from
    the app's Control screen. When you Interact with this source in OBS and hover the box: drag the top bar to move it,
    drag the corner to resize it (the text grows with it), or × to hide it. Where it sits is remembered. */
 const ChatBox = {
   KEY: "kzChatBox", el: null,
   get() { let v = {}; try { v = JSON.parse(localStorage.getItem(this.KEY)) || {}; } catch (e) {} return v; },
   put(o) { const v = Object.assign(this.get(), o); try { localStorage.setItem(this.KEY, JSON.stringify(v)); } catch (e) {} return v; },
-  DEF: { x: 2560 - 1280 - 30, y: 105, w: 1280, h: 196 },
+  DEF: { x: 2560 - 1280 - 30, y: 980, w: 1280, h: 196 },
   init() {
     const el = this.el = $("#chatbox"), lines = el.querySelector(".lines"); this.lines = lines; this.layout();
     el.querySelector(".x").onclick = e => { e.stopPropagation(); this.show(false); if (window.remoteSend) window.remoteSend({ cmd: "chatShown", on: false }); };
@@ -8781,6 +8781,7 @@ const ChatBox = {
     else if (!c.wide2) this.put({ wide2: 1 });
     if (!c.nudge1) { const x = Math.min(2400, (c.x != null ? c.x : this.DEF.x) + 100), y = (c.y != null ? c.y : this.DEF.y) + 75, w = Math.max(260, Math.min(c.w || this.DEF.w, 2560 - 20 - x));
       c = this.put({ x, y, w, nudge1: 1 }); this.cur = null; this.layout(); }                  // moved 100 right and 75 down once, narrowed so it stays clear of the right edge
+    if (!c.down800) { const h = c.h || this.DEF.h, y = Math.min(1440 - 10 - h, (c.y != null ? c.y : this.DEF.y) + 800); c = this.put({ y, down800: 1 }); this.cur = null; this.layout(); }      // moved 800 down once (kept on the screen)
     this.show(c.show !== false); this.bg(c.bg !== false); this.el.classList.add("idle"); if (!MIRROR) this.connect();
   },
   box(o, live) { const c = Object.assign({}, this.DEF, this.get(), this.cur || {}, o || {}); if (o) { this.cur = c; this.layout(c); } return c; },
@@ -9011,7 +9012,7 @@ window.KZDirect = function (opt) {
 (() => {
   const qs = new URLSearchParams(location.search), key = qs.get("ctl");
   if (!key || !window.WebSocket) return;
-  const PAGE = "html3", VERSION = "80d091a", INST = Math.random().toString(36).slice(2, 8);
+  const PAGE = "html3", VERSION = "50873f8", INST = Math.random().toString(36).slice(2, 8);
   const QUICK = { mir: 1, rtt: 1 };                                 // sent many times a second: only the newest matters
   let said = false, direct = null;
   const seen = new Set(), seenList = [], fresh = id => { if (!id) return true; if (seen.has(id)) return false; seen.add(id); seenList.push(id); if (seenList.length > 800) seen.delete(seenList.shift()); return true; };
