@@ -6610,6 +6610,7 @@ const SmokeLap = {
 window.onRemote = c => {
   if (c.cmd === "stars") Wanted.set(+c.n || 0);
   else if (c.cmd === "sound") SoundIn.receive(c);
+  else if (c.cmd === "soundDel" && c.slot) { MySounds.del(String(c.slot)); toast("🔊 Sound removed for " + c.slot); }
   else if (c.cmd === "soundList") { const list = Object.assign({}, MySounds.names); Object.keys(BUNDLED_SOUNDS).forEach(k => list[k] = "built in"); if (window.remoteSend) window.remoteSend({ cmd: "sounds", list }); }
   else if (c.cmd === "soundTest") { if (!MySounds.urls[c.type] && !BUNDLED_SOUNDS[c.type]) MySounds.report(c.type, "no sound saved for this in OBS"); else { const cur = MySounds.playing[c.type]; if (cur) cur.pause(); MySounds.play(c.type); } }
   else if (c.cmd === "mirWatch") Mirror.watch(c.on !== false, c.far, c.w);    // the app's touchpad is open (or has closed): see Mirror
@@ -8136,7 +8137,7 @@ else {
   let target = null; const menu = $("#sndmenu");
   const choose = t => { target = t; pick.value = ""; pick.click(); };
   pick.onchange = async () => { const f = pick.files && pick.files[0]; if (!f || !target) return;
-    await MySounds.set(target, f); Sound.init(); MySounds.play(target); toast("Sound added: " + f.name); };
+    await MySounds.set(target, f); Sound.init(); MySounds.play(target); toast("Sound added: " + f.name); ToObs.send(target, f); };
   const close = () => menu.classList.remove("on");
   document.querySelectorAll("#testbar .snd").forEach(b => b.onclick = e => {
     e.stopPropagation(); const t = b.dataset.snd;
@@ -8148,7 +8149,7 @@ else {
   });
   menu.onclick = e => { const a = e.target.dataset && e.target.dataset.a; if (!a) return;
     if (a === "play") MySounds.play(target); else if (a === "new") { close(); choose(target); }
-    else if (a === "del") { MySounds.del(target); close(); toast("Sound removed"); } else close(); };
+    else if (a === "del") { MySounds.del(target); ToObs.del(target); close(); toast("Sound removed"); } else close(); };
   $("#testbar").addEventListener("scroll", close);
 }
 $("#tRand").onclick = () => {
@@ -8636,13 +8637,38 @@ const Lurk = {
 };
 Lurk.init();
 
+/* This page opened in the app (HTML3 · Alerts), not in OBS: a sound picked with 🔊+ is saved in the phone's copy of
+   this page only, which OBS never sees. So it's also sent to HTML3 in OBS (in pieces, the same way the YouTube sounds
+   screen sends one), and OBS saves it as that alert's sound and says so. Removing one here removes it in OBS too. */
+const ToObs = {
+  key() { if (MIRROR || qs.has("ctl")) return ""; try { return localStorage.getItem("ctl_key") || ""; } catch (e) { return ""; } },
+  relay() { const k = this.key(); if (!k || !window.KZRelay) return null; if (this.r) return this.r;
+    this.acks = {}; this.oks = {};
+    return this.r = KZRelay("kzctl/" + k, c => { if (!c || c.from !== "overlay") return;
+      if (c.cmd === "ack" && this.acks[c.ack]) { this.acks[c.ack](); delete this.acks[c.ack]; }
+      else if (c.cmd === "soundok" && this.oks[c.set]) this.oks[c.set](c); }); },
+  one(m) { const r = this.relay(); return new Promise((ok, no) => { let tries = 0;
+    const go = () => { if (++tries > 4) return no(new Error("HTML3 in OBS isn't answering")); const id = r.send(Object.assign({ from: "app", to: "html3", t: Date.now() }, m));
+      const tm = setTimeout(() => { delete this.acks[id]; go(); }, 5000); this.acks[id] = () => { clearTimeout(tm); ok(); }; }; go(); }); },
+  async send(slot, file) { if (!this.relay()) { if (!qs.has("ctl") && !MIRROR && !LIVE) toast("⚠ Saved on this phone only: open the Control screen once (it makes the pairing key), then add the sound again so OBS gets it", true, 7000); return; }
+    const data = await new Promise((ok, no) => { const fr = new FileReader(); fr.onload = () => ok(String(fr.result).split(",")[1] || ""); fr.onerror = no; fr.readAsDataURL(file); });
+    const CH = 24000, n = Math.ceil(data.length / CH), set = Date.now().toString(36); let done = 0;
+    const confirmed = new Promise(ok => { this.oks[set] = ok; setTimeout(() => ok(null), 25000); });
+    toast("Sending " + file.name + " to OBS…", false, 3000);
+    try { const q = []; for (let i = 0; i < n; i++) q.push({ cmd: "sound", slot, name: file.name, mime: file.type || "", set, part: i, parts: n, data: data.slice(i * CH, (i + 1) * CH) });
+      await Promise.all([0, 1, 2, 3].map(async () => { while (q.length) { await this.one(q.shift()); done++; } }));
+      const ok = await confirmed; delete this.oks[set];
+      toast(ok ? "✓ OBS saved " + file.name + " as the " + slot + " sound. That's what plays live now." : "⚠ Sent, but OBS didn't confirm it saved it. In Control tap ⟳ Update overlays in OBS, then add the sound again.", !ok, 6000);
+    } catch (e) { toast("⚠ Couldn't send the sound to OBS: " + e.message + " (" + Math.round(done / n * 100) + "% sent). Is OBS open with HTML3 connected? Add the sound again to retry.", true, 7000); } },
+  del(slot) { if (this.relay()) this.one({ cmd: "soundDel", slot }).then(() => toast("Removed in OBS too"), () => toast("⚠ OBS didn't answer, so it still has its " + slot + " sound", true)); }
+};
 /* a sound sent from the app's YouTube sounds screen, in pieces: put back together and kept as that alert's/effect's sound */
 const SoundIn = {
   sets: {},
   receive(c) { const k = c.set + "/" + c.slot, s = this.sets[k] || (this.sets[k] = { parts: [], got: 0 }); if (s.parts[c.part] == null) { s.parts[c.part] = c.data; s.got++; }
     if (s.got < c.parts) return; delete this.sets[k];
     try { const bin = atob(s.parts.join("")), u = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i);
-      const f = new File([u], c.name || (c.slot + ".wav"), { type: "audio/wav" }); MySounds.set(c.slot, f).then(() => {
+      const f = new File([u], c.name || (c.slot + ".wav"), { type: c.mime || "audio/wav" }); MySounds.set(c.slot, f).then(() => {
         toast("🔊 New sound for " + c.slot + ": " + (c.name || ""), false, 4000); if (window.remoteSend) window.remoteSend({ cmd: "soundok", set: c.set, slot: c.slot }); });
     } catch (e) { toast("Couldn't put that sound together", true); } }
 };
@@ -9012,7 +9038,7 @@ window.KZDirect = function (opt) {
 (() => {
   const qs = new URLSearchParams(location.search), key = qs.get("ctl");
   if (!key || !window.WebSocket) return;
-  const PAGE = "html3", VERSION = "1e6307d", INST = Math.random().toString(36).slice(2, 8);
+  const PAGE = "html3", VERSION = "ddfce52", INST = Math.random().toString(36).slice(2, 8);
   const QUICK = { mir: 1, rtt: 1 };                                 // sent many times a second: only the newest matters
   let said = false, direct = null;
   const seen = new Set(), seenList = [], fresh = id => { if (!id) return true; if (seen.has(id)) return false; seen.add(id); seenList.push(id); if (seenList.length > 800) seen.delete(seenList.shift()); return true; };
