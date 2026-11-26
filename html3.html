@@ -7274,11 +7274,12 @@ const Tanks = {
     else if (dv) this.frame(g, dv, Math.floor(now / (dv.ms || 80)) % (dv.frames || 1), w, top, a);
     else if (a) { const c = this.cut(a), iw = a.img.naturalWidth, ih = a.img.naturalHeight, sx = c.x0 * iw, sw = (c.x1 - c.x0) * iw, Y = f => (f - c.y0) / (c.y1 - c.y0) * H;
       const slice = (f0, f1, dx, dy) => { const h0 = Y(f0), h1 = Y(f1); if (h1 - h0 < 1) return; g.drawImage(a.img, sx, f0 * ih, sw, (f1 - f0) * ih, dx, top + h0 + dy, w, h1 - h0); };
-      // tracked and moving: the running gear in strips, each bobbing on its own, and the hull rocking a little (things out of line)
-      const wob = !t.tracks && moving, bob = wob ? Math.sin(now / 110) * 2.5 : 0;
-      if (wob) { const n = 7, h0 = Y(c.trk), h1 = Y(c.y1); for (let i = 0; i < n; i++) { const dy = Math.sin(now / 85 + i * 1.9) * 4.5; g.drawImage(a.img, sx + sw * i / n, c.trk * ih, sw / n + 1, (c.y1 - c.trk) * ih, w * i / n, top + h0 + dy, w / n + 1, h1 - h0); } }
-      else slice(c.trk, c.y1, 0, 0);
-      slice(c.ring, c.trk, 0, bob); if (!t.tgone) slice(c.y0, c.ring, -rc, bob); }
+      // tracked and moving: the track stays put; the wheels inside it (the middle of the running gear) bob up and down a
+      // little, each on its own, out of line. The hull doesn't move
+      slice(c.trk, c.y1, 0, 0);
+      if (!t.tracks && moving) { const n = 7, f0 = c.trk + (c.y1 - c.trk) * .22, f1 = c.trk + (c.y1 - c.trk) * .82, h0 = Y(f0), h1 = Y(f1);
+        for (let i = 0; i < n; i++) { const dy = Math.sin(now / 85 + i * 1.9) * 2.2; g.drawImage(a.img, sx + sw * (i + .08) / n, f0 * ih, sw * .84 / n, (f1 - f0) * ih, w * (i + .08) / n, top + h0 + dy, w * .84 / n, h1 - h0); } }
+      slice(c.ring, c.trk, 0, 0); if (!t.tgone) slice(c.y0, c.ring, -rc, 0); }
     else this.drawn(g, t, w, H, top, rc, sag);
     g.filter = "none";
     // pieces blown off
@@ -8999,7 +9000,7 @@ window.KZDirect = function (opt) {
 (() => {
   const qs = new URLSearchParams(location.search), key = qs.get("ctl");
   if (!key || !window.WebSocket) return;
-  const PAGE = "html3", VERSION = "688ced8", INST = Math.random().toString(36).slice(2, 8);
+  const PAGE = "html3", VERSION = "b61db65", INST = Math.random().toString(36).slice(2, 8);
   const QUICK = { mir: 1, rtt: 1 };                                 // sent many times a second: only the newest matters
   let said = false, direct = null;
   const seen = new Set(), seenList = [], fresh = id => { if (!id) return true; if (seen.has(id)) return false; seen.add(id); seenList.push(id); if (seenList.length > 800) seen.delete(seenList.shift()); return true; };
