@@ -7137,12 +7137,13 @@ const Tanks = {
   decide(t, e) { const hit = Math.random() < this.aim(t), q = Math.random(), kind = !hit ? "" : q < .15 ? "bounce" : q < .3 ? "heavy" : "hit";
     const dmg = kind === "hit" ? rand(.08, .17) : kind === "heavy" ? rand(.2, .32) : 0; let brk = "";
     if (dmg) { const r = Math.random(), more = kind === "heavy" ? 1.8 : 1; if (e.tracks && r < .15 * more) brk = "tracks"; else if (e.turret && e.hp - dmg < .6 && r < .4 * more) brk = "turret"; }
-    return [t.s, hit ? 1 : 0, Math.round(dmg * 1000) / 1000, brk, Math.random() < .5 ? "short" : "over", kind]; },
+    return [t.s, hit ? 1 : 0, Math.round(dmg * 1000) / 1000, brk, Math.random() < .5 ? "wide" : "over", kind]; },
   fire(s, hit, dmg, brk, miss, kind) { const t = this.slots[s], e = this.slots[1 - s]; if (!t || !e || t.dead) return; const now = performance.now(), m = this.muzzle(t), dir = s ? -1 : 1;
-    const tx = this.cx(e) + rand(-60, 60) * (hit ? 1 : 0) + (hit ? 0 : miss === "short" ? -dir * rand(260, 420) : dir * rand(150, 300)), ty = hit ? this.GY - this.H * rand(.35, .6) : miss === "short" ? this.GY - 8 : this.GY - this.H * rand(1.1, 1.6);
+    // a tank round: dead straight and fast. A miss goes high over the top, or wide (past its side, off into the distance)
+    const wide = !+hit && miss !== "over", tx = this.cx(e) + (+hit ? rand(-60, 60) : 0), ty = +hit ? this.GY - this.H * rand(.35, .6) : wide ? this.GY - this.H * rand(.4, .65) : this.GY - this.H * rand(1.15, 1.5);
     t.recoil = now; if (t.turret && t.tracks && this.sp("tank_" + t.team + "_fire") && !t.play) t.play = { n: "fire", at: now };
-    this.shells.push({ s, x0: m[0], y0: m[1], tx, ty, at: now, dur: 420 + Math.abs(tx - m[0]) * .12, hit: !!+hit, dmg: +dmg || 0, brk, kind: kind || (+hit ? "hit" : ""), over: !+hit && miss !== "short" });
-    this.fx.push({ k: "flash", x: m[0], y: m[1], at: now, life: 140 });
+    this.shells.push({ s, x0: m[0], y0: m[1], tx, ty, at: now, dur: Math.hypot(tx - m[0], ty - m[1]) / 4.5, hit: !!+hit, dmg: +dmg || 0, brk, kind: kind || (+hit ? "hit" : ""), over: !+hit, wide, straight: 1 });
+    this.fx.push({ k: "flash", x: m[0] + dir * 30, y: m[1], at: now, life: 170, R: 150 }); this.fx.push({ k: "ring", x: m[0] + dir * 20, y: m[1], at: now, life: 320 });         // the muzzle blast
     for (let i = 0; i < 6; i++) this.fx.push({ k: "smoke", x: m[0], y: m[1], vx: dir * rand(30, 120), vy: rand(-60, -10), r: rand(20, 40), at: now, life: rand(700, 1200) }); },
   land(sh, now) { const e = this.slots[1 - sh.s];
     if (sh.over) return;                                                                         // flies on over it, off the screen
@@ -7243,15 +7244,18 @@ const Tanks = {
     for (let i = this.fx.length - 1; i >= 0; i--) if (now - this.fx[i].at > this.fx[i].life) this.fx.splice(i, 1); },
   draw(g, now) {
     this.slots.forEach(t => { if (t) this.drawTank(g, t, now); });
-    // shells: a glowing slug on a low arc, with a trail
-    this.shells.forEach(sh => { const k = (now - sh.at) / sh.dur; const P = u => [sh.x0 + (sh.tx - sh.x0) * u, sh.y0 + (sh.ty - sh.y0) * u - Math.sin(Math.min(1, u) * Math.PI) * 90 * (sh.over ? 1.6 : 1)];
-      const [x, y] = P(k), [px, py] = P(Math.max(0, k - .12)); const gr = g.createLinearGradient(px, py, x, y); gr.addColorStop(0, "rgba(255,150,50,0)"); gr.addColorStop(1, "rgba(255,240,200,1)");
-      g.save(); g.strokeStyle = gr; g.lineWidth = 9; g.lineCap = "round"; g.shadowColor = "#ffb04a"; g.shadowBlur = 18; g.beginPath(); g.moveTo(px, py); g.lineTo(x, y); g.stroke(); g.restore(); });
+    // shells: a tank round, a white-hot tracer streaking dead straight (a wide miss fades and thins as it goes off past the side)
+    this.shells.forEach(sh => { const k = (now - sh.at) / sh.dur, arc = sh.straight ? 0 : 1, P = u => [sh.x0 + (sh.tx - sh.x0) * u, sh.y0 + (sh.ty - sh.y0) * u - Math.sin(Math.min(1, u) * Math.PI) * 90 * arc];
+      const fade = sh.wide ? Math.max(0, Math.min(1, 1 - (k - .8) / .7)) : 1; if (fade <= 0) return; const [x, y] = P(k), [px, py] = P(Math.max(0, k - .3)), wd = sh.wide ? .4 + .6 * fade : 1;
+      const gr = g.createLinearGradient(px, py, x, y); gr.addColorStop(0, "rgba(255,140,40,0)"); gr.addColorStop(.6, `rgba(255,190,90,${.55 * fade})`); gr.addColorStop(1, `rgba(255,250,230,${fade})`);
+      g.save(); g.lineCap = "round"; g.shadowColor = "#ffb04a"; g.shadowBlur = 22; g.strokeStyle = gr; g.lineWidth = 12 * wd; g.beginPath(); g.moveTo(px, py); g.lineTo(x, y); g.stroke();
+      g.shadowBlur = 0; g.strokeStyle = `rgba(255,255,255,${fade})`; g.lineWidth = 4 * wd; const [qx, qy] = P(Math.max(0, k - .08)); g.beginPath(); g.moveTo(qx, qy); g.lineTo(x, y); g.stroke(); g.restore(); });
     this.fx.forEach(f => { const k = (now - f.at) / f.life, e = 1 - Math.pow(1 - k, 2);
       if (f.k === "smoke") { const x = f.x + f.vx * e * 1.3, y = f.y + f.vy * e * 1.3, R = f.r * (.6 + e), gr = g.createRadialGradient(x, y, 0, x, y, R), a = (1 - k) * (f.dark ? .7 : .4); gr.addColorStop(0, `rgba(${f.dark ? "30,28,26" : "130,126,118"},${a})`); gr.addColorStop(1, "rgba(60,58,54,0)"); g.fillStyle = gr; g.beginPath(); g.arc(x, y, R, 0, 6.283); g.fill(); }
       else if (f.k === "flame") { const x = f.x + f.vx * k, y = f.y + f.vy * k * (f.life / 1000), R = f.r * (1 - .6 * k), gr = g.createRadialGradient(x, y, 0, x, y, R); gr.addColorStop(0, `rgba(255,240,170,${.9 * (1 - k)})`); gr.addColorStop(.5, `rgba(255,140,30,${.7 * (1 - k)})`); gr.addColorStop(1, "rgba(200,40,0,0)"); g.fillStyle = gr; g.beginPath(); g.arc(x, y, R, 0, 6.283); g.fill(); }
       else if (f.k === "label") { const y = f.y - 90 * e; g.globalAlpha = Math.min(1, (1 - k) * 3); g.textAlign = "center"; g.textBaseline = "middle"; g.font = `900 ${f.big ? 46 : 38}px 'Segoe UI', sans-serif`; g.lineWidth = 7; g.strokeStyle = "#000"; g.strokeText(f.text, f.x, y); g.fillStyle = f.color; g.fillText(f.text, f.x, y); g.globalAlpha = 1; }
       else if (f.k === "spark") { const t = (now - f.at) / 1000, x = f.x + f.vx * t, y = f.y + f.vy * t + 900 * t * t; g.globalAlpha = 1 - k; g.fillStyle = f.c; g.fillRect(x - 3, y - 3, 6, 6); g.globalAlpha = 1; }
+      else if (f.k === "ring") { const R = 30 + 170 * e; g.strokeStyle = `rgba(255,230,190,${.7 * (1 - k)})`; g.lineWidth = 10 * (1 - k) + 1; g.beginPath(); g.arc(f.x, f.y, R, 0, 6.283); g.stroke(); }
       else if (f.k === "flash" || f.k === "boom") { const R = (f.R || 70) * (.4 + 1.1 * e), gr = g.createRadialGradient(f.x, f.y, 0, f.x, f.y, R); gr.addColorStop(0, `rgba(255,250,225,${1 - k})`); gr.addColorStop(.4, f.dirt ? `rgba(150,110,70,${(1 - k) * .8})` : `rgba(255,160,60,${(1 - k) * .9})`); gr.addColorStop(1, "rgba(120,60,20,0)"); g.fillStyle = gr; g.beginPath(); g.arc(f.x, f.y, R, 0, 6.283); g.fill(); } }); },
   drawTank(g, t, now) { const z = this.size(t), w = z.w, H = this.H, dir = t.s ? -1 : 1, left = t.s ? t.x - w : t.x, moving = Math.abs(t.v || 0) > 5;
     const sh = now - t.shake < 300 ? Math.sin((now - t.shake) / 18) * (t.heavy ? 16 : 6) * (1 - (now - t.shake) / 300) : 0, rc = now - t.recoil < 220 ? Math.sin((now - t.recoil) / 220 * Math.PI) * 18 : 0, sag = t.tracks ? 0 : 22;
@@ -8992,7 +8996,7 @@ window.KZDirect = function (opt) {
 (() => {
   const qs = new URLSearchParams(location.search), key = qs.get("ctl");
   if (!key || !window.WebSocket) return;
-  const PAGE = "html3", VERSION = "7a8a03d", INST = Math.random().toString(36).slice(2, 8);
+  const PAGE = "html3", VERSION = "5ceae11", INST = Math.random().toString(36).slice(2, 8);
   const QUICK = { mir: 1, rtt: 1 };                                 // sent many times a second: only the newest matters
   let said = false, direct = null;
   const seen = new Set(), seenList = [], fresh = id => { if (!id) return true; if (seen.has(id)) return false; seen.add(id); seenList.push(id); if (seenList.length > 800) seen.delete(seenList.shift()); return true; };
