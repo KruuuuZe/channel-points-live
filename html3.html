@@ -6748,9 +6748,10 @@ const SharedVid = {
   close() { clearTimeout(this.endT); try { this.player && this.player.destroy && this.player.destroy(); } catch (e) {} this.player = null; $("#svid .box").innerHTML = ""; Float.remove(this.fl); this.fl = null; setTimeout(() => Float.sweep(), 1200); },
   ended(why) { const k = this.key; this.close(); $("#svid").classList.remove("on"); if (window.remoteSend && !MIRROR) window.remoteSend({ cmd: "svidEnded", key: k, why }); },
   /* the left ¾ (1920×1080): a frame with the sharer's name on its top edge, the video snug inside it */
-  place(it) { const box = $("#svid .box"), frm = $("#svid .frm"), tall = it.kind === "yt" && it.short, B = 34, T = 74, G = 12, AW = 1920, AH = 1080;     // G: room for the green ring's glow at the edges
-    const h = AH - 2 * G - T - B, w = Math.min(AW - 2 * G - 2 * B, Math.round(h * (tall ? 9 / 16 : 16 / 9))), fw = w + 2 * B, fx = Math.round((AW - fw) / 2);
-    Object.assign(frm.style, { left: fx + "px", top: G + "px", width: fw + "px", height: AH - 2 * G + "px" });
+  place(it, ar) { const box = $("#svid .box"), frm = $("#svid .frm"), tall = it.kind === "yt" && it.short, B = 34, T = 74, G = 12, AW = 1920, AH = 1080;     // G: room for the green ring's glow at the edges
+    ar = ar || (tall ? 9 / 16 : 16 / 9);                                            // (a picture: its own shape, as big as fits, the frame hugging it)
+    const mw = AW - 2 * G - 2 * B, mh = AH - 2 * G - T - B, w = Math.round(Math.min(mw, mh * ar)), h = Math.round(Math.min(mh, w / ar)), fw = w + 2 * B, fx = Math.round((AW - fw) / 2);
+    Object.assign(frm.style, { left: fx + "px", top: G + "px", width: fw + "px", height: h + T + B + "px" });
     Object.assign(box.style, { left: fx + B + "px", top: G + T + "px", width: w + "px", height: h + "px" });
     this.plate(it); },
   plate(it) { const pl = $("#svid .plate"), who = String(it.from || "").trim().slice(0, 30); if (pl.dataset.who === who) return; pl.dataset.who = who; pl.innerHTML = "";
@@ -6758,7 +6759,12 @@ const SharedVid = {
   vol: 1,
   setVol(v) { this.vol = Math.max(0, Math.min(1, +v)); if (isNaN(this.vol)) this.vol = 1; const p = this.player; if (!p) return;
     try { if (p.setVolume && window.YT && p.getIframe) { p.unMute(); p.setVolume(Math.round(this.vol * 100)); } else if (p.setVolume) { p.setMuted(false); p.setVolume(this.vol); } } catch (e) {} },
-  open(it) { const box = $("#svid .box"); this.place(it);
+  open(it) { const box = $("#svid .box");
+    if (it.kind === "img") {          // a picture: shown (framed, its own shape) until it's switched off or another link is picked
+      const key = this.key, im = new Image(); im.alt = ""; im.referrerPolicy = "no-referrer";
+      im.onload = () => { if (this.key !== key) return; this.place(it, (im.naturalWidth || 16) / (im.naturalHeight || 9)); box.replaceChildren(im); };
+      im.onerror = () => { if (this.key === key) this.ended("error"); }; im.src = it.id; return; }
+    this.place(it);
     const host = location.hostname, real = !MIRROR && /github\.io$|^localhost$|^127\./.test(host), key = this.key;
     if (!real) { if (it.thumb) { const im = document.createElement("img"); im.src = it.thumb; box.append(im); } return; }
     this.fl = Float.add(box, () => $("#svid").classList.contains("on")); const div = document.createElement("div"); div.id = "svidP" + Date.now(); this.fl.h.append(div);
@@ -9039,7 +9045,7 @@ window.KZDirect = function (opt) {
 (() => {
   const qs = new URLSearchParams(location.search), key = qs.get("ctl");
   if (!key || !window.WebSocket) return;
-  const PAGE = "html3", VERSION = "945fff2", INST = Math.random().toString(36).slice(2, 8);
+  const PAGE = "html3", VERSION = "705c4bf", INST = Math.random().toString(36).slice(2, 8);
   const QUICK = { mir: 1, rtt: 1 };                                 // sent many times a second: only the newest matters
   let said = false, direct = null;
   const seen = new Set(), seenList = [], fresh = id => { if (!id) return true; if (seen.has(id)) return false; seen.add(id); seenList.push(id); if (seenList.length > 800) seen.delete(seenList.shift()); return true; };
