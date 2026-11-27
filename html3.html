@@ -49,6 +49,7 @@ body.fit #stage{background:radial-gradient(1200px 700px at 30% 20%,#1a103322,tra
 /* a faint sheet of glass with a slow reflection, shown while the YoLoGame_WP raid is up */
 #pane{position:absolute;inset:0;opacity:0;transition:opacity 1.2s ease;pointer-events:none;overflow:hidden;background:rgba(170,210,255,.05)}
 #pane.on{opacity:1}
+#pane.idle::before,#pane.idle::after{animation:none}      /* (no glass on screen: its sheen stops, so the page can sit still) */
 /* the reflection lives on its own layers, so the glass shaking from each shot never interrupts it;
    two soft bands glide left to right on an endless loop, easing in and out at the edges */
 #pane::before,#pane::after{content:"";position:absolute;top:0;bottom:0;left:0;width:1500px;will-change:transform,opacity;
@@ -438,7 +439,7 @@ body.fit #stage{background:radial-gradient(1200px 700px at 30% 20%,#1a103322,tra
 /* ---------- Kazul123: artillery from every side ---------- */
 #kazcv{position:absolute;inset:0;width:2560px;height:1440px;pointer-events:none;z-index:7}
 /* ---------- Silverhand (canvas + a red shade over the whole screen) ---------- */
-#tankcv{position:absolute;inset:0;width:2560px;height:1440px;pointer-events:none;z-index:7}
+#tankbcv{position:absolute;inset:0;width:2560px;height:1440px;pointer-events:none;z-index:7}
 #redtint{position:absolute;inset:0;pointer-events:none;z-index:4;opacity:0;
   background:radial-gradient(ellipse at center,rgba(150,0,0,.16) 35%,rgba(120,0,0,.5) 100%),rgba(160,0,0,.14)}
 /* ---------- anime_chef (canvas; art made in the app) ---------- */
@@ -535,7 +536,7 @@ body.fit #stage{background:radial-gradient(1200px 700px at 30% 20%,#1a103322,tra
   <canvas id="flagcv" width="2560" height="1440"></canvas>
   <canvas id="vincv" width="2560" height="1440"></canvas>
   <div id="emo"></div>
-  <canvas id="tankcv" width="2560" height="1440"></canvas><canvas id="flakcv" width="2560" height="1440"></canvas><div id="flakloot"></div><div id="salvbar"></div><div id="salvboard"></div>
+  <canvas id="tankbcv" width="2560" height="1440"></canvas><canvas id="flakcv" width="2560" height="1440"></canvas><div id="flakloot"></div><div id="salvbar"></div><div id="salvboard"></div>
   <canvas id="planecv" width="2560" height="1440"></canvas>
   <canvas id="mediccv" width="2560" height="1440"></canvas>
   <div id="svid"><div class="frm"><div class="plate"></div></div><div class="box"></div></div>
@@ -543,7 +544,7 @@ body.fit #stage{background:radial-gradient(1200px 700px at 30% 20%,#1a103322,tra
   <canvas id="gemcv" width="2560" height="1440"></canvas>
   <canvas id="dicecv" width="2560" height="1440"></canvas>
   <canvas id="tankcv" width="2560" height="1440"></canvas>
-  <div id="pane"></div>
+  <div id="pane" class="idle"></div>
   <canvas id="holes" width="2560" height="1440"></canvas>
   <canvas id="shards" width="2560" height="1440"></canvas>
   <canvas id="fx" width="2560" height="1440"></canvas>
@@ -667,6 +668,24 @@ body.fit #stage{background:radial-gradient(1200px 700px at 30% 20%,#1a103322,tra
 
 <script>
 "use strict";
+/* ================= empty effect layers leave the picture =================
+   Every effect draws on its own full-screen canvas (2560x1440), and the browser blends every one of them into every
+   frame, even when they're empty, so after a few effects have played the overlay works far harder sitting still than
+   it needs to. So: a big canvas that's been wiped clean and left empty for 1.5 s is taken out of the picture, and the
+   moment anything draws on it again it's put straight back (in the same frame, so nothing ever looks different). */
+const Layers = (() => {
+  const P = window.CanvasRenderingContext2D && CanvasRenderingContext2D.prototype; if (!P) return {};
+  const show = c => { c.__hid = false; c.style.visibility = ""; };
+  ["fill", "stroke", "fillRect", "strokeRect", "drawImage", "fillText", "strokeText", "putImageData"].forEach(n => { const o = P[n]; if (!o) return;
+    P[n] = function () { const c = this.canvas; if (c) { if (c.__hid) show(c); c.__d = ++Layers.n; } return o.apply(this, arguments); }; });
+  const clear = P.clearRect;
+  P.clearRect = function (x, y, w, h) { const c = this.canvas;            // (a wipe of the whole canvas, with nothing moved or scaled)
+    if (c && c.width >= 1000 && x <= 0 && y <= 0 && x + w >= c.width && y + h >= c.height) { const m = this.getTransform(); if (m.isIdentity) { c.__c = ++Layers.n; c.__ct = performance.now(); } }
+    return clear.call(this, x, y, w, h); };
+  setInterval(() => { const now = performance.now();
+    for (const c of document.getElementsByTagName("canvas")) if (!c.__hid && c.__c && c.__c > (c.__d || 0) && now - c.__ct > 1500) { c.__hid = true; c.style.visibility = "hidden"; } }, 1000);
+  return { n: 0 };
+})();
 const LOGO = "data:image/webp;base64,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";
 document.getElementById("favicon").href = LOGO;
 const $ = s => document.querySelector(s);
@@ -1608,7 +1627,7 @@ function bigCrack(x, y) {
 function shatter(cx = 1280, cy = 700) {
   const snap = document.createElement("canvas"); snap.width = 2560; snap.height = 1440;
   const sc = snap.getContext("2d"); sc.drawImage($("#holes"), 0, 0, 2560, 1440);
-  hx.clearRect(0, 0, 2560, 1440); $("#pane").classList.remove("on");
+  hx.clearRect(0, 0, 2560, 1440); $("#pane").classList.remove("on"); clearTimeout(window.__paneT); window.__paneT = setTimeout(() => { if (!$("#pane").classList.contains("on")) $("#pane").classList.add("idle"); }, 1400);
   const rays = 18, radii = [0, 90, 230, 430, 700, 1050, 1500, 2300];
   const ang = Array.from({ length: rays }, (_, i) => i / rays * 6.283 + rand(-.12, .12));
   const P2 = (ri, ai) => { const a = ang[ai % rays] + (ri ? rand(-.05, .05) : 0), r = radii[ri] * (ri ? rand(.88, 1.12) : 0); return [cx + Math.cos(a) * r, cy + Math.sin(a) * r]; };
@@ -1666,7 +1685,7 @@ const CUSTOM_RAIDS = {
 };
 function raidBulletHoles(name) {
   hx.clearRect(0, 0, 2560, 1440);
-  $("#pane").classList.add("on");
+  clearTimeout(window.__paneT); $("#pane").classList.remove("idle"); $("#pane").classList.add("on");
   Sound.init();
   const byX = (a, b) => a[0] - b[0];
   const thin = { weight: 500, size: 290, step: 24, spacing: 18 };
@@ -6115,8 +6134,23 @@ const BitGems = {
     // turning around its own long axis (3D): while rolling on its side, or the art's "turning on its point" animation
     let roll = c.roll || 0; if (art && c.anim && this.TURNS[c.anim.name] && art[0] === ChefArt.sprites[c.anim.name]) roll = art[1] / (art[0].frames || 1) * Math.PI * 2 * this.TURNS[c.anim.name];
     const sq = .78 + .22 * Math.abs(Math.cos(roll));                              // the stone narrows and widens as it turns
-    g.save(); g.translate(c.x, c.y); g.rotate(c.tilt); g.save(); g.scale(sq, 1);
-    if (art) { let [sp, f] = art, T = this.tinted(sp, col, t); if (!T) { sp = ChefArt.sprites.gem_base; f = 0; T = this.tinted(sp, col, t); }
+    // Not turning or pulsing (nearly all the time): the gem looks exactly the same every frame apart from its tilt, so its
+    // picture (with the two soft glows, the costly part) is drawn once into a small canvas and that is tilted and placed
+    // each frame. Anything else (rolling, spinning, a pulse) is drawn fresh as before.
+    const key = !roll && !c.pulse && !c.topSpin ? (art ? (art[0]._id || (art[0]._id = ++this.ids)) + "/" + art[1] : "drawn") : "";
+    g.save(); g.translate(c.x, c.y); g.rotate(c.tilt);
+    if (key) { const C = this.still(c, key, col, W, H, art, x => this.paint(x, c, t, art, roll, sq, col, W, H, PAV, CR, tw, top, gird));
+      if (C) { g.drawImage(C, C._x, C._y); g.restore(); this.swirl(g, c, true); return; } }
+    this.paint(g, c, t, art, roll, sq, col, W, H, PAV, CR, tw, top, gird); g.restore(); this.swirl(g, c, true); },
+  still(c, key, col, W, H, art, paint) { const base = col + "|" + W + "|" + c.name; if (!c._st || c._st.base !== base || c._st.m.size > 48) c._st = { base, m: new Map() };
+    let C = c._st.m.get(key); if (C) return C;
+    let x0 = -W / 2, x1 = W / 2, y0 = -H, y1 = 0;                                    // what it covers: the stone, the name, and the art's whole frame
+    if (art) { const sp = art[0], b = Pirate.figOf(sp), k = W / (b.x1 - b.x0), ax = -(b.x0 + b.x1) / 2 * k, ay = -b.y1 * k; x0 = Math.min(x0, ax); x1 = Math.max(x1, ax + sp.w * k); y0 = Math.min(y0, ay); y1 = Math.max(y1, ay + sp.h * k); }
+    const P = 48; C = document.createElement("canvas"); C._x = Math.floor(x0 - P); C._y = Math.floor(y0 - P); C.width = Math.ceil(x1 + P) - C._x; C.height = Math.ceil(y1 + P) - C._y;
+    const x = C.getContext("2d"); x.translate(-C._x, -C._y); if (paint(x) === false) return null;      // (its art wasn't ready: drawn fresh until it is)
+    c._st.m.set(key, C); return C; },
+  paint(g, c, t, art, roll, sq, col, W, H, PAV, CR, tw, top, gird) { let ok = true; g.save(); g.scale(sq, 1);
+    if (art) { let [sp, f] = art, T = this.tinted(sp, col, t); if (!T) { ok = false; sp = ChefArt.sprites.gem_base; f = 0; T = this.tinted(sp, col, t); } if (!T) return false;
       const b = Pirate.figOf(sp), k = W / (b.x1 - b.x0), r = T._r || 1;
       g.shadowColor = col; g.shadowBlur = 20; g.drawImage(T, f * sp.w * r, 0, sp.w * r, sp.h * r, -(b.x0 + b.x1) / 2 * k, -b.y1 * k, sp.w * k, sp.h * k); g.shadowBlur = 0; }
     else {
@@ -6143,12 +6177,12 @@ const BitGems = {
     g.restore();
     // the name is engraved on the wide top part: it tilts with the gem, and turns with it (squeezing to the side and
     // round the back, where it shows faintly through the stone)
-    const face = Math.cos(roll); g.scale(Math.sign(face || 1) * Math.max(.04, Math.abs(face)), 1); g.globalAlpha = face >= 0 ? 1 : .28;
+    g.save(); const face = Math.cos(roll); g.scale(Math.sign(face || 1) * Math.max(.04, Math.abs(face)), 1); g.globalAlpha = face >= 0 ? 1 : .28;
     const ny = top + CR * .55; let fs = CR * .62; g.font = `900 ${fs}px ${FONT}`; const w = g.measureText(c.name).width, maxW = W * .9; if (w > maxW) fs = Math.max(20, fs * maxW / w); g.font = `900 ${fs}px ${FONT}`;
     g.textAlign = "center"; g.textBaseline = "middle"; g.lineJoin = "round";
     g.lineWidth = fs * .26; g.strokeStyle = "rgba(10,6,24,.9)"; g.strokeText(c.name, 0, ny);
     g.shadowColor = this.shade(col, .3); g.shadowBlur = fs * .5; g.fillStyle = "#fff"; g.fillText(c.name, 0, ny); g.shadowBlur = 0; g.fillText(c.name, 0, ny);
-    g.restore(); this.swirl(g, c, true); },
+    g.restore(); return ok; },
   // ---- moving: drops in on its point and wobbles to a stop; rests rocking gently; now and then waddles a little way on its point
   start() { this.warm(); if (this.running) return; this.running = true; let last = performance.now();
     const cv = $("#gemcv"), g = cv.getContext("2d");
@@ -7236,7 +7270,7 @@ const Tanks = {
     if (!a) { const f = z.w * .68 + this.H * .62; return [t.s ? left + z.w - f : left + f, this.GY - this.H * .72 + (t.tracks ? 0 : 22)]; }
     const c = this.cut(a), fx = (c.mx - c.x0) / (c.x1 - c.x0), fy = (c.my - c.y0) / (c.y1 - c.y0); return [t.s ? left + (1 - fx) * z.w : left + fx * z.w, this.GY - this.H + fy * this.H]; },
   // ---- running
-  start() { if (this.running) return; this.running = true; const cv = $("#tankcv"), g = cv.getContext("2d"); let last = performance.now();
+  start() { if (this.running) return; this.running = true; const cv = $("#tankbcv"), g = cv.getContext("2d"); let last = performance.now();
     const step = now => { const dt = Math.min(.05, (now - last) / 1000); last = now; g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, 2560, 1440);
       try { this.tick(now, dt); this.draw(g, now); } catch (e) { console.error(e); }
       if (this.busy()) requestAnimationFrame(step); else { this.running = false; g.clearRect(0, 0, 2560, 1440); } };
@@ -9045,7 +9079,7 @@ window.KZDirect = function (opt) {
 (() => {
   const qs = new URLSearchParams(location.search), key = qs.get("ctl");
   if (!key || !window.WebSocket) return;
-  const PAGE = "html3", VERSION = "705c4bf", INST = Math.random().toString(36).slice(2, 8);
+  const PAGE = "html3", VERSION = "272470c", INST = Math.random().toString(36).slice(2, 8);
   const QUICK = { mir: 1, rtt: 1 };                                 // sent many times a second: only the newest matters
   let said = false, direct = null;
   const seen = new Set(), seenList = [], fresh = id => { if (!id) return true; if (seen.has(id)) return false; seen.add(id); seenList.push(id); if (seenList.length > 800) seen.delete(seenList.shift()); return true; };
