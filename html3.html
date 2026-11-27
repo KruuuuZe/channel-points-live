@@ -7157,7 +7157,7 @@ const Tanks = {
     for (let i = 0; i < 14; i++) this.fx.push({ k: "spark", x: this.cx(t) + rand(-100, 100), y: this.GY - rand(20, this.H), vx: rand(-150, 150), vy: rand(-300, -60), at: performance.now(), life: rand(400, 800), c: team === "blue" ? "#60a5fa" : "#4ade80" });
     if (!MIRROR) Mirror.fwd("tank.team", [k, team]); },
   // ---- what happens (in OBS and the copy alike)
-  add(s, k, name, color, team, streak) { const now = performance.now(), o = this.slots[1 - s]; if (o) { o.park = false; o.parkAt = 0; o.intro = now + 5000; o.nextShot = Math.max(o.nextShot, now + 5200); }           // (a parked winner drives back in to fight)
+  add(s, k, name, color, team, streak) { this.prep(team); const now = performance.now(), o = this.slots[1 - s]; if (o) { o.park = false; o.parkAt = 0; o.intro = now + 5000; o.nextShot = Math.max(o.nextShot, now + 5200); }           // (a parked winner drives back in to fight)
     // OBS: the app says which of this team's tank pictures OBS doesn't have (they show as the other team's, or stand-ins)
     if (!MIRROR) { const miss = ChefArt.NAMES.filter(n => n.startsWith("tank_" + team) && (n === "tank_" + team || n.startsWith("tank_" + team + "_")) && !ChefArt.sprites[n]);
       if (miss.length && window.remoteSend) window.remoteSend({ cmd: "artMissing", what: "🪖 The " + team + " team's tank", names: miss }); }
@@ -7235,9 +7235,20 @@ const Tanks = {
   // a picture; if this team's tank picture isn't there but the other team's is, that one (better than the stand-in)
   sp(k) { const ok = a => a && a.img && a.img.complete && a.img.naturalWidth ? a : null, a = ok(ChefArt.sprites[k]); if (a) return a;
     const m = /^tank_(green|blue)(.*)$/.exec(k); return m ? ok(ChefArt.sprites["tank_" + (m[1] === "green" ? "blue" : "green") + m[2]]) : null; },
+  /* Smooth driving: a picture is normally decoded the first time it's drawn, and the browser may throw the decoded copy
+     away again while it isn't being drawn (say the driving animation, while a tank sits parked), so starting to move
+     would stall a frame or two to decode it again, and measuring a picture's shape the first time costs a moment too.
+     So when a tank comes out, each of its team's pictures is decoded once into a copy that stays ready to draw (the same
+     pixels), and its shape is measured ahead of time, one picture at a time, before it's needed. */
+  NAMES: ["", "_drive", "_fire", "_turretfire", "_tracked", "_hit", "_heavyhit", "_bounce", "_destroyed"],
+  px(a) { return a.bmp && a.bmpSrc === a.img.src ? a.bmp : a.img; },
+  prep(team) { const list = this.NAMES.map(n => this.sp("tank_" + team + n)).filter(Boolean); let i = 0;
+    list.forEach(a => { if (window.createImageBitmap && a.bmpFor !== a.img.src) { const src = a.bmpFor = a.img.src;
+      (a.img.decode ? a.img.decode().catch(() => {}) : Promise.resolve()).then(() => a.img.src === src ? createImageBitmap(a.img) : null).then(bm => { if (bm && a.img.src === src) { a.bmp = bm; a.bmpSrc = src; } }).catch(() => { a.bmpFor = null; }); }
+      if (!a._cut || !a._cutA) setTimeout(() => { try { if (a === list[0]) this.cut(a); else this.cutA(a); } catch (e) {} }, 40 * ++i); }); },
   // a tank picture's shape: the part that's tank (not background), where the turret line is, the tracks line, the barrel end
   cut(a) { if (a._cut) return a._cut; const W = Math.min(600, a.img.naturalWidth), Hh = Math.round(W * a.img.naturalHeight / a.img.naturalWidth), c = document.createElement("canvas"); c.width = W; c.height = Hh;
-    const g = c.getContext("2d", { willReadFrequently: true }); g.drawImage(a.img, 0, 0, W, Hh); const d = g.getImageData(0, 0, W, Hh).data, A = (x, y) => d[(y * W + x) * 4 + 3] > 60;
+    const g = c.getContext("2d", { willReadFrequently: true }); g.drawImage(this.px(a), 0, 0, W, Hh); const d = g.getImageData(0, 0, W, Hh).data, A = (x, y) => d[(y * W + x) * 4 + 3] > 60;
     let x0 = W, x1 = 0, y0 = Hh, y1 = 0; for (let y = 0; y < Hh; y += 2) for (let x = 0; x < W; x += 2) if (A(x, y)) { if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
     if (x1 <= x0) { x0 = 0; x1 = W; y0 = 0; y1 = Hh; } const bh = y1 - y0, ring = a.nozzle ? a.nozzle[1] * Hh : y0 + bh * .4, trk = y0 + bh * .7;
     let mx = x0, my = (y0 + ring) / 2; for (let y = Math.round(y0); y < ring; y++) for (let x = W - 1; x > mx; x--) if (A(x, y)) { mx = x; my = y; break; }      // the barrel's end: the furthest-right point above the turret line
@@ -7252,7 +7263,7 @@ const Tanks = {
   // an animation's frame, sized and placed by where the tank is in its first frame (so every frame lines up, and a
   // turret flying off can leave the tank's box)
   cutA(a) { if (a._cutA) return a._cutA; const n = a.frames || 1, fw0 = a.img.naturalWidth / n, W = Math.min(500, Math.round(fw0)), Hh = Math.round(W * a.img.naturalHeight / fw0), c = document.createElement("canvas"); c.width = W; c.height = Hh;
-    const g = c.getContext("2d", { willReadFrequently: true }); g.drawImage(a.img, 0, 0, fw0, a.img.naturalHeight, 0, 0, W, Hh); const d = g.getImageData(0, 0, W, Hh).data;
+    const g = c.getContext("2d", { willReadFrequently: true }); g.drawImage(this.px(a), 0, 0, fw0, a.img.naturalHeight, 0, 0, W, Hh); const d = g.getImageData(0, 0, W, Hh).data;
     let x0 = W, x1 = 0, y0 = Hh, y1 = 0; for (let y = 0; y < Hh; y += 2) for (let x = 0; x < W; x += 2) if (d[(y * W + x) * 4 + 3] > 60) { if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
     if (x1 <= x0) { x0 = 0; x1 = W; y0 = 0; y1 = Hh; } const b = this.band((x, y) => d[(y * W + x) * 4 + 3] > 60, W, Hh, y0, y1);
     return a._cutA = { x0: x0 / W, x1: x1 / W, y0: y0 / Hh, y1: y1 / Hh, bx0: b[0] / W, bx1: b[1] / W, by1: b[2] / Hh }; },
@@ -7262,8 +7273,8 @@ const Tanks = {
     if (st) { const s = this.cut(st), iw = st.img.naturalWidth, ih = st.img.naturalHeight, ks = this.H / ((s.y1 - s.y0) * ih), bw = (s.bx1 - s.bx0) * iw * ks, bc = ((s.bx0 + s.bx1) / 2 - s.x0) * iw * ks, gy = top + (s.by1 - s.y0) * ih * ks;
       // (if the tracks' length in this animation can't be told well, the sizes disagree a lot: then it's sized like the still by its height, and set on the ground)
       let k = bw / Math.max(1, (c.bx1 - c.bx0) * fw); const kh = this.H / Math.max(1, (c.y1 - c.y0) * fh); if (!(k / kh > .6 && k / kh < 1.6)) k = Math.min(kh, w / Math.max(1, (c.x1 - c.x0) * fw));
-      const ac = (c.bx0 + c.bx1) / 2 * fw * k; g.drawImage(a.img, f, 0, fw, fh, bc - ac, gy - c.by1 * fh * k, fw * k, fh * k); return; }
-    const k = this.H / ((c.y1 - c.y0) * fh), dw = (c.x1 - c.x0) * fw * k; g.drawImage(a.img, f, 0, fw, fh, (w - dw) / 2 - c.x0 * fw * k, top - c.y0 * fh * k, fw * k, fh * k); },
+      const ac = (c.bx0 + c.bx1) / 2 * fw * k; g.drawImage(this.px(a), f, 0, fw, fh, bc - ac, gy - c.by1 * fh * k, fw * k, fh * k); return; }
+    const k = this.H / ((c.y1 - c.y0) * fh), dw = (c.x1 - c.x0) * fw * k; g.drawImage(this.px(a), f, 0, fw, fh, (w - dw) / 2 - c.x0 * fw * k, top - c.y0 * fh * k, fw * k, fh * k); },
   size(t) { const a = this.sp("tank_" + t.team); if (!a) return { w: this.H * 1.75, h: this.H }; const c = this.cut(a), iw = a.img.naturalWidth, ih = a.img.naturalHeight, k = this.H / ((c.y1 - c.y0) * ih); return { w: (c.x1 - c.x0) * iw * k, h: this.H, k }; },
   muzzle(t) { const dir = t.s ? -1 : 1, z = this.size(t), a = this.sp("tank_" + t.team), left = t.s ? t.x - z.w : t.x;
     if (t.tgone) return [this.cx(t) + dir * z.w * .45, this.GY - this.H * .45];
@@ -7276,11 +7287,14 @@ const Tanks = {
       if (this.busy()) requestAnimationFrame(step); else { this.running = false; g.clearRect(0, 0, 2560, 1440); } };
     requestAnimationFrame(step); },
   tick(now, dt) {
-    this.slots.forEach(t => { if (!t) return; const z = this.size(t), w = z.w, edge = t.s ? 2560 : 0, dir = t.s ? -1 : 1;
+    this.slots.forEach(t => { if (!t) return;
+      { const st = this.sp("tank_" + t.team), pk = t.team + "|" + (st ? st.img.src : ""); if (t.prepK !== pk) { t.prepK = pk; this.prep(t.team); } }     // (its art arrived or changed, or it switched team)
+      const z = this.size(t), w = z.w, edge = t.s ? 2560 : 0, dir = t.s ? -1 : 1;
       // it drives in, then creeps about within 100 px of its edge (slower with no tracks)
       // a winner waiting for the next challenger backs slowly off the screen until only its front quarter shows, and parks
       const target = t.leaving ? edge - dir * (w + 400) : t.park ? edge - dir * w * .75 : edge + dir * (12 + 44 * (1 + Math.sin((now - t.born) / 2600 + t.s * 2))), sp = t.park ? 70 : t.tracks ? 520 : 90;
       const dx = target - t.x; t.v = Math.abs(dx) > 2 && !t.dead ? Math.sign(dx) * Math.min(sp, Math.abs(dx) * 3) : 0; t.x += t.v * dt;
+      t.odo = (t.odo || 0) + t.v * dt * dir;            // how far it has rolled forward (backing up rolls it back): its tracks turn with this
       if (t.leaving && Math.abs(dx) < 4) { this.slots[t.s] = null; this.saveOut(); }
       if (t.parkAt && now >= t.parkAt) { t.parkAt = 0; const e = this.slots[1 - t.s]; if (!e || e.dead || e.leaving) t.park = true; }
       if (!MIRROR && t.wantTeam && !t.dead) { const e = this.slots[1 - t.s]; if (!e || e.dead || e.leaving) this.recolor(t.k, t.wantTeam, true); }      // the battle's over: the switch they asked for
@@ -7323,14 +7337,15 @@ const Tanks = {
     g.filter = t.obl ? "none" : t.dead ? "brightness(.25) saturate(.3)" : t.hp < 1 ? `brightness(${(.55 + .45 * t.hp).toFixed(2)})` : "none";
     const top = this.GY - H;
     if (an) this.frame(g, an, fi, w, top, a);
-    else if (dv) this.frame(g, dv, Math.floor(now / (dv.ms || 80)) % (dv.frames || 1), w, top, a);
+    else if (dv) { const n = dv.frames || 1, step = 520 * (dv.ms || 80) / 1000;          // the tracks turn as far as it rolls: as before at full speed, slower when creeping, backwards when backing up
+      this.frame(g, dv, ((Math.floor((t.odo || 0) / step) % n) + n) % n, w, top, a); }
     else if (a) { const c = this.cut(a), iw = a.img.naturalWidth, ih = a.img.naturalHeight, sx = c.x0 * iw, sw = (c.x1 - c.x0) * iw, Y = f => (f - c.y0) / (c.y1 - c.y0) * H;
-      const slice = (f0, f1, dx, dy) => { const h0 = Y(f0), h1 = Y(f1); if (h1 - h0 < 1) return; g.drawImage(a.img, sx, f0 * ih, sw, (f1 - f0) * ih, dx, top + h0 + dy, w, h1 - h0); };
+      const slice = (f0, f1, dx, dy) => { const h0 = Y(f0), h1 = Y(f1); if (h1 - h0 < 1) return; g.drawImage(this.px(a), sx, f0 * ih, sw, (f1 - f0) * ih, dx, top + h0 + dy, w, h1 - h0); };
       // tracked and moving: the track stays put; the wheels inside it (the middle of the running gear) bob up and down a
       // little, each on its own, out of line. The hull doesn't move
       slice(c.trk, c.y1, 0, 0);
       if (!t.tracks && moving) { const n = 7, f0 = c.trk + (c.y1 - c.trk) * .22, f1 = c.trk + (c.y1 - c.trk) * .82, h0 = Y(f0), h1 = Y(f1);
-        for (let i = 0; i < n; i++) { const dy = Math.sin(now / 85 + i * 1.9) * 2.2; g.drawImage(a.img, sx + sw * (i + .08) / n, f0 * ih, sw * .84 / n, (f1 - f0) * ih, w * (i + .08) / n, top + h0 + dy, w * .84 / n, h1 - h0); } }
+        for (let i = 0; i < n; i++) { const dy = Math.sin(now / 85 + i * 1.9) * 2.2; g.drawImage(this.px(a), sx + sw * (i + .08) / n, f0 * ih, sw * .84 / n, (f1 - f0) * ih, w * (i + .08) / n, top + h0 + dy, w * .84 / n, h1 - h0); } }
       slice(c.ring, c.trk, 0, 0); if (!t.tgone) slice(c.y0, c.ring, -rc, 0); }
     else this.drawn(g, t, w, H, top, rc, sag);
     g.filter = "none";
@@ -7338,7 +7353,7 @@ const Tanks = {
     t.parts.forEach(p => { const s = (now - p.at) / 1000, fy = p.which === "turret" ? Math.min(this.GY - H * .2, top + H * .2 + p.vy * s + 1100 * s * s) : Math.min(top + H * .82, top + H * .78 + p.vy * s + 900 * s * s), fx = w / 2 + p.vx * s * dir;
       g.save(); g.translate(fx, fy); g.rotate(p.spin * Math.min(s, p.which === "turret" ? 2.2 : .5)); g.filter = "brightness(.45)";
       if (a) { const c = this.cut(a), iw = a.img.naturalWidth, ih = a.img.naturalHeight, Y = f => (f - c.y0) / (c.y1 - c.y0) * H, f0 = p.which === "turret" ? c.y0 : c.trk, f1 = p.which === "turret" ? c.ring : c.y1, h = Y(f1) - Y(f0);
-        g.drawImage(a.img, c.x0 * iw, f0 * ih, (c.x1 - c.x0) * iw, (f1 - f0) * ih, -w / 2, -h / 2, w, h); }
+        g.drawImage(this.px(a), c.x0 * iw, f0 * ih, (c.x1 - c.x0) * iw, (f1 - f0) * ih, -w / 2, -h / 2, w, h); }
       else { g.fillStyle = p.which === "turret" ? "#3a3d33" : "#1d1e1a"; if (p.which === "turret") { g.fillRect(-H * .45, -H * .14, H * .9, H * .28); g.fillRect(H * .3, -H * .05, H * .7, H * .1); } else g.fillRect(-w / 2, -H * .1, w, H * .2); }
       g.filter = "none"; g.restore(); });
     g.restore();
@@ -7360,6 +7375,9 @@ const Tanks = {
     g.fillStyle = col[0]; g.beginPath(); g.moveTo(w * .02, top + H * .72 + sag); g.lineTo(w * .1, top + H * .42 + sag); g.lineTo(w * .92, top + H * .42 + sag); g.lineTo(w, top + H * .6 + sag); g.lineTo(w * .96, top + H * .72 + sag); g.closePath(); g.fill();
     if (!t.tgone) { g.fillStyle = col[1]; g.beginPath(); g.roundRect(w * .3 - rc, top + H * .14 + sag, w * .4, H * .3, H * .08); g.fill(); g.fillStyle = "#26281f"; g.fillRect(w * .68 - rc, top + H * .24 + sag, H * .62, H * .08); } }
 };
+// (both teams' pictures made ready in the background soon after the overlay starts, and again once any late art has
+// arrived, so even a tank's very first drive in is smooth)
+[8000, 30000].forEach(ms => setTimeout(() => { try { Tanks.prep("green"); Tanks.prep("blue"); } catch (e) {} }, ms));
 window.Tanks = Tanks;
 if (!MIRROR) setTimeout(() => { try { Tanks.restore(); } catch (e) {} }, 2500);           // (after a reload, the tanks that were out drive back in)
 
@@ -9079,7 +9097,7 @@ window.KZDirect = function (opt) {
 (() => {
   const qs = new URLSearchParams(location.search), key = qs.get("ctl");
   if (!key || !window.WebSocket) return;
-  const PAGE = "html3", VERSION = "272470c", INST = Math.random().toString(36).slice(2, 8);
+  const PAGE = "html3", VERSION = "ffda432", INST = Math.random().toString(36).slice(2, 8);
   const QUICK = { mir: 1, rtt: 1 };                                 // sent many times a second: only the newest matters
   let said = false, direct = null;
   const seen = new Set(), seenList = [], fresh = id => { if (!id) return true; if (seen.has(id)) return false; seen.add(id); seenList.push(id); if (seenList.length > 800) seen.delete(seenList.shift()); return true; };
