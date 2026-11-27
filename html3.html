@@ -668,23 +668,77 @@ body.fit #stage{background:radial-gradient(1200px 700px at 30% 20%,#1a103322,tra
 
 <script>
 "use strict";
-/* ================= empty effect layers leave the picture =================
-   Every effect draws on its own full-screen canvas (2560x1440), and the browser blends every one of them into every
-   frame, even when they're empty, so after a few effects have played the overlay works far harder sitting still than
-   it needs to. So: a big canvas that's been wiped clean and left empty for 1.5 s is taken out of the picture, and the
-   moment anything draws on it again it's put straight back (in the same frame, so nothing ever looks different). */
+/* ================= effect layers only cost something while they're in use =================
+   Every effect draws on its own full-screen canvas (2560x1440). Two things keep the ones that aren't in use from
+   costing anything:
+   1. Out of the picture: a canvas that's been wiped clean and left empty for 1.5 s is hidden, so the browser stops
+      blending it into every frame. The moment anything draws on it again it's shown (in the same frame).
+   2. Its memory handed back: a canvas that has been drawn on keeps a full screen of pixels (tens of MB each, in the
+      graphics card's memory when OBS draws with it) for as long as the page stays open, even when it's empty: after a
+      stream's worth of effects, all of them. So a hidden canvas that has sat empty for 8 s is shrunk to nothing, which
+      gives that memory back, and it's made full size again the instant its effect next touches it (asks for its
+      drawing context, wipes, saves, moves or turns, starts a path or draws; reading its width or height still
+      answers the full size).
+      A canvas forgets its drawing settings (colours, fonts, transform...) whenever its size changes, so they're read
+      first and put back after, both ways: an effect can't tell it happened. (Not in the app's touchpad copy.)
+   Drawing a picture also notes when it was last drawn, and draws its ready-decoded copy if it has one (see Bmp). */
 const Layers = (() => {
-  const P = window.CanvasRenderingContext2D && CanvasRenderingContext2D.prototype; if (!P) return {};
+  const L = { n: 0, t: performance.now(), HIDE: 1500, FREE: 8000, freed: 0, on: true, half: .52 };
+  const P = window.CanvasRenderingContext2D && CanvasRenderingContext2D.prototype, CP = window.HTMLCanvasElement && HTMLCanvasElement.prototype; if (!P || !CP) return L;
+  const wd = Object.getOwnPropertyDescriptor(CP, "width"), hd = Object.getOwnPropertyDescriptor(CP, "height");
+  const canFree = !/[?&]mirror\b/.test(location.search) && !!(wd && hd && wd.get && wd.set && hd.get && hd.set && P.getTransform && P.getLineDash);
+  const KEEP = ["fillStyle", "strokeStyle", "globalAlpha", "globalCompositeOperation", "lineWidth", "lineCap", "lineJoin", "miterLimit", "lineDashOffset", "shadowBlur", "shadowColor", "shadowOffsetX", "shadowOffsetY",
+    "font", "textAlign", "textBaseline", "direction", "imageSmoothingEnabled", "imageSmoothingQuality", "filter", "letterSpacing", "wordSpacing", "fontKerning", "fontStretch", "fontVariantCaps", "textRendering"];
+  // a new size for a canvas, with its drawing settings carried across (a size change wipes them)
+  const size = (c, g, w, h, m) => { const st = [], dash = g.getLineDash(); m = m || g.getTransform(); for (const k of KEEP) if (k in g) st.push(k, g[k]);
+    wd.set.call(c, w); hd.set.call(c, h);
+    for (let i = 0; i < st.length; i += 2) { try { if (g[st[i]] !== st[i + 1]) g[st[i]] = st[i + 1]; } catch (e) {} }
+    try { g.setTransform(m); if (dash.length) g.setLineDash(dash); } catch (e) {} };
+  const free = c => { const g = c.__g; if (!g) return; let bw = "", bh = ""; try { const cs = getComputedStyle(c); bw = cs.width; bh = cs.height; } catch (e) {}
+    c.__rw = wd.get.call(c); c.__rh = hd.get.call(c); if (!c.__rw || !c.__rh) return; c.__m = g.getTransform(); size(c, g, 0, 0, c.__m); c.__rel = g.__rel = true; L.freed++;
+    try { const cs = getComputedStyle(c); if (cs.width !== bw || cs.height !== bh) { c.__sw = c.style.width; c.__sh = c.style.height; c.style.width = bw; c.style.height = bh; c.__styled = true; } } catch (e) {} };   // (it keeps its place on the page)
+  const wake = c => { if (!c || !c.__rel) return; const g = c.__g; c.__rel = false; if (g) g.__rel = false; L.freed--;
+    try { if (c.__styled) { c.style.width = c.__sw; c.style.height = c.__sh; c.__styled = false; }
+      if (g) size(c, g, c.__rw, c.__rh, c.__m); else { wd.set.call(c, c.__rw); hd.set.call(c, c.__rh); } }       // (c.__m: a canvas with no size can't hold a transform, so it's kept here meanwhile)
+    catch (e) { try { wd.set.call(c, c.__rw); hd.set.call(c, c.__rh); } catch (x) {} }                              // (whatever happens, it's full size again and what was about to be drawn is drawn)
+    c.__ct = performance.now(); c.__wk = ++L.n; };
   const show = c => { c.__hid = false; c.style.visibility = ""; };
-  ["fill", "stroke", "fillRect", "strokeRect", "drawImage", "fillText", "strokeText", "putImageData"].forEach(n => { const o = P[n]; if (!o) return;
-    P[n] = function () { const c = this.canvas; if (c) { if (c.__hid) show(c); c.__d = ++Layers.n; } return o.apply(this, arguments); }; });
-  const clear = P.clearRect;
-  P.clearRect = function (x, y, w, h) { const c = this.canvas;            // (a wipe of the whole canvas, with nothing moved or scaled)
-    if (c && c.width >= 1000 && x <= 0 && y <= 0 && x + w >= c.width && y + h >= c.height) { const m = this.getTransform(); if (m.isIdentity) { c.__c = ++Layers.n; c.__ct = performance.now(); } }
-    return clear.call(this, x, y, w, h); };
-  setInterval(() => { const now = performance.now();
-    for (const c of document.getElementsByTagName("canvas")) if (!c.__hid && c.__c && c.__c > (c.__d || 0) && now - c.__ct > 1500) { c.__hid = true; c.style.visibility = "hidden"; } }, 1000);
-  return { n: 0 };
+  // anything drawn: the layer is in use (shown, and full size)
+  ["fill", "stroke", "fillRect", "strokeRect", "fillText", "strokeText", "putImageData"].forEach(n => { const o = P[n]; if (!o) return;
+    P[n] = function () { if (this.__rel) wake(this.canvas); const c = this.__cv || (this.__cv = this.canvas); if (c) { if (c.__hid) show(c); c.__d = ++L.n; } return o.apply(this, arguments); }; });
+  { const o = P.drawImage; P.drawImage = function (s) { if (this.__rel) wake(this.canvas); const c = this.__cv || (this.__cv = this.canvas); if (c) { if (c.__hid) show(c); c.__d = ++L.n; }
+      if (s) { if (s.__rel) wake(s);                                        // (a put-away canvas being copied from)
+        else if (s.__bm) { s.__dt = L.t;                                    // a picture with a ready-decoded copy: that's what's drawn (the very same pixels)...
+          // ...unless this browser shrinks a picture and a copy in slightly different ways (it does when it isn't drawing with
+          // the graphics card: Bmp.probe finds out) and it's being drawn at half size or smaller: then the picture itself is
+          // drawn, as it always was
+          if (!L.half) arguments[0] = s.__bm;
+          else { const n = arguments.length, k = n >= 9 ? Math.min(Math.abs(arguments[7] / arguments[3]), Math.abs(arguments[8] / arguments[4])) : n >= 5 ? Math.min(Math.abs(arguments[3]) / s.__bmw, Math.abs(arguments[4]) / s.__bmh) : 1;
+            let big = k > L.half; if (big) { const m = this.getTransform(); big = k * Math.sqrt(Math.abs(m.a * m.d - m.b * m.c)) > L.half; }
+            if (big) { s.__sw = 1; arguments[0] = s.__bm; } else s.__sm = (s.__sm || 0) + 1; } }
+        else if (s.__n) s.__dt = L.t; }                                     // (when each sprite was last drawn)
+      return o.apply(this, arguments); }; }
+  { const o = P.clearRect; P.clearRect = function (x, y, w, h) { if (this.__rel) wake(this.canvas); const c = this.__cv || (this.__cv = this.canvas);            // (a wipe of the whole canvas, with nothing moved or scaled)
+      if (c && x <= 0 && y <= 0) { const cw = wd ? wd.get.call(c) : c.width, chh = hd ? hd.get.call(c) : c.height; if (cw >= 1000 && x + w >= cw && y + h >= chh && this.getTransform().isIdentity) { c.__c = ++L.n; c.__ct = performance.now(); c.__g = this; } }
+      return o.call(this, x, y, w, h); }; }
+  // (anything else an effect might do first with a put-away canvas makes it full size before it happens)
+  ["save", "beginPath", "resetTransform"].forEach(n => { const o = P[n]; if (o) P[n] = function () { if (this.__rel) wake(this.canvas); return o.call(this); }; });
+  { const o = P.translate; P.translate = function (x, y) { if (this.__rel) wake(this.canvas); return o.call(this, x, y); }; }
+  { const o = P.scale; P.scale = function (x, y) { if (this.__rel) wake(this.canvas); return o.call(this, x, y); }; }
+  { const o = P.rotate; P.rotate = function (a) { if (this.__rel) wake(this.canvas); return o.call(this, a); }; }
+  ["setTransform", "transform", "clip", "getImageData"].forEach(n => { const o = P[n]; P[n] = function () { if (this.__rel) wake(this.canvas); return o.apply(this, arguments); }; });
+  { const o = P.createPattern; P.createPattern = function (s) { if (s && s.__rel) wake(s); return o.apply(this, arguments); }; }
+  ["getContext", "toDataURL", "toBlob"].forEach(n => { const o = CP[n]; if (o) CP[n] = function () { if (this.__rel) wake(this); return o.apply(this, arguments); }; });
+  if (canFree) {
+    Object.defineProperty(CP, "width", { configurable: true, enumerable: true, get() { return this.__rel ? this.__rw : wd.get.call(this); }, set(v) { if (this.__rel) wake(this); wd.set.call(this, v); } });
+    Object.defineProperty(CP, "height", { configurable: true, enumerable: true, get() { return this.__rel ? this.__rh : hd.get.call(this); }, set(v) { if (this.__rel) wake(this); hd.set.call(this, v); } }); }
+  setInterval(() => { const now = L.t = performance.now(); if (!L.on) return;
+    for (const c of document.getElementsByTagName("canvas")) { if (!c.__c || c.__c <= (c.__d || 0)) continue; const idle = now - c.__ct;
+      if (!c.__hid && idle > L.HIDE) { c.__hid = true; c.style.visibility = "hidden"; }
+      if (canFree && c.__hid && !c.__rel && idle > L.FREE && c.__c > (c.__wk || 0)) { try { free(c); } catch (e) {} } }
+    try { if (typeof Bmp !== "undefined") Bmp.trim(); } catch (e) {} }, 1000);
+  L.wake = wake; L.free = free; L.canFree = canFree;
+  return L;
 })();
 const LOGO = "data:image/webp;base64,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";
 document.getElementById("favicon").href = LOGO;
@@ -695,6 +749,53 @@ const hs = new URLSearchParams(location.hash.replace(/^#/, ""));
 // everything is, and every effect as it starts), makes no sound, and doesn't listen to Twitch or the relay itself.
 // See "the touchpad copy" (Mirror) further down.
 const MIRROR = qs.has("mirror");
+/* ================= pictures decoded ahead of time, off the main thread =================
+   A picture is normally decoded the first time it's drawn, right then, while everything else waits: a pause of a
+   frame or more just as an effect starts, and again whenever the browser has dropped its decoded copy in the meantime.
+   So before an effect starts, the pictures it's about to draw are decoded in the background into ready-to-draw copies
+   (Bmp.want), and drawing a picture that has one draws the copy instead (Layers does the swap: same pixels, no pause;
+   checked against the usual way pixel for pixel, with and without the graphics card).
+   A copy that hasn't been drawn for a minute is let go again, and they never add up to more than MAX. */
+const Bmp = { live: new Map(), bytes: 0, MAX: 256e6, IDLE: 45000, made: 0, probed: null, ok: !MIRROR && !!(window.createImageBitmap && window.fetch),
+  // resolves once img's copy is ready (true), or can't be made (false)
+  want(img) { if (!this.ok || !img || !img.complete || !img.naturalWidth || img.__small) return Promise.resolve(false); img.__dt = Layers.t;
+    if (img.__bm) return Promise.resolve(true); if (img.__bw) return img.__bw; const src = img.src;
+    return img.__bw = fetch(src).then(r => r.blob()).then(b => createImageBitmap(b)).then(bm => { img.__bw = null;
+      if (img.src !== src || bm.width !== img.naturalWidth || bm.height !== img.naturalHeight) { try { bm.close(); } catch (e) {} return false; }
+      const bytes = bm.width * bm.height * 4; img.__bmw = bm.width; img.__bmh = bm.height; img.__bm = bm; this.live.set(img, bytes); this.bytes += bytes; this.made++; img.__dt = Layers.t; return true; }, () => { img.__bw = null; return false; }); },
+  all(imgs, ms) { return Promise.race([Promise.all(imgs.map(i => this.want(i))), new Promise(r => setTimeout(r, ms))]); },     // (waits no longer than ms)
+  has(img) { return !this.ok || !img || !!img.__bm || !!img.__small; },
+  soon(img) { if (img && img.__bm) img.__dt = Layers.t - this.IDLE + 5000; },                 // (it's done its job: let go in a few seconds unless it's drawn again)
+  drop(img) { const b = this.live.get(img); if (b == null) return; const bm = img.__bm; img.__bm = null; this.live.delete(img); this.bytes -= b; try { bm && bm.close(); } catch (e) {} },
+  trim() { const now = Layers.t; for (const img of [...this.live.keys()]) { if (now - (img.__dt || 0) > this.IDLE) this.drop(img);
+      else if (img.__sm > 150 && !img.__sw) { img.__small = true; this.drop(img); } }                // (only ever drawn small, where its copy isn't used: it doesn't get one)
+    if (this.bytes > this.MAX) for (const img of [...this.live.keys()].sort((a, b) => (a.__dt || 0) - (b.__dt || 0))) { if (this.bytes <= this.MAX * .8 || now - (img.__dt || 0) < 3000) break; this.drop(img); } }
+};
+// Does this browser shrink a picture and its decoded copy in exactly the same way? Checked once as the overlay starts,
+// on a test picture drawn both ways at four small sizes and compared pixel for pixel. If it does (it does when it draws
+// with the graphics card), copies are used at every size; if not, only above half size, where the two always match.
+Bmp.probe = async function () { if (!this.ok) return; try {
+    const src = document.createElement("canvas"); src.width = src.height = 256; const g = src.getContext("2d"); let sd = 7; const rnd = () => (sd = (sd * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff;
+    for (let i = 0; i < 260; i++) { g.fillStyle = `hsl(${rnd() * 360},80%,${20 + rnd() * 60}%)`; g.beginPath(); g.arc(rnd() * 256, rnd() * 256, 3 + rnd() * 22, 0, 6.283); g.fill(); g.strokeStyle = "#000"; g.lineWidth = 2; g.stroke(); }
+    const blob = await new Promise(r => src.toBlob(r, "image/webp", .86)), img = new Image(); await new Promise((ok, no) => { img.onload = ok; img.onerror = no; img.src = URL.createObjectURL(blob); });
+    const bm = await createImageBitmap(blob);
+    const shot = pic => { const c = document.createElement("canvas"); c.width = 640; c.height = 360; const x = c.getContext("2d"); let px = 4; [.5, .4, .25, .13].forEach(k => { x.drawImage(pic, px, 4, 256 * k, 256 * k); px += 256 * k + 8; });
+      const rd = document.createElement("canvas"); rd.width = 640; rd.height = 360; const y = rd.getContext("2d", { willReadFrequently: true }); y.drawImage(c, 0, 0); return y.getImageData(0, 0, 420, 140).data; };
+    const a = shot(img), b = shot(bm); try { bm.close(); URL.revokeObjectURL(img.src); } catch (e) {}
+    let same = a.length === b.length, ink = 0; for (let i = 0; i < a.length; i++) { if (a[i]) ink++; if (a[i] !== b[i]) { same = false; break; } }
+    this.probed = same && ink > 1000; Layers.half = this.probed ? 0 : .52; } catch (e) {} };
+if (Bmp.ok) setTimeout(() => Bmp.probe(), 900);
+/* Things measured from a picture (where the figure sits in it, a tank's shape...) are kept with that picture's
+   fingerprint, so each is only ever worked out once, not again every time the overlay starts. */
+const ART_PIPE = 2;            // which version of the art clean-up (kzSoften + kzUnbox) saved results were made with
+const ArtFacts = { KEY: "kzArtFacts", m: null, t: 0,
+  all() { if (!this.m) { try { this.m = JSON.parse(localStorage.getItem(this.KEY)) || {}; } catch (e) { this.m = {}; } } return this.m; },
+  key(a, kind) { return kind + "|" + (a.at || 0) + "|" + (a.url || "").length + "|" + (a.frames || 1) + "|" + (a.w || 0) + "x" + (a.h || 0) + "|" + (a.nozzle ? a.nozzle.join() : "") + "|" + ART_PIPE; },
+  get(a, kind) { if (!a || !a.url) return null; const v = this.all()[this.key(a, kind)]; return v ? v.v : null; },
+  set(a, kind, v) { if (!a || !a.url) return v; this.all()[this.key(a, kind)] = { v, t: Date.now() }; clearTimeout(this.t); this.t = setTimeout(() => this.save(), 2000); return v; },
+  save() { const m = this.all(), ks = Object.keys(m); if (ks.length > 700) ks.sort((x, y) => (m[x].t || 0) - (m[y].t || 0)).slice(0, ks.length - 600).forEach(k => delete m[k]);
+    try { localStorage.setItem(this.KEY, JSON.stringify(m)); } catch (e) {} }
+};
 const Low = { k: 1 };                                    // how much smaller the copy's canvases are than the stream's (1 = the same size)
 const Raf = { paused: false, eco: false, bg: false, frames: 0, due: 0, slow: 0, ms: 0 };   // the copy's animation clock: pictures drawn, pictures it meant to draw, late ones, time spent drawing
 if (MIRROR) {
@@ -3218,56 +3319,129 @@ const Eagle = {
    2. 3 seconds of frantic chopping of a blue goo.
    3. A diagonal leap up to the center-right, then a straight leap across to the left; "anime-chef" pops up midway.
    4. Lands at the left middle, then slides down the screen and off the bottom. */
+/* The clean-up every animation made in the Art tab gets before it's used. Both work on the pixels of a whole sheet
+   (d: its RGBA bytes, W x H: the sheet, n: how many frames side by side) and say whether they changed anything.
+   They run off the main thread, in ChefArt's worker, so they use nothing outside themselves. */
+// Where a frame's top or sides are cut off in a straight line (a good share of that edge row is solid), that edge
+// fades out softly instead.
+function kzSoften(d, W, H, n) { const fw = Math.floor(W / n); if (n < 2 || !fw || !H) return false; const A = (x, y) => d[(y * W + x) * 4 + 3];
+  let changed = false;
+  for (let f = 0; f < n; f++) { const x0 = f * fw, x1 = x0 + fw; let top = 0, left = 0, right = 0;
+    for (let x = x0; x < x1; x++) if (A(x, 0) > 120) top++; for (let y = 0; y < H; y++) { if (A(x0, y) > 120) left++; if (A(x1 - 1, y) > 120) right++; }
+    const T = top > fw * .08 ? Math.round(H * .12) : 0, L = left > H * .08 ? Math.round(fw * .08) : 0, R = right > H * .08 ? Math.round(fw * .08) : 0; if (!T && !L && !R) continue; changed = true;
+    for (let y = 0; y < H; y++) for (let x = x0; x < x1; x++) { const k = Math.min(1, T && y < T ? y / T : 1, L && x - x0 < L ? (x - x0) / L : 1, R && x1 - 1 - x < R ? (x1 - 1 - x) / R : 1); if (k < 1) { const i = (y * W + x) * 4 + 3; d[i] = Math.round(d[i] * k * k * (3 - 2 * k)); } } }
+  return changed; }
+// Animations sometimes come back with a thin dark box drawn around each frame (the picture maker outlining the cells).
+// In each frame, any line of pixels near the frame's edge that runs most of the way across it is a border, not the
+// character, and is cleared, along with the outermost few pixels. (Not for pictures that are meant to fill their frame.)
+function kzUnbox(d, W, H, n) { const fw = Math.floor(W / n); if (n < 2 || !fw || !H) return false; const A = (x, y) => d[(y * W + x) * 4 + 3];
+  let opq = 0; for (let i = 3; i < d.length; i += 16) if (d[i] > 40) opq++; if (opq / (d.length / 16) > .55) return false;
+  let changed = false; const clr = (x, y) => { const i = (y * W + x) * 4 + 3; if (d[i]) { d[i] = 0; changed = true; } }, B = Math.max(2, Math.round(Math.min(fw, H) * .006)), M = Math.round(Math.min(fw, H) * .14);
+  for (let f = 0; f < n; f++) { const x0 = f * fw, x1 = x0 + fw;
+    for (let y = 0; y < H; y++) for (let x = x0; x < x1; x++) if (x - x0 < B || x1 - 1 - x < B || y < B || H - 1 - y < B) clr(x, y);        // the outermost pixels
+    for (let y = 0; y < H; y++) { if (y > M && y < H - 1 - M) continue; let k = 0; for (let x = x0; x < x1; x++) if (A(x, y) > 40) k++; if (k > fw * .6) for (let x = x0; x < x1; x++) clr(x, y); }       // a row across it
+    for (let x = x0; x < x1; x++) { if (x - x0 > M && x1 - 1 - x > M) continue; let k = 0; for (let y = 0; y < H; y++) if (A(x, y) > 40) k++; if (k > H * .6) for (let y = 0; y < H; y++) clr(x, y); } }       // a column down it
+  return changed; }
 const ChefArt = {
   sprites: {}, parts: {},
   db: null,
   open() { return this.db || (this.db = new Promise((ok, no) => { const r = indexedDB.open("kzArt", 1); r.onupgradeneeded = () => r.result.createObjectStore("a"); r.onsuccess = () => ok(r.result); r.onerror = () => no(r.error); })); },
-  // Animations made in the Art tab sometimes come back with a thin dark box drawn around each frame (the picture
-  // maker outlining the cells). That's taken off before use: in each frame, any line of pixels near the frame's edge
-  // that runs most of the way across it is a border, not the character, and is cleared, along with the outermost few
-  // pixels. (Not for pictures that are meant to fill their frame, nor for the live look-in frames, which ARE borders.)
-  unbox(img, a) { const n = Math.max(1, a.frames || 1), W = img.naturalWidth, H = img.naturalHeight, fw = Math.floor(W / n); if (n < 2 || !fw || !H) return null;
-    const c = document.createElement("canvas"); c.width = W; c.height = H; const g = c.getContext("2d", { willReadFrequently: true }); g.drawImage(img, 0, 0);
-    const im = g.getImageData(0, 0, W, H), d = im.data, A = (x, y) => d[(y * W + x) * 4 + 3]; let opq = 0; for (let i = 3; i < d.length; i += 16) if (d[i] > 40) opq++; if (opq / (d.length / 16) > .55) return null;
-    let changed = false; const clr = (x, y) => { const i = (y * W + x) * 4 + 3; if (d[i]) { d[i] = 0; changed = true; } }, B = Math.max(2, Math.round(Math.min(fw, H) * .006)), M = Math.round(Math.min(fw, H) * .14);
-    for (let f = 0; f < n; f++) { const x0 = f * fw, x1 = x0 + fw;
-      for (let y = 0; y < H; y++) for (let x = x0; x < x1; x++) if (x - x0 < B || x1 - 1 - x < B || y < B || H - 1 - y < B) clr(x, y);        // the outermost pixels
-      for (let y = 0; y < H; y++) { if (y > M && y < H - 1 - M) continue; let k = 0; for (let x = x0; x < x1; x++) if (A(x, y) > 40) k++; if (k > fw * .6) for (let x = x0; x < x1; x++) clr(x, y); }       // a row across it
-      for (let x = x0; x < x1; x++) { if (x - x0 > M && x1 - 1 - x > M) continue; let k = 0; for (let y = 0; y < H; y++) if (A(x, y) > 40) k++; if (k > H * .6) for (let y = 0; y < H; y++) clr(x, y); } }       // a column down it
-    if (!changed) return null; g.putImageData(im, 0, 0); return c; },
-  // animation art made before the soft edges: where a frame's top or sides are cut off in a straight line (a good share
-  // of that edge row is solid), that edge fades out softly instead
-  soften(img, a) { const n = Math.max(1, a.frames || 1), W = img.naturalWidth, H = img.naturalHeight, fw = Math.floor(W / n); if (n < 2 || !fw || !H) return null;
-    const c = document.createElement("canvas"); c.width = W; c.height = H; const g = c.getContext("2d", { willReadFrequently: true }); g.drawImage(img, 0, 0); const im = g.getImageData(0, 0, W, H), d = im.data, A = (x, y) => d[(y * W + x) * 4 + 3];
-    let changed = false;
-    for (let f = 0; f < n; f++) { const x0 = f * fw, x1 = x0 + fw; let top = 0, left = 0, right = 0;
-      for (let x = x0; x < x1; x++) if (A(x, 0) > 120) top++; for (let y = 0; y < H; y++) { if (A(x0, y) > 120) left++; if (A(x1 - 1, y) > 120) right++; }
-      const T = top > fw * .08 ? Math.round(H * .12) : 0, L = left > H * .08 ? Math.round(fw * .08) : 0, R = right > H * .08 ? Math.round(fw * .08) : 0; if (!T && !L && !R) continue; changed = true;
-      for (let y = 0; y < H; y++) for (let x = x0; x < x1; x++) { const k = Math.min(1, T && y < T ? y / T : 1, L && x - x0 < L ? (x - x0) / L : 1, R && x1 - 1 - x < R ? (x1 - 1 - x) / R : 1); if (k < 1) { const i = (y * W + x) * 4 + 3; d[i] = Math.round(d[i] * k * k * (3 - 2 * k)); } } }
-    if (!changed) return null; g.putImageData(im, 0, 0); return c; },
-  use(name, a) { const img = new Image(); img.onload = () => {
-      if (!img._kzs && !/^lli_|_beam$|_backdrop$/.test(name)) { let c = null; try { c = this.soften(img, a); } catch (e) {} if (c) { img._kzs = 1; c.toBlob(b => { if (b) img.src = URL.createObjectURL(b); }); return; } }
-      if (!img._kz && !/^lli_|_beam$|_backdrop$/.test(name)) { let c = null; try { c = this.unbox(img, a); } catch (e) {} if (c) { img._kz = 1; c.toBlob(b => { if (b) img.src = URL.createObjectURL(b); }); return; } }
-      this.sprites[name] = Object.assign({ img }, a); if (name === "tower" && Lurk.up) Lurk.paint(); if (/^plane_/.test(name)) setTimeout(() => Plane.prep(), 250); }; img.src = a.url; },
+  /* ---- the clean-up is done once per picture, off the main thread, and its result is kept ----
+     It used to be done again for every animation every time the overlay started: each sheet decoded, read back and
+     scanned twice and most of them re-encoded, all on the main thread: seconds of stutter after every reload or
+     update, just as tanks and gems are coming back. Now a worker does it (the page never waits), and what it makes
+     is saved in a store of its own (kzArtReady: the cleaned picture, or just "needed nothing", with the fingerprint
+     of the picture it was made from). After that a picture is simply loaded. New art from the app goes the same way.
+     (The touchpad copy does the same in its worker but saves nothing on the phone.) */
+  PIPE: ART_PIPE, rdb: null, jobs: [], mainQ: [], mainCur: null, jobId: 0, wks: [], WK: 2, wkBad: false, errs: 0, seq: {}, loading: {}, listed: false, pend: 0, cleaned: 0,
+  ropen() { return this.rdb || (this.rdb = new Promise((ok, no) => { const r = indexedDB.open("kzArtReady", 1); r.onupgradeneeded = () => r.result.createObjectStore("r"); r.onsuccess = () => { this.rok = true; ok(r.result); }; r.onerror = () => { this.rdead = true; no(r.error); }; })); },
+  // (if that store can't be opened or doesn't answer, art is simply cleaned afresh, as if nothing had been kept)
+  rget(name) { if (this.rdead) return Promise.resolve(null);
+    return Promise.race([this.ropen().then(db => new Promise(ok => { try { const q = db.transaction("r").objectStore("r").get(name); q.onsuccess = () => ok(q.result || null); q.onerror = () => ok(null); } catch (e) { ok(null); } }), () => null),
+      new Promise(ok => setTimeout(() => { if (!this.rok) this.rdead = true; ok(null); }, 4000))]); },
+  rput(name, v) { if (this.rdead) return Promise.resolve(false); return this.ropen().then(db => new Promise(ok => { try { const t = db.transaction("r", "readwrite"); t.objectStore("r").put(v, name); t.oncomplete = () => ok(true); t.onerror = t.onabort = () => ok(false); } catch (e) { ok(false); } }), () => false); },
+  sig(a) { const u = a.url || ""; return (a.at || 0) + ":" + u.length + ":" + u.slice(-40) + ":" + (a.frames || 1); },       // a picture's fingerprint
+  workerSrc() { return kzSoften.toString() + "\n" + kzUnbox.toString() + "\n" + `onmessage = async e => { const j = e.data; try {
+      const bm = await createImageBitmap(await (await fetch(j.url)).blob()), W = bm.width, H = bm.height;
+      const c = new OffscreenCanvas(W, H), g = c.getContext("2d", { willReadFrequently: true }); g.drawImage(bm, 0, 0); bm.close();
+      const im = g.getImageData(0, 0, W, H), a = kzSoften(im.data, W, H, j.frames), b = kzUnbox(im.data, W, H, j.frames);
+      if (!a && !b) return postMessage({ id: j.id, same: true });
+      g.putImageData(im, 0, 0); const out = await c.convertToBlob({ type: "image/png" });       // (kept without any loss)
+      postMessage({ id: j.id, blob: out });
+    } catch (x) { postMessage({ id: j.id, err: String(x && x.message || x) }); } };`; },
+  // resolves with { same: true } (the picture needed nothing) or { blob } (the cleaned picture)
+  clean(name, a) { return new Promise((ok, no) => { this.jobs.push({ id: ++this.jobId, name, url: a.url, frames: Math.max(1, a.frames || 1), ok, no }); this.pump(); }); },
+  bump(names) { if (!this.jobs.length) return; const s = new Set(names), f = [], l = []; this.jobs.forEach(j => (s.has(j.name) ? f : l).push(j)); this.jobs = f.concat(l); },   // these first
+  // up to two workers share the line; they're let go again once it has been empty for a while
+  spawn() { try { const w = { cur: null }; w.k = new Worker(this.wkUrl || (this.wkUrl = URL.createObjectURL(new Blob([this.workerSrc()], { type: "text/javascript" }))));
+      w.k.onmessage = e => { const j = w.cur; if (!j || !e.data || e.data.id !== j.id) return; clearTimeout(j.t); w.cur = null;
+        if (e.data.err) { if (++this.errs >= 3 && !this.cleaned) this.wkBad = true; this.mainQ.push(j); } else { this.cleaned++; j.ok(e.data); } this.pump(); };
+      w.k.onerror = () => this.fail(w); this.wks.push(w); return w; } catch (e) { this.wkBad = true; return null; } },
+  fail(w) { this.wkBad = true; const j = w.cur; w.cur = null; if (j) { clearTimeout(j.t); this.jobs.unshift(j); } this.pump(); },       // (a worker that broke or never answered: without them from here on)
+  pump() { clearTimeout(this.idleT);
+    if (this.wkBad) { this.wks.forEach(w => { if (w.cur) { clearTimeout(w.cur.t); this.jobs.unshift(w.cur); w.cur = null; } try { w.k.terminate(); } catch (e) {} }); this.wks = []; this.mainQ.push(...this.jobs.splice(0)); }
+    while (!this.wkBad && this.jobs.length) { let w = this.wks.find(x => !x.cur); if (!w && this.wks.length < this.WK) w = this.spawn(); if (!w) break;
+      const j = w.cur = this.jobs.shift(); j.t = setTimeout(() => { if (w.cur === j) this.fail(w); }, 30000);
+      try { w.k.postMessage({ id: j.id, url: j.url, frames: j.frames }); } catch (e) { return this.fail(w); } }
+    if (this.wkBad && this.jobs.length) return this.pump();
+    if (!this.mainCur && this.mainQ.length) this.onMain(this.mainQ.shift());
+    if (!this.working()) this.idleT = setTimeout(() => { if (this.working()) return; this.wks.forEach(w => { try { w.k.terminate(); } catch (e) {} }); this.wks = []; }, 20000); },
+  working() { return !!(this.jobs.length || this.mainQ.length || this.mainCur || this.wks.some(w => w.cur)); },
+  // (no worker to be had, or it couldn't do this one: done here instead, as it always used to be, one picture at a time with a breather between)
+  onMain(j) { this.mainCur = j; const done = v => { v ? j.ok(v) : j.no(); setTimeout(() => { this.mainCur = null; this.pump(); }, 150); }, img = new Image();
+    img.onerror = () => done(null);
+    img.onload = () => { try { const W = img.naturalWidth, H = img.naturalHeight, c = document.createElement("canvas"); c.width = W; c.height = H; const g = c.getContext("2d", { willReadFrequently: true }); g.drawImage(img, 0, 0);
+        const im = g.getImageData(0, 0, W, H), a = kzSoften(im.data, W, H, j.frames), b = kzUnbox(im.data, W, H, j.frames); if (!a && !b) return done({ same: true });
+        g.putImageData(im, 0, 0); c.toBlob(bl => done(bl ? { blob: bl } : null)); } catch (e) { done(null); } };
+    img.src = j.url; },
+  // a picture comes into use: from the saved art as the overlay starts, or new from the app. Stills are just loaded;
+  // an animation is loaded from its kept clean-up if there is one for exactly this picture, else cleaned first (and kept)
+  use(name, a) { const my = this.seq[name] = (this.seq[name] || 0) + 1, n = Math.max(1, a.frames || 1); this.loading[name] = my;       // (a newer picture for the same name wins, whichever loads first)
+    const done = () => { if (this.loading[name] === my) delete this.loading[name]; };
+    const show = (src, failed) => { const img = new Image(); img.__n = name;
+      img.onload = () => { done(); if (this.seq[name] !== my) return; this.sprites[name] = Object.assign({ img }, a); if (name === "tower" && Lurk.up) Lurk.paint(); if (/^plane_/.test(name)) this.whenQuiet("plane", () => Plane.prep());
+        if (/^gem_(base|power|topspin|dizzy)$/.test(name) && !MIRROR) { clearTimeout(this.gemT); this.gemT = setTimeout(() => { try { BitGems.warm(); } catch (e) {} }, 1500); } };
+      img.onerror = () => { if (failed && this.seq[name] === my) failed(); else done(); }; img.src = src; };
+    if (n < 2 || /^lli_|_beam$|_backdrop$/.test(name)) return show(a.url);
+    const of = this.sig(a), keep = !MIRROR;
+    const fresh = () => this.clean(name, a).then(res => { if (this.seq[name] !== my) return done();
+      if (res.same) { if (keep) this.rput(name, { v: this.PIPE, of }); return show(a.url); }
+      if (keep) this.rput(name, { v: this.PIPE, of, blob: res.blob }); show(URL.createObjectURL(res.blob), () => show(a.url)); }, () => { if (this.seq[name] === my) show(a.url); else done(); });
+    if (!keep) return fresh();
+    this.rget(name).then(k => { if (this.seq[name] !== my) return done();
+      if (k && k.v === this.PIPE && k.of === of) { if (!k.blob) return show(a.url); let u = null; try { u = URL.createObjectURL(k.blob); } catch (e) {} if (u) return show(u, fresh); }       // (a kept picture that won't load is made again)
+      fresh(); }); },
+  // (work that can wait is done at the first quiet moment: the overlay up for a little while, all the art loaded, and
+  // no effect or alert playing or tank on the move)
+  quiet: new Map(), quietT: 0,
+  whenQuiet(key, fn) { this.quiet.set(key, fn); if (this.quietT) return;
+    this.quietT = setInterval(() => { let busy = true; try { busy = !this.settled() || performance.now() < 20000 || FxLine.running || FxLine.playing() || Queue.busy || Flak.busy || Tanks.slots.some(t => t && (t.arrive || Math.abs(t.v || 0) > 5)); } catch (e) {} if (busy) return;
+      const fns = [...this.quiet.values()]; this.quiet.clear(); clearInterval(this.quietT); this.quietT = 0; fns.forEach(f => { try { f(); } catch (e) {} }); }, 1000); },
+  // everything saved has been asked for, and nothing is still loading or being cleaned
+  settled() { return this.listed && !this.pend && !this.working() && !Object.keys(this.loading).length; },
   NAMES: ["lli_frame", "lli_backdrop", "plane_fly", "plane_turn", "plane_roll", "plane_boom", "flak_cannon", "flak_fire", "tank_green", "tank_green_drive", "tank_green_fire", "tank_green_turretfire", "tank_green_tracked", "tank_green_hit", "tank_green_heavyhit", "tank_green_bounce", "tank_green_destroyed", "tank_blue", "tank_blue_drive", "tank_blue_fire", "tank_blue_turretfire", "tank_blue_tracked", "tank_blue_hit", "tank_blue_heavyhit", "tank_blue_bounce", "tank_blue_destroyed", "vin_anim", "yo_flag", "yo_F_UM", "yo_F_ly", "yo_F_UF", "yo_F_lr", "yo_F_li", "yo_F_le", "yo_F_ln", "yo_F_ld", "yo_F_lo", "yo_F_bang", "yo_F_UY", "yo_F_UL", "yo_F_UG", "yo_F_la", "yo_F_lm", "yo_F_under", "yo_F_UW", "yo_F_UP", "ufo_ship", "ufo_beam", "med_soldier_run", "med_soldier_down", "med_soldier_limp", "med_medic_run", "med_medic_reach", "med_medic_throw", "med_meat", "med_L_N", "med_L_E", "med_L_D", "med_L_Y", "med_L_O", "med_L_U", "med_L_M", "med_L_R", "train_engine", "train_car", "train_caboose", "train_wall", "train_L_M", "train_L_Y", "train_L_S", "train_L_T", "train_L_O", "train_L_R", "train_L_2", "train_L_D", "pb_bag", "pirate_ship", "pirate_wave", "pirate_fall", "pirate_slide", "pirate_waving", "scrap_truck", "scrap_truck_empty", "scrap_truck_dump", "scrap_pile", "scrap_guy", "scrap_guy_pop", "scrap_guy_cheer", "scrap_guy_run", "scrap_harvester", "scrap_harvester_go", "vt_L_v", "vt_L_UT", "vt_L_e", "vt_L_r", "vt_L_i", "vt_L_b", "vt_L_l", "vt_boma", "vt_soldier", "vt_soldier_cheer", "vt_soldier_throw", "vt_soldier_salute", "vt_soldier_flip", "gem_base", "gem_sparkle", "gem_pulse", "gem_fire", "gem_glint", "gem_turn", "gem_power", "gem_topspin", "gem_dizzy", "gem_bounce", "gem_twirl", "gem_sway", "gem_shiver", "gem_heart", "gem_bubbles", "gem_orbit", "gem_snow", "gem_galaxy", "gem_jelly", "dice_1", "dice_2", "dice_3", "dice_4", "dice_5", "dice_6", "dice_tumble", "dice_shake", "cs__base", "cs_tank", "cs_tank_form", "cs_tank_idle", "cs_tank_act", "cs_tank_turn", "cs_dog", "cs_dog_form", "cs_dog_idle", "cs_dog_act", "cs_dog_turn", "cs_cat", "cs_cat_form", "cs_cat_idle", "cs_cat_act", "cs_cat_turn", "cs_fish", "cs_fish_form", "cs_fish_idle", "cs_fish_act", "cs_fish_turn", "cs_whale", "cs_whale_form", "cs_whale_idle", "cs_whale_act", "cs_whale_turn", "cs_bunny", "cs_bunny_form", "cs_bunny_idle", "cs_bunny_act", "cs_bunny_turn", "cs_turtle", "cs_turtle_form", "cs_turtle_idle", "cs_turtle_act", "cs_turtle_turn", "cs_duck", "cs_duck_form", "cs_duck_idle", "cs_duck_act", "cs_duck_turn", "cs_elephant", "cs_elephant_form", "cs_elephant_idle", "cs_elephant_act", "cs_elephant_turn", "cs_dino", "cs_dino_form", "cs_dino_idle", "cs_dino_act", "cs_dino_turn", "cs_dragon", "cs_dragon_form", "cs_dragon_idle", "cs_dragon_act", "cs_dragon_turn", "cs_butterfly", "cs_butterfly_form", "cs_butterfly_idle", "cs_butterfly_act", "cs_bird", "cs_bird_form", "cs_bird_idle", "cs_bird_act", "cs_bird_turn", "cs_snail", "cs_snail_form", "cs_snail_idle", "cs_snail_turn", "cs_octopus", "cs_octopus_form", "cs_octopus_idle", "cs_octopus_act", "cs_crab", "cs_crab_form", "cs_crab_idle", "cs_crab_act", "cs_plane", "cs_plane_form", "cs_plane_idle", "cs_plane_act", "cs_plane_turn", "cs_rocket", "cs_rocket_form", "cs_rocket_idle", "cs_rocket_act", "cs_car", "cs_car_form", "cs_car_idle", "cs_car_act", "cs_car_turn", "cs_train", "cs_train_form", "cs_train_idle", "cs_train_act", "cs_train_turn", "cs_boat", "cs_boat_form", "cs_boat_idle", "cs_heli", "cs_heli_form", "cs_heli_idle", "cs_heli_turn", "cs_ufo", "cs_ufo_form", "cs_ufo_idle", "cs_ufo_act", "cs_ufo_turn", "cs_heart", "cs_heart_form", "cs_heart_idle", "cs_heart_act", "cs_star", "cs_star_form", "cs_star_idle", "cs_star_act", "cs_moon", "cs_moon_form", "cs_moon_idle", "cs_mushroom", "cs_mushroom_form", "cs_mushroom_idle", "cs_tree", "cs_tree_form", "cs_tree_idle", "cs_castle", "cs_castle_form", "cs_castle_idle", "cs_ghost", "cs_ghost_form", "cs_ghost_idle", "cs_ghost_act", "cs_pig", "cs_pig_form", "cs_pig_idle", "cs_pig_act", "cs_pig_turn", "cs_sheep", "cs_sheep_form", "cs_sheep_idle", "cs_sheep_act", "cs_sheep_turn", "cs_lion", "cs_lion_form", "cs_lion_idle", "cs_lion_act", "cs_lion_turn", "cs_giraffe", "cs_giraffe_form", "cs_giraffe_idle", "cs_giraffe_turn", "cs_horse", "cs_horse_form", "cs_horse_idle", "cs_horse_act", "cs_horse_turn", "cs_cow", "cs_cow_form", "cs_cow_idle", "cs_cow_act", "cs_cow_turn", "cs_penguin", "cs_penguin_form", "cs_penguin_idle", "cs_penguin_act", "cs_owl", "cs_owl_form", "cs_owl_idle", "cs_owl_act", "cs_frog", "cs_frog_form", "cs_frog_idle", "cs_frog_act", "cs_frog_turn", "cs_snake", "cs_snake_form", "cs_snake_idle", "cs_snake_act", "cs_snake_turn", "cs_shark", "cs_shark_form", "cs_shark_idle", "cs_shark_act", "cs_shark_turn", "cs_dolphin", "cs_dolphin_form", "cs_dolphin_idle", "cs_dolphin_act", "cs_dolphin_turn", "cs_bee", "cs_bee_form", "cs_bee_idle", "cs_bee_act", "cs_bee_turn", "cs_spider", "cs_spider_form", "cs_spider_idle", "cs_mouse", "cs_mouse_form", "cs_mouse_idle", "cs_mouse_act", "cs_mouse_turn", "cs_fox", "cs_fox_form", "cs_fox_idle", "cs_fox_act", "cs_fox_turn", "cs_bear", "cs_bear_form", "cs_bear_idle", "cs_bear_act", "cs_bear_turn", "cs_kangaroo", "cs_kangaroo_form", "cs_kangaroo_idle", "cs_kangaroo_act", "cs_kangaroo_turn", "cs_flamingo", "cs_flamingo_form", "cs_flamingo_idle", "cs_flamingo_turn", "cs_seahorse", "cs_seahorse_form", "cs_seahorse_idle", "cs_seahorse_turn", "cs_jellyfish", "cs_jellyfish_form", "cs_jellyfish_idle", "cs_jellyfish_act", "cs_unicorn", "cs_unicorn_form", "cs_unicorn_idle", "cs_unicorn_act", "cs_unicorn_turn", "cs_guitar", "cs_guitar_form", "cs_guitar_idle", "cs_guitar_act", "cs_umbrella", "cs_umbrella_form", "cs_umbrella_idle", "cs_umbrella_act", "cs_balloon", "cs_balloon_form", "cs_balloon_idle", "cs_balloon_act", "cs_lighthouse", "cs_lighthouse_form", "cs_lighthouse_idle", "cs_lighthouse_act", "cs_house", "cs_house_form", "cs_house_idle", "cs_house_act", "cs_robot", "cs_robot_form", "cs_robot_idle", "cs_robot_act", "cs_skull", "cs_skull_form", "cs_skull_idle", "cs_skull_act", "cs_crown", "cs_crown_form", "cs_crown_idle", "cs_crown_act", "cs_anchor", "cs_anchor_form", "cs_anchor_idle", "cs_sword", "cs_sword_form", "cs_sword_idle", "cs_sword_act", "cs_trophy", "cs_trophy_form", "cs_trophy_idle", "cs_trophy_act", "cs_cupcake", "cs_cupcake_form", "cs_cupcake_idle", "cs_icecream", "cs_icecream_form", "cs_icecream_idle", "cs_pizza", "cs_pizza_form", "cs_pizza_idle", "cs_pizza_turn", "cs_apple", "cs_apple_form", "cs_apple_idle", "cs_bell", "cs_bell_form", "cs_bell_idle", "cs_bell_act", "cs_kite", "cs_kite_form", "cs_kite_idle", "cs_submarine", "cs_submarine_form", "cs_submarine_idle", "cs_submarine_act", "cs_submarine_turn", "cs_bicycle", "cs_bicycle_form", "cs_bicycle_idle", "cs_bicycle_act", "cs_bicycle_turn", "cs_gamepad", "cs_gamepad_form", "cs_gamepad_idle", "cs_gamepad_act", "cf_e_none", "disco_glint", "cf_x_talk_me", "sm_hat", "sm_face", "sm_nose", "sm_arm", "sm_ball", "sm_ball_melt", "sm_puddle", "cf_ref", "cf_x_talk", "cf_x_wide", "cf_x_look_l", "cf_x_look_r", "cf_x_smile", "cf_x_grin", "cf_x_oo", "cf_x_blink", "cf_v_smile_talk", "cf_v_smile_l", "cf_v_smile_r", "cf_v_grin_talk", "cf_v_grin_l", "cf_v_grin_r", "cf_v_oo_talk", "cf_v_oo_l", "cf_v_oo_r", "cf_v_closed_talk", "cf_e_smirk", "cf_v_smirk_talk", "cf_v_smirk_l", "cf_v_smirk_r", "cf_e_wink", "cf_v_wink_talk", "cf_e_laugh", "cf_v_laugh_talk", "cf_e_shocked", "cf_v_shocked_talk", "cf_v_shocked_l", "cf_v_shocked_r", "cf_e_sleepy", "cf_v_sleepy_talk", "cf_v_sleepy_l", "cf_v_sleepy_r", "cf_e_sideeye", "cf_v_sideeye_talk", "cf_v_sideeye_l", "cf_v_sideeye_r", "cf_e_sad", "cf_v_sad_talk", "cf_v_sad_l", "cf_v_sad_r", "cf_e_tongue", "cf_v_tongue_talk", "cf_v_tongue_l", "cf_v_tongue_r", "cf_e_puffed", "cf_v_puffed_talk", "cf_v_puffed_l", "cf_v_puffed_r", "cf_e_determined", "cf_v_determined_talk", "cf_v_determined_l", "cf_v_determined_r", "cf_e_evil", "cf_v_evil_talk", "cf_v_evil_l", "cf_v_evil_r", "cf_e_smug", "cf_v_smug_talk", "cf_v_smug_l", "cf_v_smug_r", "cf_e_confused", "cf_v_confused_talk", "cf_v_confused_l", "cf_v_confused_r", "cf_e_disgusted", "cf_v_disgusted_talk", "cf_v_disgusted_l", "cf_v_disgusted_r", "cf_e_nervous", "cf_v_nervous_talk", "cf_v_nervous_l", "cf_v_nervous_r", "cf_e_kissy", "cf_v_kissy_talk", "cf_v_kissy_l", "cf_v_kissy_r", "cf_e_bored", "cf_v_bored_talk", "cf_v_bored_l", "cf_v_bored_r", "cf_e_excited", "cf_v_excited_talk", "cf_v_excited_l", "cf_v_excited_r", "cf_e_thinking", "cf_v_thinking_talk", "cf_v_thinking_l", "cf_v_thinking_r", "cf_e_scared", "cf_v_scared_talk", "cf_v_scared_l", "cf_v_scared_r", "jinx_flip", "jinx_spin", "jinx_fire", "jinx_launch", "artillery", "golden_banana", "golden_mango", "tower", "eagle_roll", "tank_drive", "soldier_run", "soldier_throw", "grenade", "explosion", "eagle_glide", "eagle_flap", "plane", "title", "chef_parachute", "chef_chop", "chef_jump", "chef_fly", "chef_truck", "cf_x_look_d", "cf_v_smile_d", "cf_v_grin_d", "cf_v_oo_d", "cf_v_smirk_d", "cf_v_shocked_d", "cf_v_sleepy_d", "cf_v_sideeye_d", "cf_v_sad_d", "cf_v_tongue_d", "cf_v_puffed_d", "cf_v_determined_d", "cf_v_evil_d", "cf_v_smug_d", "cf_v_confused_d", "cf_v_disgusted_d", "cf_v_nervous_d", "cf_v_kissy_d", "cf_v_bored_d", "cf_v_excited_d", "cf_v_thinking_d", "cf_v_scared_d"],
   async load() {
-    try { const db = await this.open(), get = n => { const r = db.transaction("a").objectStore("a").get(n); r.onsuccess = () => { if (r.result) this.use(n, r.result); }; };
-      const all = () => new Promise(ok => { const r = db.transaction("a").objectStore("a").getAllKeys(); r.onsuccess = () => ok(r.result || []); r.onerror = () => ok([]); });
-      if (!MIRROR) { this.NAMES.forEach(get); (await all()).filter(n => /^cx_/.test(n)).forEach(get); return; }
-      // the touchpad copy: only the pictures the app really has, the ones that are on screen all the time first (cloud,
-      // gems, dice), then the rest a few at a time, so opening the touchpad never makes the app stutter
-      const keys = await new Promise(ok => { const r = db.transaction("a").objectStore("a").getAllKeys(); r.onsuccess = () => ok(new Set(r.result)); r.onerror = () => ok(null); });
-      const first = n => /^(gem_|dice_|cf_ref|cf_x_|cf_e_none|cs__base|sm_)/.test(n) ? 0 : 1, todo = this.NAMES.filter(n => !keys || keys.has(n)).concat(keys ? [...keys].filter(n => /^cx_/.test(n)) : []).sort((a, b) => first(a) - first(b));
-      const step = () => { todo.splice(0, first(todo[0] || "") ? 6 : 40).forEach(get); if (todo.length) setTimeout(step, 60); }; step();
-    } catch (e) {}
+    try { const db = await this.open(), get = n => { this.pend++; const q = db.transaction("a").objectStore("a").get(n); q.onerror = () => { this.pend--; };
+        q.onsuccess = () => { this.pend--; if (q.result && !this.sprites[n] && !this.loading[n]) this.use(n, q.result); }; };       // (unless something asked for it sooner: see ready)
+      // only the pictures that have really been made; the ones on screen all the time first (cloud, gems, dice, and
+      // the tanks if any were out), then the rest a few at a time, so starting up never makes anything stutter
+      const keys = await new Promise(ok => { const q = db.transaction("a").objectStore("a").getAllKeys(); q.onsuccess = () => ok(new Set(q.result)); q.onerror = () => ok(null); });
+      let tanks = false; try { tanks = !MIRROR && (JSON.parse(localStorage.getItem("tankOut")) || []).some(Boolean); } catch (e) {}
+      const first = MIRROR ? (n => /^(gem_|dice_|cf_ref|cf_x_|cf_e_none|cs__base|sm_)/.test(n) ? 0 : 1) : (n => /^(gem_|dice_|cf_|cs__base|sm_|tower)/.test(n) || (tanks && /^tank_(green|blue)/.test(n)) ? 0 : 1);
+      const todo = this.NAMES.filter(n => !keys || keys.has(n)).concat(keys ? [...keys].filter(n => /^cx_/.test(n)) : []).sort((a, b) => first(a) - first(b));
+      const step = () => { todo.splice(0, first(todo[0] || "") ? (MIRROR ? 6 : 10) : 40).forEach(get); if (todo.length) setTimeout(step, MIRROR ? 60 : 35); else this.listed = true; }; step();
+    } catch (e) { this.listed = true; }
   },
-  // waits (up to ms) until these pictures, if they've been made, are loaded and ready to draw. An effect that starts
-  // right after the page has (re)loaded would otherwise find its art not there yet and play with stand-ins.
+  // waits (up to ms) until these pictures, if they've been made, are loaded and ready to draw (decoded too, see Bmp).
+  // An effect that starts right after the page has (re)loaded would otherwise find its art not there yet and play
+  // with stand-ins.
   async ready(names, ms = 4000) { const end = Date.now() + ms;
-    let have = null; try { const db = await this.open(); have = await new Promise(ok => { const r = db.transaction("a").objectStore("a").getAllKeys(); r.onsuccess = () => ok(new Set(r.result)); r.onerror = () => ok(null); }); } catch (e) {}
+    let have = null; try { const db = await this.open(); have = await new Promise(ok => { const q = db.transaction("a").objectStore("a").getAllKeys(); q.onsuccess = () => ok(new Set(q.result)); q.onerror = () => ok(null); }); } catch (e) {}
     const want = names.filter(n => !have || have.has(n)), ok = n => { const a = this.sprites[n]; return a && a.img && a.img.complete && a.img.naturalWidth; };
-    if (have) want.forEach(n => { if (!this.sprites[n]) { const db = this.db; db.then(d => { const r = d.transaction("a").objectStore("a").get(n); r.onsuccess = () => { if (r.result && !this.sprites[n]) this.use(n, r.result); }; }); } });
-    while (Date.now() < end && !want.every(ok)) await new Promise(r => setTimeout(r, 80)); },
+    this.bump(want);                                                  // (any of them still waiting to be cleaned go to the front of the line)
+    if (have) want.forEach(n => { if (!this.sprites[n] && !this.loading[n]) { const db = this.db; db.then(d => { const q = d.transaction("a").objectStore("a").get(n); q.onsuccess = () => { if (q.result && !this.sprites[n] && !this.loading[n]) this.use(n, q.result); }; }); } });
+    while (Date.now() < end && !want.every(ok)) await new Promise(r => setTimeout(r, 80));
+    await Bmp.all(want.filter(ok).map(n => this.sprites[n].img), Math.max(400, end - Date.now())); },
   // a piece of art arriving from the app (sent in parts)
   async receive(c) {
     const k = c.name + "/" + c.set, p = this.parts[k] || (this.parts[k] = { got: [], n: c.parts });
@@ -5442,10 +5616,10 @@ const Pirate = {
     const v = top >= 0 ? top / sp.h + .03 : .7;                                       // feet a little below the rail top, on the walkway
     return sp._deck = [u, Math.min(.84, v)]; },
   // the drawn figure's box inside a picture (all frames together), so his feet land exactly where they should
-  figOf(sp) { if (sp._fig) return sp._fig; const fw = sp.w, n = sp.frames || 1, c = document.createElement("canvas"); c.width = fw * n; c.height = sp.h;
+  figOf(sp) { if (sp._fig) return sp._fig; { const had = ArtFacts.get(sp, "fig"); if (had) return sp._fig = had; } const fw = sp.w, n = sp.frames || 1, c = document.createElement("canvas"); c.width = fw * n; c.height = sp.h;
     const g = c.getContext("2d", { willReadFrequently: true }); g.drawImage(sp.img, 0, 0, fw * n, sp.h, 0, 0, fw * n, sp.h); const d = g.getImageData(0, 0, fw * n, sp.h).data;
     let x0 = fw, y0 = sp.h, x1 = 0, y1 = 0; for (let y = 0; y < sp.h; y += 2) for (let X = 0; X < fw * n; X += 2) if (d[(y * fw * n + X) * 4 + 3] > 60) { const x = X % fw; if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
-    return sp._fig = x1 > x0 && y1 > y0 ? { x0, y0, x1, y1 } : { x0: 0, y0: 0, x1: fw, y1: sp.h }; },
+    return sp._fig = ArtFacts.set(sp, "fig", x1 > x0 && y1 > y0 ? { x0, y0, x1, y1 } : { x0: 0, y0: 0, x1: fw, y1: sp.h }); },
   drawShip(g, cx, top, w, h, face) {
     g.save(); g.translate(cx, top); g.scale(face, 1);
     g.fillStyle = "#6b3e1f"; g.beginPath(); g.moveTo(-w * .48, h * .62); g.lineTo(w * .48, h * .62); g.lineTo(w * .38, h * .9); g.lineTo(-w * .4, h * .9); g.closePath(); g.fill();
@@ -6098,11 +6272,16 @@ const BitGems = {
     if (c.anim) { const sp = S[c.anim.name]; if (sp) { const a = now - c.anim.at, f = Math.floor(a / (sp.ms || 100));
         if (c.anim.once ? f < sp.frames : a < c.anim.dur) return [sp, c.anim.once ? f : f % sp.frames]; } c.anim = null; }
     return [S.gem_base, 0]; },
-  // colour every gem animation ahead of time (a little at a time), so starting one never stutters
-  warm() { if (MIRROR || this._warming) return; const S = ChefArt.sprites, names = ["gem_base", "gem_power", "gem_topspin", "gem_dizzy", ...this.IDLE].filter(n => S[n]);
+  // one sheet coloured ahead of when it's needed (decoded in the background first: see Bmp)
+  ahead(sp, col) { if (MIRROR || !sp || this.tints[(sp._id || (sp._id = ++this.ids)) + "/" + col]) return; const go = () => { try { this.tinted(sp, col); } catch (e) {} Bmp.soon(sp.img); }; Bmp.want(sp.img).then(go, go); },
+  // the gem's own pictures (standing, thrown, spinning, dizzy) are coloured ahead of time for every colour on screen, a
+  // little at a time: when gems come back as the overlay starts (once their art has loaded), and when one is added.
+  // (The little animations are coloured a turn ahead instead, as each is picked: see the frame loop.)
+  warm() { if (MIRROR || this._warming) return; const S = ChefArt.sprites, names = ["gem_base", "gem_power", "gem_topspin", "gem_dizzy"].filter(n => S[n]);
     const cols = [...new Set(this.list.map(c => bitColor(c.bits)))], sig = cols.join() + "/" + names.map(n => S[n]._id || n).join(); if (sig === this._warmSig) return;
     this._warmSig = sig; this._warming = true; const jobs = []; cols.forEach(col => names.forEach(n => jobs.push([S[n], col])));
-    const next = () => { const j = jobs.shift(); if (!j) { this._warming = false; this.warm(); return; } this.tinted(j[0], j[1]); setTimeout(next, 120); }; next(); },   // (then once more, in case a new colour or picture turned up meanwhile)
+    const next = () => { const j = jobs.shift(); if (!j) { this._warming = false; this.warm(); return; }                    // (then once more, in case a new colour or picture turned up meanwhile)
+      const go = () => { try { this.tinted(j[0], j[1]); } catch (e) {} Bmp.soon(j[0].img); setTimeout(next, 120); }; Bmp.want(j[0].img).then(go, go); }; next(); },   // (each sheet decoded in the background first: see Bmp)
   play(c, name, once) { const sp = ChefArt.sprites[name]; if (!sp) return; c.anim = { name, at: performance.now(), once, dur: once ? 0 : sp.frames * (sp.ms || 100) * 2 }; },
   shade(hex, k) { const n = parseInt(hex.slice(1), 16), r = n >> 16, g = (n >> 8) & 255, b = n & 255, f = v => Math.max(0, Math.min(255, Math.round(k > 0 ? v + (255 - v) * k : v * (1 + k))));
     return `rgb(${f(r)},${f(g)},${f(b)})`; },
@@ -6137,12 +6316,12 @@ const BitGems = {
     // Not turning or pulsing (nearly all the time): the gem looks exactly the same every frame apart from its tilt, so its
     // picture (with the two soft glows, the costly part) is drawn once into a small canvas and that is tilted and placed
     // each frame. Anything else (rolling, spinning, a pulse) is drawn fresh as before.
-    const key = !roll && !c.pulse && !c.topSpin ? (art ? (art[0]._id || (art[0]._id = ++this.ids)) + "/" + art[1] : "drawn") : "";
+    const key = !roll && !c.pulse && !c.topSpin && !c.anim ? (art ? (art[0]._id || (art[0]._id = ++this.ids)) + "/" + art[1] : "drawn") : "";       // (only its resting picture is kept: one small canvas a gem)
     g.save(); g.translate(c.x, c.y); g.rotate(c.tilt);
     if (key) { const C = this.still(c, key, col, W, H, art, x => this.paint(x, c, t, art, roll, sq, col, W, H, PAV, CR, tw, top, gird));
       if (C) { g.drawImage(C, C._x, C._y); g.restore(); this.swirl(g, c, true); return; } }
     this.paint(g, c, t, art, roll, sq, col, W, H, PAV, CR, tw, top, gird); g.restore(); this.swirl(g, c, true); },
-  still(c, key, col, W, H, art, paint) { const base = col + "|" + W + "|" + c.name; if (!c._st || c._st.base !== base || c._st.m.size > 48) c._st = { base, m: new Map() };
+  still(c, key, col, W, H, art, paint) { const base = col + "|" + W + "|" + c.name; if (!c._st || c._st.base !== base || c._st.m.size > 2) c._st = { base, m: new Map() };
     let C = c._st.m.get(key); if (C) return C;
     let x0 = -W / 2, x1 = W / 2, y0 = -H, y1 = 0;                                    // what it covers: the stone, the name, and the art's whole frame
     if (art) { const sp = art[0], b = Pirate.figOf(sp), k = W / (b.x1 - b.x0), ax = -(b.x0 + b.x1) / 2 * k, ay = -b.y1 * k; x0 = Math.min(x0, ax); x1 = Math.max(x1, ax + sp.w * k); y0 = Math.min(y0, ay); y1 = Math.max(y1, ay + sp.h * k); }
@@ -6224,7 +6403,10 @@ const BitGems = {
           else { c.tilt = L.from + (L.to - L.from) * e; c.hop = Math.sin(k * Math.PI) * 26; if (k >= 1) { c.lie = null; c.hop = 0; c.wob = .18 * Math.sign(L.from || 1); c.next = now + rand(7000, 18000); this.save(); } }
           c.y = this.FLOOR - this.drop(c, c.tilt) - (c.hop || 0); }
         else {
-          if (!c.anim && now > (c.fxAt || 0)) { c.fxAt = now + rand(5000, 12000); if (c.fxAt0) { const have = this.IDLE.filter(n => ChefArt.sprites[n]); if (have.length) this.play(c, have[Math.floor(Math.random() * have.length)]); } c.fxAt0 = 1; }
+          // every few seconds it plays one of its little animations: which one is picked a turn ahead, so its sheet can be
+          // coloured (and decoded) in the meantime instead of on the animation's first frame
+          if (!c.anim && now > (c.fxAt || 0)) { c.fxAt = now + rand(5000, 12000); if (c.fxAt0 && c.fxNext && ChefArt.sprites[c.fxNext]) this.play(c, c.fxNext); c.fxAt0 = 1;
+            const have = this.IDLE.filter(n => ChefArt.sprites[n]); c.fxNext = have.length ? have[Math.floor(Math.random() * have.length)] : null; if (c.fxNext) this.ahead(ChefArt.sprites[c.fxNext], bitColor(c.bits)); }
           // resting: a settling wobble that dies away, then a gentle rock
           c.wob = (c.wob || 0) * Math.pow(.97, dt); c.tilt = c.wob * Math.cos((now - c.born) / 130) + Math.sin(now / 1400 + c.born) * .025;
           c.y = this.FLOOR - this.drop(c, c.tilt);
@@ -7161,7 +7343,7 @@ const Tanks = {
     // OBS: the app says which of this team's tank pictures OBS doesn't have (they show as the other team's, or stand-ins)
     if (!MIRROR) { const miss = ChefArt.NAMES.filter(n => n.startsWith("tank_" + team) && (n === "tank_" + team || n.startsWith("tank_" + team + "_")) && !ChefArt.sprites[n]);
       if (miss.length && window.remoteSend) window.remoteSend({ cmd: "artMissing", what: "🪖 The " + team + " team's tank", names: miss }); }
-    this.slots[s] = { s, k, name, color, team, hp: 1, tracks: true, turret: true, x: s ? 2560 + 500 : -500, home: 0, born: now, last: now, nextShot: now + 5200 + Math.random() * 1200, recoil: 0, say: null, sayAt: 0, parts: [], dead: 0, shake: 0, streak: +streak || 0, intro: o && !o.dead && !o.leaving ? now + 5000 : 0, parkAt: o && !o.dead && !o.leaving ? 0 : now + 3200 };       // (alone: it drives all the way out, then backs up to wait)
+    this.slots[s] = { arrive: now + 1500, s, k, name, color, team, hp: 1, tracks: true, turret: true, x: s ? 2560 + 500 : -500, home: 0, born: now, last: now, nextShot: now + 5200 + Math.random() * 1200, recoil: 0, say: null, sayAt: 0, parts: [], dead: 0, shake: 0, streak: +streak || 0, intro: o && !o.dead && !o.leaving ? now + 5000 : 0, parkAt: o && !o.dead && !o.leaving ? 0 : now + 3200 };       // (alone: it drives all the way out, then backs up to wait)
     this.saveOut(); this.start(); },
   fix(s) { const t = this.slots[s]; if (!t || t.dead) return; t.hp = 1; t.tracks = t.turret = true; t.tgone = false; t.parts = []; t.play = null; t.last = performance.now(); this.say(t, "🔧 repaired! −" + fmt(this.COST) + " salvage");
     for (let i = 0; i < 18; i++) this.fx.push({ k: "spark", x: this.cx(t) + rand(-120, 120), y: this.GY - rand(40, 220), vx: rand(-200, 200), vy: rand(-320, -60), at: performance.now(), life: rand(500, 900), c: "#a3e635" }); },
@@ -7235,25 +7417,32 @@ const Tanks = {
   // a picture; if this team's tank picture isn't there but the other team's is, that one (better than the stand-in)
   sp(k) { const ok = a => a && a.img && a.img.complete && a.img.naturalWidth ? a : null, a = ok(ChefArt.sprites[k]); if (a) return a;
     const m = /^tank_(green|blue)(.*)$/.exec(k); return m ? ok(ChefArt.sprites["tank_" + (m[1] === "green" ? "blue" : "green") + m[2]]) : null; },
-  /* Smooth driving: a picture is normally decoded the first time it's drawn, and the browser may throw the decoded copy
-     away again while it isn't being drawn (say the driving animation, while a tank sits parked), so starting to move
-     would stall a frame or two to decode it again, and measuring a picture's shape the first time costs a moment too.
-     So when a tank comes out, each of its team's pictures is decoded once into a copy that stays ready to draw (the same
-     pixels), and its shape is measured ahead of time, one picture at a time, before it's needed. */
+  /* Smooth driving. A picture is normally decoded the first time it's drawn (and again whenever the browser has dropped
+     its decoded copy, say the driving animation while a tank sat parked), and measuring a picture's shape reads it back:
+     both make everything wait, just as the tank starts to move. So:
+     - when a tank is about to come out its team's pictures are decoded in the background into ready-to-draw copies
+       (Bmp), and it waits just off screen, a moment at most, until they're there; they're kept ready for as long as a
+       tank of that team is out (while one waits alone, just its standing and driving pictures) and let go soon after;
+     - each picture's measured shape is kept for good with the picture's fingerprint (ArtFacts), so it's never measured
+       again, and art that hasn't been measured yet is measured at a quiet moment, not mid-battle. */
   NAMES: ["", "_drive", "_fire", "_turretfire", "_tracked", "_hit", "_heavyhit", "_bounce", "_destroyed"],
-  px(a) { return a.bmp && a.bmpSrc === a.img.src ? a.bmp : a.img; },
-  prep(team) { const list = this.NAMES.map(n => this.sp("tank_" + team + n)).filter(Boolean); let i = 0;
-    list.forEach(a => { if (window.createImageBitmap && a.bmpFor !== a.img.src) { const src = a.bmpFor = a.img.src;
-      (a.img.decode ? a.img.decode().catch(() => {}) : Promise.resolve()).then(() => a.img.src === src ? createImageBitmap(a.img) : null).then(bm => { if (bm && a.img.src === src) { a.bmp = bm; a.bmpSrc = src; } }).catch(() => { a.bmpFor = null; }); }
-      if (!a._cut || !a._cutA) setTimeout(() => { try { if (a === list[0]) this.cut(a); else this.cutA(a); } catch (e) {} }, 40 * ++i); }); },
+  imgs(team, lone) { return (lone ? ["", "_drive"] : this.NAMES).map(n => this.sp("tank_" + team + n)).filter(Boolean).map(a => a.img); },       // (lone: no battle on, so just standing and driving)
+  prep(team, lone) { this.imgs(team, lone).forEach(i => Bmp.want(i)); },
+  primed(team, lone) { return this.imgs(team, lone).every(i => Bmp.has(i)); },
+  lone(t) { const e = this.slots[1 - t.s]; return !e || !!e.dead || !!e.leaving; },
+  measure() { if (MIRROR || this.measuring) return; const todo = [];
+    ["green", "blue"].forEach(team => this.NAMES.forEach((n, i) => { const a = ChefArt.sprites["tank_" + team + n]; if (a && a.img.complete && a.img.naturalWidth && !(i ? a._cutA || ArtFacts.get(a, "tcutA") : a._cut || ArtFacts.get(a, "tcut"))) todo.push([a, i]); }));
+    if (!todo.length) return; this.measuring = true;
+    const next = () => { const j = todo.shift(); if (!j) { this.measuring = false; return; } if (window.kzBusy && window.kzBusy()) { todo.unshift(j); return setTimeout(next, 3000); }
+      try { j[1] ? this.cutA(j[0]) : this.cut(j[0]); } catch (e) {} setTimeout(next, 400); }; next(); },
   // a tank picture's shape: the part that's tank (not background), where the turret line is, the tracks line, the barrel end
-  cut(a) { if (a._cut) return a._cut; const W = Math.min(600, a.img.naturalWidth), Hh = Math.round(W * a.img.naturalHeight / a.img.naturalWidth), c = document.createElement("canvas"); c.width = W; c.height = Hh;
-    const g = c.getContext("2d", { willReadFrequently: true }); g.drawImage(this.px(a), 0, 0, W, Hh); const d = g.getImageData(0, 0, W, Hh).data, A = (x, y) => d[(y * W + x) * 4 + 3] > 60;
+  cut(a) { if (a._cut) return a._cut; { const had = ArtFacts.get(a, "tcut"); if (had) return a._cut = had; } const W = Math.min(600, a.img.naturalWidth), Hh = Math.round(W * a.img.naturalHeight / a.img.naturalWidth), c = document.createElement("canvas"); c.width = W; c.height = Hh;
+    const g = c.getContext("2d", { willReadFrequently: true }); g.drawImage(a.img, 0, 0, W, Hh); const d = g.getImageData(0, 0, W, Hh).data, A = (x, y) => d[(y * W + x) * 4 + 3] > 60;
     let x0 = W, x1 = 0, y0 = Hh, y1 = 0; for (let y = 0; y < Hh; y += 2) for (let x = 0; x < W; x += 2) if (A(x, y)) { if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
     if (x1 <= x0) { x0 = 0; x1 = W; y0 = 0; y1 = Hh; } const bh = y1 - y0, ring = a.nozzle ? a.nozzle[1] * Hh : y0 + bh * .4, trk = y0 + bh * .7;
     let mx = x0, my = (y0 + ring) / 2; for (let y = Math.round(y0); y < ring; y++) for (let x = W - 1; x > mx; x--) if (A(x, y)) { mx = x; my = y; break; }      // the barrel's end: the furthest-right point above the turret line
     const b = this.band(A, W, Hh, y0, y1);
-    return a._cut = { x0: x0 / W, x1: x1 / W, y0: y0 / Hh, y1: y1 / Hh, ring: ring / Hh, trk: trk / Hh, mx: mx / W, my: my / Hh, bx0: b[0] / W, bx1: b[1] / W, by1: b[2] / Hh }; },
+    return a._cut = ArtFacts.set(a, "tcut", { x0: x0 / W, x1: x1 / W, y0: y0 / Hh, y1: y1 / Hh, ring: ring / Hh, trk: trk / Hh, mx: mx / W, my: my / Hh, bx0: b[0] / W, bx1: b[1] / W, by1: b[2] / Hh }); },
   // the tracks' length: how wide the tank is along its bottom (its lowest fifth). Smoke, flashes and flying bits are
   // above or beside it, so every picture of the same tank can be sized by this and come out the same size
   band(A, W, Hh, y0, y1) { let lo = y1; for (let y = Math.min(Hh - 1, Math.round(y1) + 2); y >= y0; y--) { let any = false; for (let x = 0; x < W; x += 2) if (A(x, y)) { any = true; break; } if (any) { lo = y; break; } }
@@ -7262,19 +7451,19 @@ const Tanks = {
     return bx1 > bx0 ? [bx0, bx1, lo] : [0, W, lo]; },
   // an animation's frame, sized and placed by where the tank is in its first frame (so every frame lines up, and a
   // turret flying off can leave the tank's box)
-  cutA(a) { if (a._cutA) return a._cutA; const n = a.frames || 1, fw0 = a.img.naturalWidth / n, W = Math.min(500, Math.round(fw0)), Hh = Math.round(W * a.img.naturalHeight / fw0), c = document.createElement("canvas"); c.width = W; c.height = Hh;
-    const g = c.getContext("2d", { willReadFrequently: true }); g.drawImage(this.px(a), 0, 0, fw0, a.img.naturalHeight, 0, 0, W, Hh); const d = g.getImageData(0, 0, W, Hh).data;
+  cutA(a) { if (a._cutA) return a._cutA; { const had = ArtFacts.get(a, "tcutA"); if (had) return a._cutA = had; } const n = a.frames || 1, fw0 = a.img.naturalWidth / n, W = Math.min(500, Math.round(fw0)), Hh = Math.round(W * a.img.naturalHeight / fw0), c = document.createElement("canvas"); c.width = W; c.height = Hh;
+    const g = c.getContext("2d", { willReadFrequently: true }); g.drawImage(a.img, 0, 0, fw0, a.img.naturalHeight, 0, 0, W, Hh); const d = g.getImageData(0, 0, W, Hh).data;
     let x0 = W, x1 = 0, y0 = Hh, y1 = 0; for (let y = 0; y < Hh; y += 2) for (let x = 0; x < W; x += 2) if (d[(y * W + x) * 4 + 3] > 60) { if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
     if (x1 <= x0) { x0 = 0; x1 = W; y0 = 0; y1 = Hh; } const b = this.band((x, y) => d[(y * W + x) * 4 + 3] > 60, W, Hh, y0, y1);
-    return a._cutA = { x0: x0 / W, x1: x1 / W, y0: y0 / Hh, y1: y1 / Hh, bx0: b[0] / W, bx1: b[1] / W, by1: b[2] / Hh }; },
+    return a._cutA = ArtFacts.set(a, "tcutA", { x0: x0 / W, x1: x1 / W, y0: y0 / Hh, y1: y1 / Hh, bx0: b[0] / W, bx1: b[1] / W, by1: b[2] / Hh }); },
   // (st: the tank's still picture: the frame is sized so its tracks come out exactly as long as the still's, and placed
   // with its tracks where the still's are, on the ground)
   frame(g, a, i, w, top, st) { const c = this.cutA(a), n = a.frames || 1, fw = a.img.naturalWidth / n, fh = a.img.naturalHeight, f = Math.min(n - 1, Math.max(0, i)) * fw;
     if (st) { const s = this.cut(st), iw = st.img.naturalWidth, ih = st.img.naturalHeight, ks = this.H / ((s.y1 - s.y0) * ih), bw = (s.bx1 - s.bx0) * iw * ks, bc = ((s.bx0 + s.bx1) / 2 - s.x0) * iw * ks, gy = top + (s.by1 - s.y0) * ih * ks;
       // (if the tracks' length in this animation can't be told well, the sizes disagree a lot: then it's sized like the still by its height, and set on the ground)
       let k = bw / Math.max(1, (c.bx1 - c.bx0) * fw); const kh = this.H / Math.max(1, (c.y1 - c.y0) * fh); if (!(k / kh > .6 && k / kh < 1.6)) k = Math.min(kh, w / Math.max(1, (c.x1 - c.x0) * fw));
-      const ac = (c.bx0 + c.bx1) / 2 * fw * k; g.drawImage(this.px(a), f, 0, fw, fh, bc - ac, gy - c.by1 * fh * k, fw * k, fh * k); return; }
-    const k = this.H / ((c.y1 - c.y0) * fh), dw = (c.x1 - c.x0) * fw * k; g.drawImage(this.px(a), f, 0, fw, fh, (w - dw) / 2 - c.x0 * fw * k, top - c.y0 * fh * k, fw * k, fh * k); },
+      const ac = (c.bx0 + c.bx1) / 2 * fw * k; g.drawImage(a.img, f, 0, fw, fh, bc - ac, gy - c.by1 * fh * k, fw * k, fh * k); return; }
+    const k = this.H / ((c.y1 - c.y0) * fh), dw = (c.x1 - c.x0) * fw * k; g.drawImage(a.img, f, 0, fw, fh, (w - dw) / 2 - c.x0 * fw * k, top - c.y0 * fh * k, fw * k, fh * k); },
   size(t) { const a = this.sp("tank_" + t.team); if (!a) return { w: this.H * 1.75, h: this.H }; const c = this.cut(a), iw = a.img.naturalWidth, ih = a.img.naturalHeight, k = this.H / ((c.y1 - c.y0) * ih); return { w: (c.x1 - c.x0) * iw * k, h: this.H, k }; },
   muzzle(t) { const dir = t.s ? -1 : 1, z = this.size(t), a = this.sp("tank_" + t.team), left = t.s ? t.x - z.w : t.x;
     if (t.tgone) return [this.cx(t) + dir * z.w * .45, this.GY - this.H * .45];
@@ -7288,7 +7477,8 @@ const Tanks = {
     requestAnimationFrame(step); },
   tick(now, dt) {
     this.slots.forEach(t => { if (!t) return;
-      { const st = this.sp("tank_" + t.team), pk = t.team + "|" + (st ? st.img.src : ""); if (t.prepK !== pk) { t.prepK = pk; this.prep(t.team); } }     // (its art arrived or changed, or it switched team)
+      if (now - (t.heldAt || 0) > 1000) { t.heldAt = now; this.prep(t.team, this.lone(t)); }      // (its pictures are kept ready to draw while it's out: all of them while there's a battle)
+      if (t.arrive) { if (now < t.arrive && !this.primed(t.team, this.lone(t))) { t.born = t.last = now; return; } t.arrive = 0; }       // waits off screen (a moment at most) until they are
       const z = this.size(t), w = z.w, edge = t.s ? 2560 : 0, dir = t.s ? -1 : 1;
       // it drives in, then creeps about within 100 px of its edge (slower with no tracks)
       // a winner waiting for the next challenger backs slowly off the screen until only its front quarter shows, and parks
@@ -7323,7 +7513,7 @@ const Tanks = {
       else if (f.k === "spark") { const t = (now - f.at) / 1000, x = f.x + f.vx * t, y = f.y + f.vy * t + 900 * t * t; g.globalAlpha = 1 - k; g.fillStyle = f.c; g.fillRect(x - 3, y - 3, 6, 6); g.globalAlpha = 1; }
       else if (f.k === "ring") { const R = 30 + 170 * e; g.strokeStyle = `rgba(255,230,190,${.7 * (1 - k)})`; g.lineWidth = 10 * (1 - k) + 1; g.beginPath(); g.arc(f.x, f.y, R, 0, 6.283); g.stroke(); }
       else if (f.k === "flash" || f.k === "boom") { const R = (f.R || 70) * (.4 + 1.1 * e), gr = g.createRadialGradient(f.x, f.y, 0, f.x, f.y, R); gr.addColorStop(0, `rgba(255,250,225,${1 - k})`); gr.addColorStop(.4, f.dirt ? `rgba(150,110,70,${(1 - k) * .8})` : `rgba(255,160,60,${(1 - k) * .9})`); gr.addColorStop(1, "rgba(120,60,20,0)"); g.fillStyle = gr; g.beginPath(); g.arc(f.x, f.y, R, 0, 6.283); g.fill(); } }); },
-  drawTank(g, t, now) { const z = this.size(t), w = z.w, H = this.H, dir = t.s ? -1 : 1, left = t.s ? t.x - w : t.x, moving = Math.abs(t.v || 0) > 5;
+  drawTank(g, t, now) { if (t.arrive) return; const z = this.size(t), w = z.w, H = this.H, dir = t.s ? -1 : 1, left = t.s ? t.x - w : t.x, moving = Math.abs(t.v || 0) > 5;
     const sh = now - t.shake < 300 ? Math.sin((now - t.shake) / 18) * (t.heavy ? 16 : 6) * (1 - (now - t.shake) / 300) : 0, rc = now - t.recoil < 220 ? Math.sin((now - t.recoil) / 220 * Math.PI) * 18 : 0, sag = t.tracks ? 0 : 22;
     const a = this.sp("tank_" + t.team), A = n => this.sp("tank_" + t.team + "_" + n), dv = moving && t.tracks && t.turret && !t.dead && !t.play ? A("drive") : null;
     // which animation to show now: one that's playing (firing, the turret or the tracks being blown off), else the
@@ -7340,12 +7530,12 @@ const Tanks = {
     else if (dv) { const n = dv.frames || 1, step = 520 * (dv.ms || 80) / 1000;          // the tracks turn as far as it rolls: as before at full speed, slower when creeping, backwards when backing up
       this.frame(g, dv, ((Math.floor((t.odo || 0) / step) % n) + n) % n, w, top, a); }
     else if (a) { const c = this.cut(a), iw = a.img.naturalWidth, ih = a.img.naturalHeight, sx = c.x0 * iw, sw = (c.x1 - c.x0) * iw, Y = f => (f - c.y0) / (c.y1 - c.y0) * H;
-      const slice = (f0, f1, dx, dy) => { const h0 = Y(f0), h1 = Y(f1); if (h1 - h0 < 1) return; g.drawImage(this.px(a), sx, f0 * ih, sw, (f1 - f0) * ih, dx, top + h0 + dy, w, h1 - h0); };
+      const slice = (f0, f1, dx, dy) => { const h0 = Y(f0), h1 = Y(f1); if (h1 - h0 < 1) return; g.drawImage(a.img, sx, f0 * ih, sw, (f1 - f0) * ih, dx, top + h0 + dy, w, h1 - h0); };
       // tracked and moving: the track stays put; the wheels inside it (the middle of the running gear) bob up and down a
       // little, each on its own, out of line. The hull doesn't move
       slice(c.trk, c.y1, 0, 0);
       if (!t.tracks && moving) { const n = 7, f0 = c.trk + (c.y1 - c.trk) * .22, f1 = c.trk + (c.y1 - c.trk) * .82, h0 = Y(f0), h1 = Y(f1);
-        for (let i = 0; i < n; i++) { const dy = Math.sin(now / 85 + i * 1.9) * 2.2; g.drawImage(this.px(a), sx + sw * (i + .08) / n, f0 * ih, sw * .84 / n, (f1 - f0) * ih, w * (i + .08) / n, top + h0 + dy, w * .84 / n, h1 - h0); } }
+        for (let i = 0; i < n; i++) { const dy = Math.sin(now / 85 + i * 1.9) * 2.2; g.drawImage(a.img, sx + sw * (i + .08) / n, f0 * ih, sw * .84 / n, (f1 - f0) * ih, w * (i + .08) / n, top + h0 + dy, w * .84 / n, h1 - h0); } }
       slice(c.ring, c.trk, 0, 0); if (!t.tgone) slice(c.y0, c.ring, -rc, 0); }
     else this.drawn(g, t, w, H, top, rc, sag);
     g.filter = "none";
@@ -7353,7 +7543,7 @@ const Tanks = {
     t.parts.forEach(p => { const s = (now - p.at) / 1000, fy = p.which === "turret" ? Math.min(this.GY - H * .2, top + H * .2 + p.vy * s + 1100 * s * s) : Math.min(top + H * .82, top + H * .78 + p.vy * s + 900 * s * s), fx = w / 2 + p.vx * s * dir;
       g.save(); g.translate(fx, fy); g.rotate(p.spin * Math.min(s, p.which === "turret" ? 2.2 : .5)); g.filter = "brightness(.45)";
       if (a) { const c = this.cut(a), iw = a.img.naturalWidth, ih = a.img.naturalHeight, Y = f => (f - c.y0) / (c.y1 - c.y0) * H, f0 = p.which === "turret" ? c.y0 : c.trk, f1 = p.which === "turret" ? c.ring : c.y1, h = Y(f1) - Y(f0);
-        g.drawImage(this.px(a), c.x0 * iw, f0 * ih, (c.x1 - c.x0) * iw, (f1 - f0) * ih, -w / 2, -h / 2, w, h); }
+        g.drawImage(a.img, c.x0 * iw, f0 * ih, (c.x1 - c.x0) * iw, (f1 - f0) * ih, -w / 2, -h / 2, w, h); }
       else { g.fillStyle = p.which === "turret" ? "#3a3d33" : "#1d1e1a"; if (p.which === "turret") { g.fillRect(-H * .45, -H * .14, H * .9, H * .28); g.fillRect(H * .3, -H * .05, H * .7, H * .1); } else g.fillRect(-w / 2, -H * .1, w, H * .2); }
       g.filter = "none"; g.restore(); });
     g.restore();
@@ -7375,11 +7565,12 @@ const Tanks = {
     g.fillStyle = col[0]; g.beginPath(); g.moveTo(w * .02, top + H * .72 + sag); g.lineTo(w * .1, top + H * .42 + sag); g.lineTo(w * .92, top + H * .42 + sag); g.lineTo(w, top + H * .6 + sag); g.lineTo(w * .96, top + H * .72 + sag); g.closePath(); g.fill();
     if (!t.tgone) { g.fillStyle = col[1]; g.beginPath(); g.roundRect(w * .3 - rc, top + H * .14 + sag, w * .4, H * .3, H * .08); g.fill(); g.fillStyle = "#26281f"; g.fillRect(w * .68 - rc, top + H * .24 + sag, H * .62, H * .08); } }
 };
-// (both teams' pictures made ready in the background soon after the overlay starts, and again once any late art has
-// arrived, so even a tank's very first drive in is smooth)
-[8000, 30000].forEach(ms => setTimeout(() => { try { Tanks.prep("green"); Tanks.prep("blue"); } catch (e) {} }, ms));
+if (!MIRROR) setInterval(() => { try { if (ChefArt.settled() && !(window.kzBusy && window.kzBusy())) Tanks.measure(); } catch (e) {} }, 15000);       // (tank art not measured yet: at a quiet moment)
 window.Tanks = Tanks;
-if (!MIRROR) setTimeout(() => { try { Tanks.restore(); } catch (e) {} }, 2500);           // (after a reload, the tanks that were out drive back in)
+// after a reload, the tanks that were out drive back in: as soon as their pictures are loaded and ready to draw
+if (!MIRROR) setTimeout(() => { let o = null; try { o = JSON.parse(localStorage.getItem("tankOut")); } catch (e) {} if (!Array.isArray(o) || !o.some(Boolean)) return;
+  const names = []; ["green", "blue"].forEach(tm => Tanks.NAMES.forEach(n => names.push("tank_" + tm + n))); const go = () => { try { Tanks.restore(); } catch (e) {} };
+  let went = false; const once = () => { if (!went) { went = true; go(); } }; ChefArt.ready(names, 9000).then(once, once); setTimeout(once, 11000); }, 1200);       // (come what may, they're back within a few seconds)
 
 /* ================= 💥 !flak =================
    Anyone types !flak: the flak cannon rises out of the bottom of the screen somewhere, turns toward the ✈️ plane and
@@ -7676,7 +7867,7 @@ const Plane = {
   prep() { if (this.prepT) return; const names = ["plane_fly", "plane_turn", "plane_roll", "plane_boom"], L = () => { const a = this.spr("plane_fly"); return a && a._pb || null; };
     const next = () => { this.prepT = 0; const nm = names.find(k => { const a = this.spr(k); return a && (!a._pb || (k !== "plane_fly" && a._pb.ref !== L())); }); if (!nm) return;
       const a = this.spr(nm), go = () => { try { this.bk(nm); } catch (e) {} this.prepT = setTimeout(next, 60); };
-      this.prepT = 1; a.img.decode ? a.img.decode().then(go, go) : go(); };
+      this.prepT = 1; (Bmp.ok ? Bmp.want(a.img) : a.img.decode ? a.img.decode() : Promise.resolve()).then(go, go); };        // (decoded in the background first: see Bmp)
     this.prepT = setTimeout(next, 0); },
   // the frames as they are (each in its box, middle on the spot): what build starts from, and what's used if build can't look at the picture
   plain(a, L) { const c = this.W / a.w, f = [], nz = a.nozzle || [.98, .55];
@@ -7731,7 +7922,8 @@ const Plane = {
   // it out of the big sheet every time, and nothing has to be unpacked the moment a turn or a roll starts
   sharpen(a, B) { if (!window.createImageBitmap) return; const K = MIRROR ? Math.min(1, Low.k * 1.3) : 1; let i = 0;
     const next = () => { if (a._pb !== B || i >= B.f.length) return; const j = i++, fr = B.f[j], rw = Math.max(8, Math.round(fr.w * K)), rh = Math.max(8, Math.round(fr.h * K)); let pr;
-      try { pr = rw < a.w * .97 ? createImageBitmap(a.img, j * a.w, 0, a.w, a.h, { resizeWidth: rw, resizeHeight: rh, resizeQuality: "high" }) : createImageBitmap(a.img, j * a.w, 0, a.w, a.h); } catch (e) { return; }
+      const src = a.img.__bm || a.img;                                          // (the sheet's decoded copy, if it has one: nothing to unpack here)
+      try { pr = rw < a.w * .97 ? createImageBitmap(src, j * a.w, 0, a.w, a.h, { resizeWidth: rw, resizeHeight: rh, resizeQuality: "high" }) : createImageBitmap(src, j * a.w, 0, a.w, a.h); } catch (e) { return; }
       pr.then(bm => { if (a._pb === B) { fr.src = bm; fr.sx = fr.sy = 0; fr.sw = bm.width; fr.sh = bm.height; } else if (bm.close) bm.close(); }, () => {}).then(() => setTimeout(next, 12)); };
     setTimeout(next, 30); },
   // the stand-in, facing right: boxy armoured cabin at the nose, propeller behind it, a wing, a thin boom to the tail fin
@@ -8041,7 +8233,7 @@ const CustomFx = {
   setAll(list) { const want = {}; (list || []).forEach(d => { if (!this.check(d)) want[d.id] = d; });
     Object.values(this.defs).forEach(d => { if (!want[d.id]) this.remove(d.id); }); Object.values(want).forEach(d => { const o = this.defs[d.id]; if (!o || o.v !== d.v) this.install(d); }); },
   // plays in its turn with the other viewer effects (never two at once), and in the app's touchpad copy too
-  run(id, who) { const d = this.defs[id]; if (!d) return; if (d.mode === "toggle") return this.set(id, !this.onIds().includes(id)); FxLine.push(() => { FxLine.cur = Mirror.began2("fx", ["Custom", id, who || ""], e => FxLine.cur === e); this.play(id, who); }); },
+  run(id, who) { const d = this.defs[id]; if (!d) return; if (d.mode === "toggle") return this.set(id, !this.onIds().includes(id)); FxLine.push(() => { FxLine.cur = Mirror.began2("fx", ["Custom", id, who || ""], e => FxLine.cur === e); this.play(id, who); }, "cx_" + id); },
   report(id, err) { if (window.remoteSend) window.remoteSend({ cmd: "customErr", id, err: String(err).slice(0, 400), copy: MIRROR ? 1 : 0 }); if (MIRROR && window.parent && window.parent.customErr) try { window.parent.customErr(id, String(err)); } catch (e) {} },
   stop() { this.runs.forEach(r => r.end("stopped")); },
   play(id, who, def, toggle) {
@@ -8102,20 +8294,32 @@ const FxLine = {
   MODS: { Vinnie: null, Flags: null, Medic: null, Train: null, VTerrible: null, ScrapHaul: null, SmokeLap: null, Mango: null, Banana: null, Fishy: null, Chef: null, Tank: null, Kazul: null, Jinx: null, Pirate: null, Turkey: 7600, Penguin: 10600, Eagle: 9000, Bolt: null },
   playing() { if (performance.now() < this.until || CustomFx.busy) return true;
     return [Mango, Banana, Fishy, Chef, Tank, Kazul, Jinx, Pirate, SmokeLap, ScrapHaul, VTerrible, Train, Medic, Flags, Vinnie].some(m => m.busy) || (Bolt.runs && Bolt.runs.length > 0); },
-  push(fn) { this.q.push(fn); if (this.q.length > 40) this.q.shift(); this.pump(); },
-  pump() { if (this.running) return; const fn = this.q.shift(); if (!fn) return; this.running = true;
+  /* An effect's pictures are decoded before it starts (see Bmp), so it doesn't pause on its first frames. Which
+     pictures: the ones it drew the last time it played (noted when it ends, and kept), or for an effect made with
+     ＋ Add effect, its own art. It waits for them a moment at most, and for the art to finish loading if the overlay
+     has only just started (rather than playing with stand-ins). */
+  art: (() => { try { return JSON.parse(localStorage.getItem("kzFxArt")) || {}; } catch (e) { return {}; } })(),
+  learn(key, t0) { if (!key || MIRROR) return; const S = ChefArt.sprites, used = Object.keys(S).filter(n => (S[n].img.__dt || 0) >= t0 && !/^(gem_|dice_|cf_|cs_|sm_|lli_|tank_(green|blue))/.test(n)).sort();
+    if (used.join() === (this.art[key] || []).join()) return; this.art[key] = used; try { localStorage.setItem("kzFxArt", JSON.stringify(this.art)); } catch (e) {} },
+  push(fn, key) { this.q.push([fn, key]); if (this.q.length > 40) this.q.shift(); this.pump(); },
+  pump() { if (this.running) return; const it = this.q.shift(); if (!it) return; this.running = true; const fn = it[0], key = it[1];
     const go = () => { if (this.playing()) return setTimeout(go, 300);                 // something still on screen (e.g. it started before the line existed)
-      try { fn(); } catch (e) { console.error(e); }
-      const t0 = performance.now(), wait = () => { if (this.playing() && performance.now() - t0 < 90000) return setTimeout(wait, 300);
-        this.cur = null;                                                                 // (it's over: a touchpad that opens now isn't told about it)
-        setTimeout(() => { this.running = false; this.pump(); }, 700); };                // a short breather between effects
-      setTimeout(wait, 300); };
+      if (!ChefArt.settled() && performance.now() < 30000) return setTimeout(go, 250);
+      const start = () => { const t0 = Layers.t = performance.now(); try { fn(); } catch (e) { console.error(e); }
+        const wait = () => { if (this.playing() && performance.now() - t0 < 90000) return setTimeout(wait, 300);
+          this.cur = null;                                                               // (it's over: a touchpad that opens now isn't told about it)
+          try { this.learn(key, t0); } catch (e) {}
+          setTimeout(() => { this.running = false; this.pump(); }, 700); };              // a short breather between effects
+        setTimeout(wait, 300); };
+      const S = ChefArt.sprites, names = !key || !Bmp.ok ? [] : this.art[key] || (/^cx_/.test(key) ? Object.keys(S).filter(n => n.startsWith(key + "_")) : []);
+      const imgs = names.map(n => S[n] && S[n].img).filter(Boolean); if (!imgs.length) return start();
+      Bmp.all(imgs, 900).then(start, start); };
     go(); }
 };
 FxLine.orig = {};
 for (const [name, ms] of Object.entries(FxLine.MODS)) { const m = { Vinnie, Flags, Medic, Train, VTerrible, ScrapHaul, SmokeLap, Mango, Banana, Fishy, Chef, Tank, Kazul, Jinx, Pirate, Turkey, Penguin, Eagle, Bolt }[name], orig = m.run.bind(m);
   FxLine.orig[name] = orig;
-  m.run = (...a) => FxLine.push(() => { if (ms) FxLine.until = performance.now() + ms; FxLine.cur = Mirror.began2("fx", [name, ...a], e => FxLine.cur === e); orig(...a); }); }   // the touchpad copy plays it the moment OBS does
+  m.run = (...a) => FxLine.push(() => { if (ms) FxLine.until = performance.now() + ms; FxLine.cur = Mirror.began2("fx", [name, ...a], e => FxLine.cur === e); orig(...a); }, name); }   // the touchpad copy plays it the moment OBS does
 
 FxLine.orig.Custom = (id, who) => CustomFx.play(id, who); window.CustomFx = CustomFx;              // effects made with ＋ Add effect (see CustomFx)
 
@@ -9097,7 +9301,7 @@ window.KZDirect = function (opt) {
 (() => {
   const qs = new URLSearchParams(location.search), key = qs.get("ctl");
   if (!key || !window.WebSocket) return;
-  const PAGE = "html3", VERSION = "ffda432", INST = Math.random().toString(36).slice(2, 8);
+  const PAGE = "html3", VERSION = "5cc4df8", INST = Math.random().toString(36).slice(2, 8);
   const QUICK = { mir: 1, rtt: 1 };                                 // sent many times a second: only the newest matters
   let said = false, direct = null;
   const seen = new Set(), seenList = [], fresh = id => { if (!id) return true; if (seen.has(id)) return false; seen.add(id); seenList.push(id); if (seenList.length > 800) seen.delete(seenList.shift()); return true; };
