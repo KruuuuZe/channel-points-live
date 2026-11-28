@@ -6092,8 +6092,9 @@ const ScrapHaul = {
 /* ================= Prefectus_Prime_Oddball's first chat of the day =================
    His guitar band (the clip he sent, its green screen keyed out: src/oddball.webp, 112 frames, built in) pops up from
    the bottom-left corner and plays while his sound plays (src/sounds/oddball.mp3, built in). Out of the guitar float
-   musical notes, one at a time, drifting and swaying up to the top right; each pops into one character of
-   "Prefectus_Prime_Oddball" (one line across the top),
+   musical notes that sway away to the right and off the screen; then "Prefectus_Prime_Oddball", gigantic, scrolls in
+   from the right along the bottom and each letter, reaching the left side, slams up into its place on one line across
+   the top,
    every letter its own odd ball, until his name is spelled across the top. 3 s later each letter rebuilds itself as
    green riveted steel beams (ob_S_…), the steel name stays up 3 s, then they pop like soap bubbles one after another.
    Once the sound has finished the band sinks back down below the screen.
@@ -6162,24 +6163,30 @@ const Oddball = {
       const up = back(t / 750) * (1 - sm((t - (D + DELAY)) / 900)), by = H - bh * up + 4, fi = this.at(au && !au.paused && au.currentTime > 0 ? au.currentTime * 1000 + DELAY : t), fx = (fi % this.COLS) * (this.FW + this.PAD), fy = Math.floor(fi / this.COLS) * (this.FH + this.PAD);
       if (up > .001) g.drawImage(im, fx, fy, this.FW, this.FH, bx, by, bw, bh);
       const gx = bx + bw * this.GUIT[0], gy = by + bh * this.GUIT[1];
-      // ---- notes out of the guitar, one for each letter, spread over the song; each pops into its letter
-      // all the notes out in the first part of the song; 3 s after the last letter is up they turn into green steel beams
-      // (one after another, quickly), the steel name stays up 3 s, then they pop like bubbles
-      const NL = L.length - 1, step = Math.max(120, Math.min(220, (D * .42 - 800) / NL)), FLY = 1600, allOn = 800 + NL * step + FLY, TR = allOn + 3000, TG = 45,
+      // ---- notes out of the guitar, one for each letter, swaying away to the right and off the screen
+      // ---- then his name, gigantic, scrolls in from the right along the bottom of the screen; as each letter reaches the
+      //      left side it slams up into its place in the name across the top. 3 s after the last one lands they all turn
+      //      into green steel beams (one after another, quickly), the steel name stays up 3 s, then they pop like bubbles
+      const NL = L.length - 1, NSTEP = 120, FLY = 1500, BIG = 340, GB = 330, YB = H - 205, XL = 300, V = 1.5, SLAM = 330, SM = 2300,
+        xb = i => W + 220 + i * GB - (t - SM) * V, allOn = SM + (W + 220 + NL * GB - XL) / V + SLAM, TR = allOn + 3000, TG = 45,
         steelAll = TR + NL * TG + Math.max(...L.map(TRMS)), popAt = steelAll + 3000, PG = 85;
-      L.forEach((l, i) => { const st = 800 + i * step;
-        if (l.state === "wait" && t >= st) { l.state = "fly"; l.sx = gx; l.sy = gy; }
-        if (l.state === "fly") { const q = (t - st) / FLY, e = sm(q), sway = Math.sin(q * Math.PI * 2.2 + l.seed) * 70 * (1 - q * .6);
-          const x = l.sx + (l.x - l.sx) * e + sway * .6, y = l.sy + (l.y - l.sy) * e - Math.sin(q * Math.PI) * 120 + Math.cos(q * Math.PI * 3 + l.seed) * 25;
-          drawNote(l, x, y, .7 + .45 * e, Math.sin(q * 9 + l.seed) * .35);
-          if (Math.random() < .5) parts.push({ x: x + rand(-20, 20), y: y + rand(-20, 20), vx: rand(-.5, .5), vy: rand(.2, 1), r: rand(2, 4), c: this.COL[(i + 3) % 7], life: .8, fade: .03 });     // a little glittering trail
-          if (q >= 1) { l.state = "on"; l.at = t; burst(l.x, l.y, this.COL[i], 22, 7); } }
-        if (l.state === "on") { const a = t - l.at, s = back(a / 420), bob = Math.sin(t / 650 + l.seed) * 12, rot = Math.sin(t / 900 + l.seed * 2) * .09;
+      L.forEach((l, i) => { const st = 800 + i * NSTEP;
+        if (!l.noteDone && t >= st) { if (l.nx == null) { l.nsx = gx; l.nsy = gy; l.nty = rand(140, 900); l.nx = 1; }
+          const q = (t - st) / FLY; if (q >= 1) l.noteDone = true; else { const e = q * q * (1.6 - .6 * q);
+            const x = l.nsx + (W + 200 - l.nsx) * e, y = l.nsy + (l.nty - l.nsy) * Math.sin(Math.min(1, q * 1.3) * Math.PI / 2) + Math.sin(q * Math.PI * 3 + l.seed) * 45;
+            drawNote(l, x, y, .8 + .4 * q, Math.sin(q * 9 + l.seed) * .35);
+            if (Math.random() < .45) parts.push({ x: x + rand(-20, 20), y: y + rand(-20, 20), vx: rand(-.5, .5), vy: rand(.2, 1), r: rand(2, 4), c: this.COL[(i + 3) % 7], life: .8, fade: .03 }); } }
+        const bobB = Math.sin(t / 300 + l.seed) * 10, ybi = YB + (l.us ? BIG * .32 : 0) + bobB;
+        if (l.state === "wait" && t >= SM && xb(i) < W + 260) l.state = "run";
+        if (l.state === "run") { const x = xb(i); if (x <= XL) { l.state = "slam"; l.at = t; l.fx = x; l.fy = ybi; } else drawLetter(l, x, ybi, BIG / LH, Math.sin(t / 400 + l.seed) * .06); }
+        if (l.state === "slam") { const q = Math.min(1, (t - l.at) / SLAM), e = q * q;                 // up it goes, faster and faster, shrinking into place
+          drawLetter(l, l.fx + (l.x - l.fx) * e, l.fy + (l.y - l.fy) * e, (BIG + (LH - BIG) * e) / LH, (1 - e) * .25 * (i % 2 ? 1 : -1));
+          if (q >= 1) { l.state = "on"; l.at = t - 420; l.hit = t; burst(l.x, l.y, this.COL[i], 18, 7); } }
+        if (l.state === "on") { const bob = Math.sin(t / 650 + l.seed) * 12, rot = Math.sin(t / 900 + l.seed * 2) * .09, sq = l.hit && t - l.hit < 220 ? Math.sin((t - l.hit) / 220 * Math.PI) * .25 : 0;     // (a squash as it lands)
           if (t >= popAt + i * PG) { l.state = "pop"; burst(l.x, l.y + bob, "#7f9a52", 16, 6, true); }
           else if (t >= TR + i * TG) { const q = Math.min(1, (t - TR - i * TG) / TRMS(l)); if (!l.sparked) { l.sparked = 1; burst(l.x, l.y + bob, "#a3c26a", 12, 5); }     // the change, with a shower of sparks
             drawSteel(l, l.x, l.y + bob, q, rot); }
-          else drawLetter(l, l.x, l.y + bob, Math.max(.01, s), rot); }
-        if (l.state === "fly" && t >= popAt + i * PG + 400) l.state = "pop"; });
+          else drawLetter(l, l.x, l.y + bob - sq * 20, 1 + sq, rot); } });
       // ---- sparkles, droplets and bubble rings
       for (let i = parts.length - 1; i >= 0; i--) { const p = parts[i]; p.life -= (p.fade || .045) * dt; if (p.life <= 0) { parts.splice(i, 1); continue; }
         g.globalAlpha = Math.max(0, p.life);
@@ -9456,7 +9463,7 @@ window.KZDirect = function (opt) {
 (() => {
   const qs = new URLSearchParams(location.search), key = qs.get("ctl");
   if (!key || !window.WebSocket) return;
-  const PAGE = "html3", VERSION = "62e1446", INST = Math.random().toString(36).slice(2, 8);
+  const PAGE = "html3", VERSION = "cefdea9", INST = Math.random().toString(36).slice(2, 8);
   const QUICK = { mir: 1, rtt: 1 };                                 // sent many times a second: only the newest matters
   let said = false, direct = null;
   const seen = new Set(), seenList = [], fresh = id => { if (!id) return true; if (seen.has(id)) return false; seen.add(id); seenList.push(id); if (seenList.length > 800) seen.delete(seenList.shift()); return true; };
