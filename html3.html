@@ -6989,6 +6989,14 @@ const SharedVid = {
       this.player = new YT.Player(div.id, { videoId: it.id, width: "100%", height: "100%", playerVars: { autoplay: 1, controls: 0, rel: 0, modestbranding: 1, playsinline: 1, iv_load_policy: 3, fs: 0, disablekb: 1, start: it.start || 0 },
         events: { onReady: e => { try { e.target.unMute(); e.target.setVolume(Math.round(this.vol * 100)); e.target.playVideo(); } catch (x) {} },
           onStateChange: e => { if (e.data === 0 && this.key === key) this.ended("done"); }, onError: fail } }); });
+    else if (it.kind === "kclip") {         // a Kick clip: Kick has no clip player to embed, so its video stream (src, found by the app) plays here
+      if (!it.src) return fail(); const v = document.createElement("video"); v.autoplay = true; v.playsInline = true; v.muted = false; v.volume = this.vol;
+      v.style.cssText = "width:100%;height:100%;object-fit:contain;background:#000"; this.fl.h.replaceChildren(v);
+      const hls = { h: null }; this.player = { setVolume: x => { v.volume = Math.max(0, Math.min(1, x)); }, setMuted: m => { v.muted = !!m; }, destroy: () => { try { hls.h && hls.h.destroy(); } catch (e) {} v.removeAttribute("src"); try { v.load(); } catch (e) {} } };
+      v.onended = () => { if (this.key === key) this.ended("done"); };
+      const go = () => v.play().catch(() => { v.muted = true; v.play().catch(fail); });       // (if the browser won't start it with sound, it starts muted rather than not at all)
+      KickVid.attach(v, it.src, hls, fail).then(ok => { if (ok && this.key === key) go(); });
+      this.endT = setTimeout(() => { if (this.key === key) this.ended("done"); }, ((+it.dur || 90) + 8) * 1000); }       // (in case it never says it has ended)
     else if (it.kind === "clip") {          // a clip has no "ended" signal: it's closed when its length has played
       const f = document.createElement("iframe"); f.allow = "autoplay; encrypted-media"; f.src = "https://clips.twitch.tv/embed?clip=" + encodeURIComponent(it.id) + "&parent=" + host + "&autoplay=true&muted=false"; this.fl.h.replaceChildren(f);
       this.endT = setTimeout(() => { if (this.key === key) this.ended("done"); }, ((+it.dur || 60) + 2) * 1000); }
@@ -7004,6 +7012,17 @@ const SharedVid = {
   tw() { return LiveLook.ready(); }
 };
 window.SharedVid = SharedVid;
+/* a Kick clip's video stream (HLS: a playlist of short pieces). Played by the browser itself if it can, else with
+   hls.js (loaded the first time it's needed). h.h: the hls.js player, so it can be stopped. Resolves true once it's playing-ready. */
+const KickVid = {
+  lib() { if (window.Hls) return Promise.resolve(true); if (this.wait) return this.wait;
+    return this.wait = new Promise(ok => { const sc = document.createElement("script"); sc.src = "https://cdn.jsdelivr.net/npm/hls.js@1/dist/hls.min.js"; sc.onload = () => ok(!!window.Hls); sc.onerror = () => { this.wait = null; ok(false); }; document.head.append(sc); setTimeout(() => ok(!!window.Hls), 15000); }); },
+  async attach(v, src, h, fail) {
+    if (!/\.m3u8(\?|$)/i.test(src) || (v.canPlayType("application/vnd.apple.mpegurl") && !(await this.lib().then(() => window.Hls && Hls.isSupported())))) { v.onerror = fail; v.src = src; return true; }
+    if (!(await this.lib()) || !Hls.isSupported()) { v.onerror = fail; v.src = src; return true; }
+    const p = h.h = new Hls({ enableWorker: true }); p.on(Hls.Events.ERROR, (e, d) => { if (d && d.fatal) fail(); }); p.loadSource(src); p.attachMedia(v); return true; }
+};
+window.KickVid = KickVid;
 
 /* ================= 📺 live look-in =================
    Other Foxhole streamers, live, on the stream: the app (Control › 📺 LIVE LOOK-IN) picks who and sends the whole
@@ -9333,7 +9352,7 @@ window.KZDirect = function (opt) {
 (() => {
   const qs = new URLSearchParams(location.search), key = qs.get("ctl");
   if (!key || !window.WebSocket) return;
-  const PAGE = "html3", VERSION = "3fadb6c", INST = Math.random().toString(36).slice(2, 8);
+  const PAGE = "html3", VERSION = "5409483", INST = Math.random().toString(36).slice(2, 8);
   const QUICK = { mir: 1, rtt: 1 };                                 // sent many times a second: only the newest matters
   let said = false, direct = null;
   const seen = new Set(), seenList = [], fresh = id => { if (!id) return true; if (seen.has(id)) return false; seen.add(id); seenList.push(id); if (seenList.length > 800) seen.delete(seenList.shift()); return true; };
