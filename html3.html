@@ -375,10 +375,17 @@ body.fit #stage{background:radial-gradient(1200px 700px at 30% 20%,#1a103322,tra
 #oddcv{position:absolute;inset:0;width:2560px;height:1440px;pointer-events:none;z-index:9}
 #ufocv{position:absolute;inset:0;width:2560px;height:1440px;pointer-events:none;z-index:9}
 /* the layer real video players live in: outside the scaled stage (see Float) */
-#flt{position:fixed;inset:0;pointer-events:none;z-index:5} #flt .fh{position:fixed;overflow:hidden;background:#000;pointer-events:auto;transition:opacity .2s} #flt .fh > div,#flt .fh iframe{width:100%;height:100%;border:0;display:block}
+#flt{position:fixed;inset:0;pointer-events:none;z-index:5} #flt .fh{position:fixed;overflow:hidden;background:#000;pointer-events:auto;transition:opacity .2s} #flt .fh > div:not(.svcd),#flt .fh iframe{width:100%;height:100%;border:0;display:block}
 /* 🔗 shared links: a video in the left 3/4 of the screen */
 #svid{position:absolute;left:0;top:0;width:1920px;height:1080px;z-index:7;pointer-events:none;opacity:0;transition:opacity .5s}
 #svid.on{opacity:1} #svid .box{position:absolute;left:0;top:0;background:#000;overflow:hidden}
+/* the seconds left in a shared video, bottom right of the video, in the logo's look: a starry night badge with a green
+   ring, the number in lime fading to purple, a purple bolt (sized by the video: cq units of its holder) */
+.fh{container-type:size} #flt .fh > .svcd{position:absolute;width:auto;height:auto;right:2.2cqw;bottom:3cqh;display:flex;align-items:center;gap:.35em;padding:.18em .55em .18em .4em;border-radius:999px;font:900 5.4cqh/1 "Segoe UI",system-ui,sans-serif;font-variant-numeric:tabular-nums;
+  background:radial-gradient(circle,#fff8 .6px,transparent 1.4px) 0 0/14px 14px,radial-gradient(circle,#c4b5fd77 .6px,transparent 1.4px) 7px 5px/19px 19px,radial-gradient(ellipse at 30% 25%,#1c1040,#05030c 75%);
+  border:.14em solid #22c55e;box-shadow:0 0 .5em #22c55eaa,inset 0 0 .4em #000;pointer-events:none;opacity:0;transition:opacity .4s;z-index:5}
+#flt .fh > .svcd.on{opacity:1} .svcd i{display:block;width:.62em;height:.86em;filter:drop-shadow(0 0 .15em #a855f7)} .svcd i svg{width:100%;height:100%;display:block}
+.svcd b{background:linear-gradient(180deg,#d9f99d,#a3e635 45%,#4ade80);-webkit-background-clip:text;background-clip:text;color:transparent;filter:drop-shadow(0 2px 0 #000);min-width:1.6em;text-align:right}
 /* the frame around a shared video, in the logo's colours: starry night, green ring, lime-to-purple bolt stripe */
 #svid .frm{position:absolute;border-radius:28px;background:radial-gradient(circle,#fff9 1.2px,transparent 2px) 0 0/34px 34px,radial-gradient(circle,#c4b5fd88 1px,transparent 1.8px) 17px 11px/46px 46px,radial-gradient(ellipse at 30% 20%,#2a1650,#07040f 70%);
   box-shadow:0 0 0 7px #22c55e,0 0 0 10px #052e16,0 0 46px 10px #7c3aed88,0 18px 50px #000c}
@@ -7094,7 +7101,7 @@ const SharedVid = {
   st: { on: false, item: null }, key: "", player: null, endT: 0, ytWait: null, twWait: null,
   set(st) { this.st = Object.assign({ on: false, item: null }, st || {}); if (this.st.vol != null) this.setVol(this.st.vol); const it = this.st.on && this.st.item, k = it ? it.kind + ":" + it.id + ":" + (it.n || 0) : "";
     $("#svid").classList.toggle("on", !!it); if (k === this.key) { if (it) this.plate(it); return; } this.key = k; this.close(); if (it) this.open(it); Mirror.send(true); },
-  close() { clearTimeout(this.endT); try { this.player && this.player.destroy && this.player.destroy(); } catch (e) {} this.player = null; $("#svid .box").innerHTML = ""; Float.remove(this.fl); this.fl = null; setTimeout(() => Float.sweep(), 1200); },
+  close() { clearTimeout(this.endT); clearInterval(this.cdT); this.vEl = null; try { this.player && this.player.destroy && this.player.destroy(); } catch (e) {} this.player = null; $("#svid .box").innerHTML = ""; Float.remove(this.fl); this.fl = null; setTimeout(() => Float.sweep(), 1200); },
   ended(why) { const k = this.key; this.close(); $("#svid").classList.remove("on"); if (window.remoteSend && !MIRROR) window.remoteSend({ cmd: "svidEnded", key: k, why }); },
   /* the left ¾ (1920×1080): a frame with the sharer's name on its top edge, the video snug inside it */
   place(it, ar) { const box = $("#svid .box"), frm = $("#svid .frm"), tall = it.kind === "yt" && it.short, B = 34, T = 74, G = 12, AW = 1920, AH = 1080;     // G: room for the green ring's glow at the edges
@@ -7123,7 +7130,7 @@ const SharedVid = {
         events: { onReady: e => { try { e.target.unMute(); e.target.setVolume(Math.round(this.vol * 100)); e.target.playVideo(); } catch (x) {} },
           onStateChange: e => { if (e.data === 0 && this.key === key) this.ended("done"); }, onError: fail } }); });
     else if (it.kind === "kclip") {         // a Kick clip: Kick has no clip player to embed, so its video stream (src, found by the app) plays here
-      if (!it.src) return fail(); const v = document.createElement("video"); v.autoplay = true; v.playsInline = true; v.muted = false; v.volume = this.vol;
+      if (!it.src) return fail(); const v = this.vEl = document.createElement("video"); v.autoplay = true; v.playsInline = true; v.muted = false; v.volume = this.vol;
       v.style.cssText = "width:100%;height:100%;object-fit:contain;background:#000"; this.fl.h.replaceChildren(v);
       const hls = { h: null }; this.player = { setVolume: x => { v.volume = Math.max(0, Math.min(1, x)); }, setMuted: m => { v.muted = !!m; }, destroy: () => { try { hls.h && hls.h.destroy(); } catch (e) {} v.removeAttribute("src"); try { v.load(); } catch (e) {} } };
       v.onended = () => { if (this.key === key) this.ended("done"); };
@@ -7138,7 +7145,19 @@ const SharedVid = {
       this.player = new Twitch.Player(div.id, o);
       this.player.addEventListener(Twitch.Player.READY, () => { try { this.player.setMuted(false); this.player.setVolume(this.vol); this.player.play(); } catch (x) {} });
       this.player.addEventListener(Twitch.Player.ENDED, () => { if (this.key === key) this.ended("done"); });
-      if (Twitch.Player.OFFLINE) this.player.addEventListener(Twitch.Player.OFFLINE, () => { if (this.key === key && it.kind === "live") this.ended("offline"); }); }); },
+      if (Twitch.Player.OFFLINE) this.player.addEventListener(Twitch.Player.OFFLINE, () => { if (this.key === key && it.kind === "live") this.ended("offline"); }); });
+    this.countdown(it); },
+  // ---- the seconds left, counting down in the bottom-right corner while a video plays (not for a live stream, or a picture)
+  countdown(it) { clearInterval(this.cdT); if (it.kind === "live" || !this.fl) return; const cd = document.createElement("div"); cd.className = "svcd"; cd.innerHTML = '<i><svg viewBox="0 0 20 28"><defs><linearGradient id="svcdG" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#c084fc"/><stop offset="1" stop-color="#6d28d9"/></linearGradient></defs><path d="M13 0 L2 15 L9 15 L5 28 L18 11 L11 11 Z" fill="url(#svcdG)"/></svg></i><b></b>'; this.fl.h.append(cd);
+    const t0 = performance.now(), key = this.key, b = cd.querySelector("b");
+    const left = () => { const p = this.player;
+      try { if (it.kind === "yt" && p && p.getDuration) { const d = p.getDuration(); return d > 0 ? d - p.getCurrentTime() : null; }
+        if (it.kind === "vod" && p && p.getDuration) { const d = p.getDuration(); return d > 0 ? d - p.getCurrentTime() : null; }
+        if (it.kind === "kclip" && this.vEl) { const d = this.vEl.duration; return isFinite(d) && d > 0 && this.vEl.currentTime > 0 ? d - this.vEl.currentTime : null; }
+        if (it.kind === "clip" && +it.dur > 0) { const e = (performance.now() - t0) / 1000 - 1.5; return e > 0 ? +it.dur - e : null; }        // (a Twitch clip says nothing: counted from when it started loading)
+      } catch (e) {} return null; };
+    this.cdT = setInterval(() => { if (this.key !== key) return clearInterval(this.cdT); const r = left(); if (r == null || r < 0) { cd.classList.remove("on"); return; }
+      const n = Math.ceil(r - .05), txt = n >= 60 ? Math.floor(n / 60) + ":" + String(n % 60).padStart(2, "0") : String(n); if (b.textContent !== txt) b.textContent = txt; cd.classList.add("on"); }, 200); },
   yt() { if (window.YT && YT.Player) return Promise.resolve(); if (this.ytWait) return this.ytWait;
     return this.ytWait = new Promise(ok => { const prev = window.onYouTubeIframeAPIReady; window.onYouTubeIframeAPIReady = () => { try { prev && prev(); } catch (e) {} ok(); };
       const sc = document.createElement("script"); sc.src = "https://www.youtube.com/iframe_api"; sc.onerror = ok; document.head.append(sc); setTimeout(ok, 15000); }); },
@@ -9486,7 +9505,7 @@ window.KZDirect = function (opt) {
 (() => {
   const qs = new URLSearchParams(location.search), key = qs.get("ctl");
   if (!key || !window.WebSocket) return;
-  const PAGE = "html3", VERSION = "245a032", INST = Math.random().toString(36).slice(2, 8);
+  const PAGE = "html3", VERSION = "6873514", INST = Math.random().toString(36).slice(2, 8);
   const QUICK = { mir: 1, rtt: 1 };                                 // sent many times a second: only the newest matters
   let said = false, direct = null;
   const seen = new Set(), seenList = [], fresh = id => { if (!id) return true; if (seen.has(id)) return false; seen.add(id); seenList.push(id); if (seenList.length > 800) seen.delete(seenList.shift()); return true; };
