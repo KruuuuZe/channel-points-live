@@ -440,6 +440,7 @@ body.fit #stage{background:radial-gradient(1200px 700px at 30% 20%,#1a103322,tra
 #emo .emoX{position:absolute} #emo .emoX i{position:absolute;inset:0;background-size:contain;background-repeat:no-repeat;background-position:center;will-change:transform,opacity}
 #emo .emoF{position:absolute;width:60px;height:60px;border-radius:50%;background:radial-gradient(circle,#fff 0 30%,#fff7c2 45%,rgba(255,220,120,0) 70%)}
 #vincv{position:absolute;inset:0;width:2560px;height:1440px;pointer-events:none;z-index:9}
+#drawcv{position:absolute;inset:0;width:2560px;height:1440px;pointer-events:none;z-index:12}
 #flagcv{position:absolute;inset:0;width:2560px;height:1440px;pointer-events:none;z-index:9}
 #bagcv{position:absolute;inset:0;width:2560px;height:1440px;pointer-events:none;z-index:8}
 #customcv,.cxcv{position:absolute;inset:0;width:2560px;height:1440px;pointer-events:none;z-index:9}
@@ -544,6 +545,7 @@ body.fit #stage{background:radial-gradient(1200px 700px at 30% 20%,#1a103322,tra
   <canvas id="traincv" width="2560" height="1440"></canvas>
   <canvas id="flagcv" width="2560" height="1440"></canvas>
   <canvas id="vincv" width="2560" height="1440"></canvas>
+  <canvas id="drawcv" width="2560" height="1440"></canvas>
   <div id="emo"></div>
   <canvas id="tankbcv" width="2560" height="1440"></canvas><canvas id="flakcv" width="2560" height="1440"></canvas><div id="flakloot"></div><div id="salvbar"></div><div id="salvboard"></div>
   <canvas id="planecv" width="2560" height="1440"></canvas>
@@ -6861,7 +6863,7 @@ const Mirror = {
     if (this.fxQ.length) this.fxT = setTimeout(() => { this.fxT = 0; this.fxPump(); }, 400); },
   // your finger on the touchpad: the copy does these itself, straight away (the app sends the same to OBS)
   local(c) { if (!MIRROR || !c) return; this.touchAt = performance.now();
-    if (c.cmd === "cloudGo") { Face.goTo(+c.x, +c.y); return; }
+    if (c.cmd === "cloudGo") { Face.goTo(+c.x, +c.y); return; } if (c.cmd === "draw") { Draw.msg(c); return; }
     if (c.cmd === "planeTouch") { Plane.touch(); return; } if (c.cmd === "planeGo") { Plane.go(c.x, c.y); return; } if (c.cmd === "planeAct") { Plane.act(c.a); return; } if (c.cmd === "planeFire") { Plane.setFire(c.on); return; }
     const T = String(c.n).startsWith("dice:") ? Dice : BitGems;
     if (c.cmd === "gemGrab") T.grab(c.n); else if (c.cmd === "gemMove") { T.moveTo(c.n, +c.x, +c.y); const g = T.find(c.n); if (g && g.held) g.local = this.touchAt; }
@@ -6982,6 +6984,7 @@ window.onRemote = c => {
   else if (c.cmd === "customRun") CustomFx.run(c.id, c.user || "");
   else if (c.cmd === "customSet") CustomFx.set(c.id, !!c.on);
   else if (c.cmd === "punch") PunchBag.punch(c.dx, c.power);
+  else if (c.cmd === "draw") Draw.msg(c);                                       // ✏️ drawing on the stream with your finger, from the touchpad
   else if (c.cmd === "lli") LiveLook.set(c.st);
   else if (c.cmd === "svidVol") SharedVid.setVol(c.vol);
   else if (c.cmd === "svid") SharedVid.set(c.st);                              // 🔗 a shared link's video, from the app                                // 📺 live look-in, from the app                  // from the Camera page (or a tap on the bag on the touchpad)
@@ -7078,6 +7081,76 @@ window.onRemote = c => {
    player inside it never counts as visible and sits on its paused screen. So the real players (Twitch and YouTube) go
    on a layer of their own, outside the stage, at full opacity, and are moved every frame to sit exactly over the
    spot they belong to on the stage (which still does all the gliding and framing). */
+/* ================= ✏️ drawing on the stream =================
+   With ✏️ Draw on (the buttons under the touchpad), your finger leaves a trail on stream, for circling things or
+   doodling: ✨ Glow, a glowing line in the logo's colours (lime, green and purple flowing along it, with sparkles at
+   the tip), or 🔥 Fire, a burning line with flames and embers rising off it. The app sends the points as your finger
+   moves ({ cmd: "draw", id, m, p: [x, y, …] in 0..1, e: 1 at the end }); the touchpad copy draws them straight away.
+   Each bit of line stays 6 seconds, and a finished line fades 2.5 seconds after your finger lifts (🧽 Clear: at once). */
+const Draw = {
+  strokes: [], parts: [], run: false, HOLD: 6000, AFTER: 2500, FADE: 900,
+  msg(c) { const now = performance.now();
+    if (c.clear) { this.strokes.forEach(s => { s.end = s.end || now; s.kill = now; }); this.go(); return; }
+    let s = this.strokes.find(q => q.id === c.id);
+    if (!s) { s = { id: c.id, m: c.m === "fire" ? "fire" : "glow", pts: [], len: 0, end: 0, seen: now }; this.strokes.push(s); if (this.strokes.length > 24) this.strokes.shift(); }
+    s.seen = now; const p = c.p || [];
+    for (let i = 0; i + 1 < p.length; i += 2) { const x = +p[i] * 2560, y = +p[i + 1] * 1440; if (!isFinite(x) || !isFinite(y)) continue; const L = s.pts[s.pts.length - 1];
+      if (L && Math.hypot(x - L.x, y - L.y) < 3) continue; const d = L ? L.d + Math.hypot(x - L.x, y - L.y) : 0; s.pts.push({ x, y, t: now, d }); }
+    if (s.pts.length > 1500) s.pts.splice(0, s.pts.length - 1500);
+    if (c.e) s.end = now; this.go(); },
+  go() { if (this.run) return; this.run = true; this.last = performance.now(); const tick = () => { const now = performance.now(), dt = Math.min(.05, (now - this.last) / 1000); this.last = now;
+      if (!this.draw(now, dt)) { this.run = false; return; } requestAnimationFrame(tick); }; requestAnimationFrame(tick); },
+  // how strongly a point still shows: 6 s after it was drawn it fades, and a whole line fades 2.5 s after it ended
+  a(s, p, now) { const age = now - p.t - this.HOLD, k1 = age <= 0 ? 1 : 1 - age / this.FADE; let k2 = 1;
+    if (s.kill) k2 = 1 - (now - s.kill) / 250; else if (s.end) { const e = now - s.end - this.AFTER; if (e > 0) k2 = 1 - e / this.FADE; }
+    return Math.max(0, Math.min(k1, k2)); },
+  // the logo's colours along the line, flowing: lime → green → purple and back
+  rgb(u) { u = ((u % 1) + 1) % 1; u = u < .5 ? u * 2 : 2 - u * 2; const A = [163, 230, 53], B = [74, 222, 128], C = [168, 85, 247], [p, q, k] = u < .5 ? [A, B, u * 2] : [B, C, (u - .5) * 2];
+    return [p[0] + (q[0] - p[0]) * k, p[1] + (q[1] - p[1]) * k, p[2] + (q[2] - p[2]) * k]; },
+  col(u) { const c = this.rgb(u); return "rgb(" + (c[0] | 0) + "," + (c[1] | 0) + "," + (c[2] | 0) + ")"; },
+  // a soft round flame (drawn once): white-yellow middle, orange, red, nothing
+  flameDot() { if (this._fd) return this._fd; const c = document.createElement("canvas"); c.width = c.height = 64; const g = c.getContext("2d"), r = g.createRadialGradient(32, 32, 0, 32, 32, 32);
+    r.addColorStop(0, "rgba(255,250,210,1)"); r.addColorStop(.25, "rgba(255,200,60,.9)"); r.addColorStop(.55, "rgba(255,110,20,.55)"); r.addColorStop(.8, "rgba(200,30,0,.2)"); r.addColorStop(1, "rgba(120,0,0,0)");
+    g.fillStyle = r; g.fillRect(0, 0, 64, 64); return this._fd = c; },
+  // the line through the points, smoothed (each piece: from halfway along the last bit to halfway along the next)
+  seg(g, s, i) { const P = s.pts, a = P[i - 1], b = P[i], c = P[i + 1]; g.beginPath();
+    if (i === 1) g.moveTo(a.x, a.y); else g.moveTo((a.x + b.x) / 2, (a.y + b.y) / 2);
+    if (c) g.quadraticCurveTo(b.x, b.y, (b.x + c.x) / 2, (b.y + c.y) / 2); else g.lineTo(b.x, b.y); g.stroke(); },
+  draw(now, dt) { const cv = $("#drawcv"), g = cv.getContext("2d"); g.clearRect(0, 0, 2560, 1440);
+    this.strokes = this.strokes.filter(s => { if (!s.end && now - s.seen > 2500) s.end = now - this.AFTER * .6;           // (a lost "finger up": it ends by itself)
+      return s.pts.some(p => this.a(s, p, now) > 0) || (!s.end && !s.pts.length); });
+    g.save(); g.lineCap = g.lineJoin = "round"; g.globalCompositeOperation = "lighter";
+    for (const s of this.strokes) { const P = s.pts, fire = s.m === "fire"; if (!P.length) continue;
+      if (P.length === 1) { const p = P[0], al = this.a(s, p, now); g.globalAlpha = al; g.fillStyle = fire ? "#ff8c1a" : this.col(now / 4000); g.beginPath(); g.arc(p.x, p.y, 12, 0, 7); g.fill(); continue; }
+      // each layer of the line is drawn whole on a spare canvas first (solid, so where its pieces overlap it doesn't
+      // get brighter), then added onto the stream at that layer's strength. Fading is done by darkening the colour
+      // (adding black adds nothing)
+      const pulse = 1 + Math.sin(now / 260) * .08, al = P.map(q => this.a(s, q, now));
+      const passes = fire ? [[48, .3, () => [212, 58, 0]], [22, .75, () => [255, 140, 26]], [8, 1, () => [255, 241, 184]]] : [[46, .26, u => this.rgb(u)], [20, .7, u => this.rgb(u)], [7, 1, () => [245, 255, 240]]];
+      let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9; P.forEach(q => { x0 = Math.min(x0, q.x); y0 = Math.min(y0, q.y); x1 = Math.max(x1, q.x); y1 = Math.max(y1, q.y); });
+      const M = 40, bx = Math.max(0, Math.floor(x0 - M)), by = Math.max(0, Math.floor(y0 - M)), bw = Math.min(2560, Math.ceil(x1 + M)) - bx, bh = Math.min(1440, Math.ceil(y1 + M)) - by; if (bw <= 0 || bh <= 0) continue;
+      const sc = this.spare || (this.spare = document.createElement("canvas")); if (sc.width < 2560) { sc.width = 2560; sc.height = 1440; } const h = sc.getContext("2d");
+      for (const [w, op, cf] of passes) { h.clearRect(bx, by, bw, bh); h.lineCap = h.lineJoin = "round"; h.lineWidth = w * (w > 10 ? pulse : 1);
+        for (let i = 1; i < P.length; i++) { const a = al[i]; if (a <= 0) continue; const c = cf(P[i].d / 700 - now / 3000); h.strokeStyle = "rgb(" + (c[0] * a | 0) + "," + (c[1] * a | 0) + "," + (c[2] * a | 0) + ")"; this.seg(h, s, i); }
+        g.globalAlpha = op; g.drawImage(sc, bx, by, bw, bh, bx, by, bw, bh); }
+      // ✨ sparkles off the tip while drawing; 🔥 flames and embers all along the line
+      const tip = P[P.length - 1];
+      if (!fire) { if (!s.end && now - tip.t < 400 && Math.random() < .8) for (let k = 0; k < 2; k++) this.parts.push({ k: "star", x: tip.x + rand(-14, 14), y: tip.y + rand(-14, 14), vx: rand(-90, 90), vy: rand(-110, 40), at: now, life: rand(450, 800), r: rand(7, 15), c: Math.random() < .45 ? "#ffffff" : this.col(Math.random()) }); }
+      else { const n = Math.min(20, 4 + P.length / 10);
+        for (let k = 0; k < n; k++) { const i = 1 + Math.floor(Math.random() * (P.length - 1)), a = P[i - 1], b = P[i], al = this.a(s, b, now); if (al <= .05 || Math.random() > al) continue; const u = Math.random();
+          this.parts.push(Math.random() < .82 ? { k: "flame", x: a.x + (b.x - a.x) * u + rand(-6, 6), y: a.y + (b.y - a.y) * u, vx: rand(-25, 25), vy: rand(-260, -120), at: now, life: rand(380, 700), r: rand(26, 46) * (.6 + al * .4) }
+            : { k: "ember", x: a.x + (b.x - a.x) * u, y: a.y + (b.y - a.y) * u, vx: rand(-70, 70), vy: rand(-320, -160), at: now, life: rand(700, 1300), r: rand(2.5, 4.5) }); } } }
+    if (this.parts.length > 900) this.parts.splice(0, this.parts.length - 900);
+    const fd = this.parts.length ? this.flameDot() : null;
+    this.parts = this.parts.filter(q => { const k = (now - q.at) / q.life; if (k >= 1) return false; q.x += q.vx * dt; q.y += q.vy * dt;
+      if (q.k === "flame") { q.vx += rand(-200, 200) * dt; const r = q.r * (1 - k * .7); g.globalAlpha = (1 - k) * .9; g.drawImage(fd, q.x - r, q.y - r * 1.25, r * 2, r * 2.5); }
+      else if (q.k === "ember") { q.vx += rand(-120, 120) * dt; g.globalAlpha = (1 - k) * (.6 + .4 * Math.sin(now / 40 + q.r * 9)); g.fillStyle = k < .4 ? "#ffe08a" : "#ff7a1a"; g.beginPath(); g.arc(q.x, q.y, q.r, 0, 7); g.fill(); }
+      else { q.vy += 160 * dt; const r = q.r * (1 - k); g.globalAlpha = 1 - k; g.fillStyle = q.c; g.beginPath();        // a little four-pointed star
+        g.moveTo(q.x, q.y - r); g.quadraticCurveTo(q.x, q.y, q.x + r, q.y); g.quadraticCurveTo(q.x, q.y, q.x, q.y + r); g.quadraticCurveTo(q.x, q.y, q.x - r, q.y); g.quadraticCurveTo(q.x, q.y, q.x, q.y - r); g.fill(); }
+      return true; });
+    g.restore(); return this.strokes.length || this.parts.length; }
+};
+
 const Float = {
   list: new Set(), run: false,
   add(anchor, shown, op) { let L = $("#flt"); if (!L) { L = document.createElement("div"); L.id = "flt"; document.body.append(L); }
@@ -9521,7 +9594,7 @@ window.KZDirect = function (opt) {
 (() => {
   const qs = new URLSearchParams(location.search), key = qs.get("ctl");
   if (!key || !window.WebSocket) return;
-  const PAGE = "html3", VERSION = "75c65f9", INST = Math.random().toString(36).slice(2, 8);
+  const PAGE = "html3", VERSION = "934f68a", INST = Math.random().toString(36).slice(2, 8);
   const QUICK = { mir: 1, rtt: 1 };                                 // sent many times a second: only the newest matters
   let said = false, direct = null;
   const seen = new Set(), seenList = [], fresh = id => { if (!id) return true; if (seen.has(id)) return false; seen.add(id); seenList.push(id); if (seenList.length > 800) seen.delete(seenList.shift()); return true; };
