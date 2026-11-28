@@ -6096,8 +6096,8 @@ const ScrapHaul = {
    from the right just above the band (never over it) and each letter, reaching the left side, slams up into its place on one line across
    the top,
    every letter its own odd ball, until his name is spelled across the top. 3 s later each letter rebuilds itself as
-   green riveted steel beams (ob_S_…), the steel name stays up 3 s, then one after another each glows red hot and
-   goes up in a quick burst of fire.
+   green riveted steel beams (ob_S_…), the steel name stays up 3 s, then they all glow red hot together and vanish
+   at once.
    Once the sound has finished the band sinks back down below the screen.
    Art: 🎨 Art › ODDBALL ART: ob_L_O, ob_L_d1, ob_L_d2, ob_L_b, ob_L_a, ob_L_l1, ob_L_l2 (the letters, each a different
    odd ball) and ob_note1..3 (the notes). Until it's sent: drawn balls with the letters on them, and drawn notes. */
@@ -6184,7 +6184,7 @@ const Oddball = {
       //      into green steel beams (one after another, quickly), the steel name stays up 3 s, then they pop like bubbles
       const NL = L.length - 1, NSTEP = 120, FLY = 1500, BIG = 340, GB = 330, YB = H - this.FH * this.K - BIG / 2 - 30, XL = 300, V = 1.5, SLAM = 330, SM = 2300,
         xb = i => W + 220 + i * GB - (t - SM) * V, allOn = SM + (W + 220 + NL * GB - XL) / V + SLAM, TR = allOn + 3000, TG = 45,
-        steelAll = TR + NL * TG + Math.max(...L.map(TRMS)), popAt = steelAll + 3000, PG = 85, HEAT = 900;
+        steelAll = TR + NL * TG + Math.max(...L.map(TRMS)), popAt = steelAll + 3000, HEAT = 1100;
       L.forEach((l, i) => { const st = 800 + i * NSTEP;
         if (!l.noteDone && t >= st) { if (l.nx == null) { l.nsx = gx; l.nsy = gy; l.nty = rand(140, 900); l.nx = 1; }
           const q = (t - st) / FLY; if (q >= 1) l.noteDone = true; else { const e = q * q * (1.6 - .6 * q);
@@ -6198,13 +6198,13 @@ const Oddball = {
           drawLetter(l, l.fx + (l.x - l.fx) * e, l.fy + (l.y - l.fy) * e, (BIG + (LH - BIG) * e) / LH, (1 - e) * .25 * (i % 2 ? 1 : -1));
           if (q >= 1) { l.state = "on"; l.at = t - 420; l.hit = t; burst(l.x, l.y, this.COL[i], 18, 7); } }
         if (l.state === "on") { const bob = Math.sin(t / 650 + l.seed) * 12, rot = Math.sin(t / 900 + l.seed * 2) * .09, sq = l.hit && t - l.hit < 220 ? Math.sin((t - l.hit) / 220 * Math.PI) * .25 : 0;     // (a squash as it lands)
-          // the end: each steel letter glows red hot, then goes up in a quick burst of fire and is gone
-          if (t >= popAt + i * PG) { const h = (t - popAt - i * PG) / HEAT;
-            if (h >= 1) { l.state = "pop"; flame(l.x, l.y + bob); }
+          // the end: all the steel letters glow red hot together, then all vanish at once (a quick fade, nothing else)
+          if (t >= popAt) { const h = Math.min(1, (t - popAt) / HEAT), out = (t - popAt - HEAT) / 160;
+            if (out >= 1) l.state = "pop";
+            else if (out > 0) { const hp = hot(l); g.save(); g.globalAlpha = 1 - out; g.translate(l.x, l.y + bob); g.rotate(rot); g.drawImage(hp, -hp.width / 2, -hp.height / 2); g.restore(); }
             else { const j = h > .6 ? (h - .6) * 10 : 0, x = l.x + rand(-j, j), y = l.y + bob + rand(-j, j), hp = hot(l), e = h * h * (3 - 2 * h);
               g.save(); g.globalCompositeOperation = "lighter"; const gl = g.createRadialGradient(x, y, 0, x, y, LH * .9); gl.addColorStop(0, `rgba(255,120,20,${.55 * e})`); gl.addColorStop(1, "rgba(255,40,0,0)"); g.fillStyle = gl; g.fillRect(x - LH, y - LH, LH * 2, LH * 2); g.restore();     // its glow
-              drawSteel(l, x, y, 1, rot); g.save(); g.globalAlpha = e; g.translate(x, y); g.rotate(rot); g.drawImage(hp, -hp.width / 2, -hp.height / 2); g.restore();
-              if (Math.random() < h * .5) parts.push({ fire: true, x: l.x + rand(-LH * .3, LH * .3), y: l.y + bob + rand(-LH * .3, LH * .3), vx: rand(-.4, .4), vy: rand(-2, -.5), r: rand(3, 7), c: "#ff8a1f", life: .7, fade: .05 }); } }
+              drawSteel(l, x, y, 1, rot); g.save(); g.globalAlpha = e; g.translate(x, y); g.rotate(rot); g.drawImage(hp, -hp.width / 2, -hp.height / 2); g.restore(); } }
           else if (t >= TR + i * TG) { const q = Math.min(1, (t - TR - i * TG) / TRMS(l)); if (!l.sparked) { l.sparked = 1; burst(l.x, l.y + bob, "#a3c26a", 12, 5); }     // the change, with a shower of sparks
             drawSteel(l, l.x, l.y + bob, q, rot); }
           else drawLetter(l, l.x, l.y + bob - sq * 20, 1 + sq, rot); } });
@@ -9485,7 +9485,7 @@ window.KZDirect = function (opt) {
 (() => {
   const qs = new URLSearchParams(location.search), key = qs.get("ctl");
   if (!key || !window.WebSocket) return;
-  const PAGE = "html3", VERSION = "39674a7", INST = Math.random().toString(36).slice(2, 8);
+  const PAGE = "html3", VERSION = "124184b", INST = Math.random().toString(36).slice(2, 8);
   const QUICK = { mir: 1, rtt: 1 };                                 // sent many times a second: only the newest matters
   let said = false, direct = null;
   const seen = new Set(), seenList = [], fresh = id => { if (!id) return true; if (seen.has(id)) return false; seen.add(id); seenList.push(id); if (seenList.length > 800) seen.delete(seenList.shift()); return true; };
