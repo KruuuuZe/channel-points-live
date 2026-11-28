@@ -375,17 +375,18 @@ body.fit #stage{background:radial-gradient(1200px 700px at 30% 20%,#1a103322,tra
 #oddcv{position:absolute;inset:0;width:2560px;height:1440px;pointer-events:none;z-index:9}
 #ufocv{position:absolute;inset:0;width:2560px;height:1440px;pointer-events:none;z-index:9}
 /* the layer real video players live in: outside the scaled stage (see Float) */
-#flt{position:fixed;inset:0;pointer-events:none;z-index:5} #flt .fh{position:fixed;overflow:hidden;background:#000;pointer-events:auto;transition:opacity .2s} #flt .fh > div:not(.svcd),#flt .fh iframe{width:100%;height:100%;border:0;display:block}
+#flt{position:fixed;inset:0;pointer-events:none;z-index:5} #flt .fh{position:fixed;overflow:hidden;background:#000;pointer-events:auto;transition:opacity .2s} #flt .fh > div,#flt .fh iframe{width:100%;height:100%;border:0;display:block}
 /* 🔗 shared links: a video in the left 3/4 of the screen */
 #svid{position:absolute;left:0;top:0;width:1920px;height:1080px;z-index:7;pointer-events:none;opacity:0;transition:opacity .5s}
 #svid.on{opacity:1} #svid .box{position:absolute;left:0;top:0;background:#000;overflow:hidden}
-/* the seconds left in a shared video, bottom right of the video, in the logo's look: a starry night badge with a green
-   ring, the number in lime fading to purple, a purple bolt (sized by the video: cq units of its holder) */
-.fh{container-type:size} #flt .fh > .svcd{position:absolute;width:auto;height:auto;right:2.2cqw;bottom:3cqh;display:flex;align-items:center;gap:.35em;padding:.18em .55em .18em .4em;border-radius:999px;font:900 5.4cqh/1 "Segoe UI",system-ui,sans-serif;font-variant-numeric:tabular-nums;
-  background:radial-gradient(circle,#fff8 .6px,transparent 1.4px) 0 0/14px 14px,radial-gradient(circle,#c4b5fd77 .6px,transparent 1.4px) 7px 5px/19px 19px,radial-gradient(ellipse at 30% 25%,#1c1040,#05030c 75%);
-  border:.14em solid #22c55e;box-shadow:0 0 .5em #22c55eaa,inset 0 0 .4em #000;pointer-events:none;opacity:0;transition:opacity .4s;z-index:5}
-#flt .fh > .svcd.on{opacity:1} .svcd i{display:block;width:.62em;height:.86em;filter:drop-shadow(0 0 .15em #a855f7)} .svcd i svg{width:100%;height:100%;display:block}
-.svcd b{background:linear-gradient(180deg,#d9f99d,#a3e635 45%,#4ade80);-webkit-background-clip:text;background-clip:text;color:transparent;filter:drop-shadow(0 2px 0 #000);min-width:1.6em;text-align:right}
+/* the seconds left in a shared video: on the frame's bottom edge under the video's bottom-right corner, in the logo's
+   look (starry night badge, green ring, purple bolt, lime number). Never over the video itself: Twitch's player won't
+   start on its own if anything is on top of it. */
+#svid .svcd{position:absolute;right:34px;bottom:6px;height:60px;display:flex;align-items:center;gap:12px;padding:0 22px 0 16px;border-radius:999px;font:900 44px/1 "Segoe UI",system-ui,sans-serif;font-variant-numeric:tabular-nums;
+  background:radial-gradient(circle,#fff8 1px,transparent 1.8px) 0 0/22px 22px,radial-gradient(circle,#c4b5fd77 1px,transparent 1.8px) 11px 7px/30px 30px,radial-gradient(ellipse at 30% 25%,#1c1040,#05030c 75%);
+  border:5px solid #22c55e;box-shadow:0 0 18px #22c55eaa,inset 0 0 12px #000;opacity:0;transition:opacity .4s}
+#svid .svcd.on{opacity:1} .svcd i{display:block;width:26px;height:36px;filter:drop-shadow(0 0 6px #a855f7)} .svcd i svg{width:100%;height:100%;display:block}
+.svcd b{background:linear-gradient(180deg,#d9f99d,#a3e635 45%,#4ade80);-webkit-background-clip:text;background-clip:text;color:transparent;filter:drop-shadow(0 3px 0 #000);min-width:1.6em;text-align:right}
 /* the frame around a shared video, in the logo's colours: starry night, green ring, lime-to-purple bolt stripe */
 #svid .frm{position:absolute;border-radius:28px;background:radial-gradient(circle,#fff9 1.2px,transparent 2px) 0 0/34px 34px,radial-gradient(circle,#c4b5fd88 1px,transparent 1.8px) 17px 11px/46px 46px,radial-gradient(ellipse at 30% 20%,#2a1650,#07040f 70%);
   box-shadow:0 0 0 7px #22c55e,0 0 0 10px #052e16,0 0 46px 10px #7c3aed88,0 18px 50px #000c}
@@ -7101,13 +7102,13 @@ const SharedVid = {
   st: { on: false, item: null }, key: "", player: null, endT: 0, ytWait: null, twWait: null,
   set(st) { this.st = Object.assign({ on: false, item: null }, st || {}); if (this.st.vol != null) this.setVol(this.st.vol); const it = this.st.on && this.st.item, k = it ? it.kind + ":" + it.id + ":" + (it.n || 0) : "";
     $("#svid").classList.toggle("on", !!it); if (k === this.key) { if (it) this.plate(it); return; } this.key = k; this.close(); if (it) this.open(it); Mirror.send(true); },
-  close() { clearTimeout(this.endT); clearInterval(this.cdT); this.vEl = null; try { this.player && this.player.destroy && this.player.destroy(); } catch (e) {} this.player = null; $("#svid .box").innerHTML = ""; Float.remove(this.fl); this.fl = null; setTimeout(() => Float.sweep(), 1200); },
+  close() { clearTimeout(this.endT); clearInterval(this.cdT); this.vEl = null; document.querySelectorAll("#svid .svcd").forEach(x => x.remove()); try { this.player && this.player.destroy && this.player.destroy(); } catch (e) {} this.player = null; $("#svid .box").innerHTML = ""; Float.remove(this.fl); this.fl = null; setTimeout(() => Float.sweep(), 1200); },
   ended(why) { const k = this.key; this.close(); $("#svid").classList.remove("on"); if (window.remoteSend && !MIRROR) window.remoteSend({ cmd: "svidEnded", key: k, why }); },
   /* the left ¾ (1920×1080): a frame with the sharer's name on its top edge, the video snug inside it */
   place(it, ar) { const box = $("#svid .box"), frm = $("#svid .frm"), tall = it.kind === "yt" && it.short, B = 34, T = 74, G = 12, AW = 1920, AH = 1080;     // G: room for the green ring's glow at the edges
-    ar = ar || (tall ? 9 / 16 : 16 / 9);                                            // (a picture: its own shape, as big as fits, the frame hugging it)
-    const mw = AW - 2 * G - 2 * B, mh = AH - 2 * G - T - B, w = Math.round(Math.min(mw, mh * ar)), h = Math.round(Math.min(mh, w / ar)), fw = w + 2 * B, fx = Math.round((AW - fw) / 2);
-    Object.assign(frm.style, { left: fx + "px", top: G + "px", width: fw + "px", height: h + T + B + "px" });
+    ar = ar || (tall ? 9 / 16 : 16 / 9); const BB = it.kind === "img" || it.kind === "live" ? B : T;      // (a video with a countdown: a bottom band for it, as tall as the name's)                                            // (a picture: its own shape, as big as fits, the frame hugging it)
+    const mw = AW - 2 * G - 2 * B, mh = AH - 2 * G - T - BB, w = Math.round(Math.min(mw, mh * ar)), h = Math.round(Math.min(mh, w / ar)), fw = w + 2 * B, fx = Math.round((AW - fw) / 2);
+    Object.assign(frm.style, { left: fx + "px", top: G + "px", width: fw + "px", height: h + T + BB + "px" });
     Object.assign(box.style, { left: fx + B + "px", top: G + T + "px", width: w + "px", height: h + "px" });
     this.plate(it); },
   plate(it) { const pl = $("#svid .plate"), who = String(it.from || "").trim().slice(0, 30); if (pl.dataset.who === who) return; pl.dataset.who = who; pl.innerHTML = "";
@@ -7148,7 +7149,7 @@ const SharedVid = {
       if (Twitch.Player.OFFLINE) this.player.addEventListener(Twitch.Player.OFFLINE, () => { if (this.key === key && it.kind === "live") this.ended("offline"); }); });
     this.countdown(it); },
   // ---- the seconds left, counting down in the bottom-right corner while a video plays (not for a live stream, or a picture)
-  countdown(it) { clearInterval(this.cdT); if (it.kind === "live" || !this.fl) return; const cd = document.createElement("div"); cd.className = "svcd"; cd.innerHTML = '<i><svg viewBox="0 0 20 28"><defs><linearGradient id="svcdG" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#c084fc"/><stop offset="1" stop-color="#6d28d9"/></linearGradient></defs><path d="M13 0 L2 15 L9 15 L5 28 L18 11 L11 11 Z" fill="url(#svcdG)"/></svg></i><b></b>'; this.fl.h.append(cd);
+  countdown(it) { clearInterval(this.cdT); if (it.kind === "live" || !this.fl) return; const cd = document.createElement("div"); cd.className = "svcd"; document.querySelectorAll("#svid .svcd").forEach(x => x.remove()); cd.innerHTML = '<i><svg viewBox="0 0 20 28"><defs><linearGradient id="svcdG" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#c084fc"/><stop offset="1" stop-color="#6d28d9"/></linearGradient></defs><path d="M13 0 L2 15 L9 15 L5 28 L18 11 L11 11 Z" fill="url(#svcdG)"/></svg></i><b></b>'; $("#svid .frm").append(cd);
     const t0 = performance.now(), key = this.key, b = cd.querySelector("b");
     const left = () => { const p = this.player;
       try { if (it.kind === "yt" && p && p.getDuration) { const d = p.getDuration(); return d > 0 ? d - p.getCurrentTime() : null; }
@@ -9505,7 +9506,7 @@ window.KZDirect = function (opt) {
 (() => {
   const qs = new URLSearchParams(location.search), key = qs.get("ctl");
   if (!key || !window.WebSocket) return;
-  const PAGE = "html3", VERSION = "6873514", INST = Math.random().toString(36).slice(2, 8);
+  const PAGE = "html3", VERSION = "66a91fc", INST = Math.random().toString(36).slice(2, 8);
   const QUICK = { mir: 1, rtt: 1 };                                 // sent many times a second: only the newest matters
   let said = false, direct = null;
   const seen = new Set(), seenList = [], fresh = id => { if (!id) return true; if (seen.has(id)) return false; seen.add(id); seenList.push(id); if (seenList.length > 800) seen.delete(seenList.shift()); return true; };
