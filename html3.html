@@ -6096,7 +6096,8 @@ const ScrapHaul = {
    from the right just above the band (never over it) and each letter, reaching the left side, slams up into its place on one line across
    the top,
    every letter its own odd ball, until his name is spelled across the top. 3 s later each letter rebuilds itself as
-   green riveted steel beams (ob_S_…), the steel name stays up 3 s, then they pop like soap bubbles one after another.
+   green riveted steel beams (ob_S_…), the steel name stays up 3 s, then one after another each glows red hot and
+   goes up in a quick burst of fire.
    Once the sound has finished the band sinks back down below the screen.
    Art: 🎨 Art › ODDBALL ART: ob_L_O, ob_L_d1, ob_L_d2, ob_L_b, ob_L_a, ob_L_l1, ob_L_l2 (the letters, each a different
    odd ball) and ob_note1..3 (the notes). Until it's sent: drawn balls with the letters on them, and drawn notes. */
@@ -6154,6 +6155,20 @@ const Oddball = {
     const drawNote = (l, cx, cy, s, rot) => { if (l.note) return putSp(l.note, cx, cy, 120 * s, rot);
       const c = this.COL[(this.KEYS.indexOf(l.k) + 3) % 7]; g.save(); g.translate(cx, cy); g.rotate(rot); g.font = `900 ${130 * s}px ${FONT}`; g.textAlign = "center"; g.textBaseline = "middle";
       g.shadowColor = c; g.shadowBlur = 26; g.fillStyle = c; g.fillText(["♪", "♫", "♬"][l.ni], 0, 0); g.shadowBlur = 0; g.lineWidth = 3; g.strokeStyle = "#fff"; g.strokeText(["♪", "♫", "♬"][l.ni], 0, 0); g.restore(); };
+    // a letter's red-hot look: its steel picture filled with glowing heat (white-yellow at the middle, deep red at the
+    // edges), made once per letter, then faded in over the steel
+    const hot = l => { if (l.hotPic) return l.hotPic; const c = document.createElement("canvas"), x = c.getContext("2d"), sp = l.tr;
+      if (sp) { const b = Pirate.figOf(sp), h = LH * (l.us ? .42 : 1), k = h / Math.max(1, b.y1 - b.y0), w = (b.x1 - b.x0) * k; c.width = Math.ceil(w + 4); c.height = Math.ceil(h + 4);
+        x.drawImage(sp.img, ((sp.frames || 1) - 1) * sp.w + b.x0, b.y0, b.x1 - b.x0, b.y1 - b.y0, 2, 2, w, h); }
+      else { c.width = c.height = Math.ceil(LH * 1.3); x.translate(c.width / 2, c.height / 2); x.fillStyle = "#000";
+        if (l.us) x.fillRect(-LH * .45, -LH * .1, LH * .9, LH * .2); else { x.font = `900 ${LH * 1.05}px ${FONT}`; x.textAlign = "center"; x.textBaseline = "middle"; x.lineWidth = 6; x.strokeStyle = "#000"; x.strokeText(l.ch, 0, 0); x.fillText(l.ch, 0, 0); }
+        x.setTransform(1, 0, 0, 1, 0, 0); }
+      x.globalCompositeOperation = "source-atop"; const gr = x.createRadialGradient(c.width / 2, c.height / 2, 0, c.width / 2, c.height / 2, Math.max(c.width, c.height) * .6);
+      gr.addColorStop(0, "#fff6c8"); gr.addColorStop(.35, "#ffb02e"); gr.addColorStop(.7, "#ff4d0d"); gr.addColorStop(1, "#b3120a"); x.fillStyle = gr; x.fillRect(0, 0, c.width, c.height);
+      return l.hotPic = c; };
+    // a quick burst of fire where a letter was: a flash, flames licking up and out, sparks
+    const flame = (x, y) => { parts.push({ ring: true, x, y, R: 30, life: 1, c: "rgba(255,170,60,.95)" });
+      for (let i = 0; i < 34; i++) { const a = rand(0, 6.283), v = rand(1, 6); parts.push({ fire: true, x: x + rand(-LH * .3, LH * .3), y: y + rand(-LH * .3, LH * .3), vx: Math.cos(a) * v, vy: Math.sin(a) * v - rand(1, 3), r: rand(8, 20), c: ["#fff3b0", "#ffd166", "#ff9f1c", "#ff5a1f", "#d62828"][Math.floor(rand(0, 5))], life: 1, fade: rand(.035, .06) }); } };
     const burst = (x, y, c, n, sp, bubble) => { for (let i = 0; i < n; i++) { const a = rand(0, 6.283), v = rand(.4, 1) * sp; parts.push({ x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v - (bubble ? 0 : 1), r: bubble ? rand(4, 10) : rand(3, 7), c: bubble ? "rgba(220,240,255,.9)" : c, life: 1, fade: rand(.02, .035), bubble }); }
       parts.push({ ring: true, x, y, R: bubble ? 40 : 20, life: 1, c: bubble ? "rgba(230,245,255,.95)" : c }); };
     const frame = now => {
@@ -6169,7 +6184,7 @@ const Oddball = {
       //      into green steel beams (one after another, quickly), the steel name stays up 3 s, then they pop like bubbles
       const NL = L.length - 1, NSTEP = 120, FLY = 1500, BIG = 340, GB = 330, YB = H - this.FH * this.K - BIG / 2 - 30, XL = 300, V = 1.5, SLAM = 330, SM = 2300,
         xb = i => W + 220 + i * GB - (t - SM) * V, allOn = SM + (W + 220 + NL * GB - XL) / V + SLAM, TR = allOn + 3000, TG = 45,
-        steelAll = TR + NL * TG + Math.max(...L.map(TRMS)), popAt = steelAll + 3000, PG = 85;
+        steelAll = TR + NL * TG + Math.max(...L.map(TRMS)), popAt = steelAll + 3000, PG = 85, HEAT = 900;
       L.forEach((l, i) => { const st = 800 + i * NSTEP;
         if (!l.noteDone && t >= st) { if (l.nx == null) { l.nsx = gx; l.nsy = gy; l.nty = rand(140, 900); l.nx = 1; }
           const q = (t - st) / FLY; if (q >= 1) l.noteDone = true; else { const e = q * q * (1.6 - .6 * q);
@@ -6183,7 +6198,13 @@ const Oddball = {
           drawLetter(l, l.fx + (l.x - l.fx) * e, l.fy + (l.y - l.fy) * e, (BIG + (LH - BIG) * e) / LH, (1 - e) * .25 * (i % 2 ? 1 : -1));
           if (q >= 1) { l.state = "on"; l.at = t - 420; l.hit = t; burst(l.x, l.y, this.COL[i], 18, 7); } }
         if (l.state === "on") { const bob = Math.sin(t / 650 + l.seed) * 12, rot = Math.sin(t / 900 + l.seed * 2) * .09, sq = l.hit && t - l.hit < 220 ? Math.sin((t - l.hit) / 220 * Math.PI) * .25 : 0;     // (a squash as it lands)
-          if (t >= popAt + i * PG) { l.state = "pop"; burst(l.x, l.y + bob, "#7f9a52", 16, 6, true); }
+          // the end: each steel letter glows red hot, then goes up in a quick burst of fire and is gone
+          if (t >= popAt + i * PG) { const h = (t - popAt - i * PG) / HEAT;
+            if (h >= 1) { l.state = "pop"; flame(l.x, l.y + bob); }
+            else { const j = h > .6 ? (h - .6) * 10 : 0, x = l.x + rand(-j, j), y = l.y + bob + rand(-j, j), hp = hot(l), e = h * h * (3 - 2 * h);
+              g.save(); g.globalCompositeOperation = "lighter"; const gl = g.createRadialGradient(x, y, 0, x, y, LH * .9); gl.addColorStop(0, `rgba(255,120,20,${.55 * e})`); gl.addColorStop(1, "rgba(255,40,0,0)"); g.fillStyle = gl; g.fillRect(x - LH, y - LH, LH * 2, LH * 2); g.restore();     // its glow
+              drawSteel(l, x, y, 1, rot); g.save(); g.globalAlpha = e; g.translate(x, y); g.rotate(rot); g.drawImage(hp, -hp.width / 2, -hp.height / 2); g.restore();
+              if (Math.random() < h * .5) parts.push({ fire: true, x: l.x + rand(-LH * .3, LH * .3), y: l.y + bob + rand(-LH * .3, LH * .3), vx: rand(-.4, .4), vy: rand(-2, -.5), r: rand(3, 7), c: "#ff8a1f", life: .7, fade: .05 }); } }
           else if (t >= TR + i * TG) { const q = Math.min(1, (t - TR - i * TG) / TRMS(l)); if (!l.sparked) { l.sparked = 1; burst(l.x, l.y + bob, "#a3c26a", 12, 5); }     // the change, with a shower of sparks
             drawSteel(l, l.x, l.y + bob, q, rot); }
           else drawLetter(l, l.x, l.y + bob - sq * 20, 1 + sq, rot); } });
@@ -6191,6 +6212,7 @@ const Oddball = {
       for (let i = parts.length - 1; i >= 0; i--) { const p = parts[i]; p.life -= (p.fade || .045) * dt; if (p.life <= 0) { parts.splice(i, 1); continue; }
         g.globalAlpha = Math.max(0, p.life);
         if (p.ring) { const R = p.R + (1 - p.life) * 110; g.strokeStyle = p.c; g.lineWidth = 5 * p.life; g.beginPath(); g.arc(p.x, p.y, R, 0, 6.283); g.stroke(); }
+        else if (p.fire) { p.x += p.vx * dt; p.y += p.vy * dt; p.vy -= .06 * dt; p.vx *= Math.pow(.96, dt); g.globalCompositeOperation = "lighter"; g.fillStyle = p.c; g.beginPath(); g.arc(p.x, p.y, Math.max(.5, p.r * (.4 + .6 * p.life)), 0, 6.283); g.fill(); g.globalCompositeOperation = "source-over"; }
         else { p.x += p.vx * dt; p.y += p.vy * dt; if (p.bubble) p.vy += .12 * dt; g.fillStyle = p.c; g.beginPath(); g.arc(p.x, p.y, p.r, 0, 6.283); g.fill(); } }
       g.globalAlpha = 1;
       if (t < D + DELAY + 1000 || parts.length || L.some(l => l.state !== "pop")) requestAnimationFrame(frame); else { g.clearRect(0, 0, W, H); this.busy = false; } };       // (the band sinks when the song is over; the steel name finishes by itself)
@@ -9463,7 +9485,7 @@ window.KZDirect = function (opt) {
 (() => {
   const qs = new URLSearchParams(location.search), key = qs.get("ctl");
   if (!key || !window.WebSocket) return;
-  const PAGE = "html3", VERSION = "e191e10", INST = Math.random().toString(36).slice(2, 8);
+  const PAGE = "html3", VERSION = "39674a7", INST = Math.random().toString(36).slice(2, 8);
   const QUICK = { mir: 1, rtt: 1 };                                 // sent many times a second: only the newest matters
   let said = false, direct = null;
   const seen = new Set(), seenList = [], fresh = id => { if (!id) return true; if (seen.has(id)) return false; seen.add(id); seenList.push(id); if (seenList.length > 800) seen.delete(seenList.shift()); return true; };
