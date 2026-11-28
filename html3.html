@@ -2575,7 +2575,8 @@ const Scrap = {
     }, i * 260);
   },
   // loot into a viewer's totals (today's board and All Time): from a scroop, or from shooting the plane down with !flak
-  credit(k, name, color, l, n) { this.build(); if (Date.now() - (this.data.t || 0) > this.RESET) this.data = { t: Date.now(), users: {} };
+  credit(k, name, color, l, n) { if (l && l.gold) n = 1;          // (a Golden Banana or Golden Mango is always one find, whatever it was won with)
+    this.build(); if (Date.now() - (this.data.t || 0) > this.RESET) this.data = { t: Date.now(), users: {} };
     for (const book of [this.data.users, this.all.users]) {
       const u = book[k] || (book[k] = { name, color, pts: 0, salv: 0, comp: 0, sulf: 0, rare: 0 });
       u.name = name; u.color = color; u[l.k] = (u[l.k] || 0) + n; u.pts += n * l.pts;
@@ -2653,7 +2654,7 @@ const Scrap = {
   run(p, job) {
     // how many hits it takes and what's inside are decided here, up front, so the touchpad copy shows the very same dig
     if (!job.hits) job.hits = 10 + Math.floor(Math.random() * 6);                       // 10 to 15 hits to break a pile
-    if (!job.roll) { const r = this.roll(); job.roll = [SCRAP_LOOT.indexOf(r.l), r.n]; }
+    if (!job.roll) { const r = this.roll(); job.roll = [SCRAP_LOOT.indexOf(r.l), r.l.gold ? 1 : r.n * Flak.TIMES]; }        // (a scroop pile pays the same as the plane and a tank win: three times the rolled amount)
     Mirror.began2("Scrap.run", [this.piles.indexOf(p), p.x, job], () => p.state === "claimed");
     Sound.init(); MySounds.play("scroop");
     const box = $("#scrap"), uc = css(bright(job.color)), X = p.x - 67;      // the soldier stands just left of the pile, facing it (toward the right edge)
@@ -2700,7 +2701,7 @@ const Scrap = {
     const o = el("div", "loot" + (l.rare ? " rare" : "")); o.style.setProperty("--lc", l.c);
     const art = l.gold && ChefArt.sprites[l.art];
     if (art) { const im = document.createElement("img"); im.src = art.img.src; im.className = "gb"; o.append(im); } else o.innerHTML = l.svg;
-    o.append((l.gold ? "" : "+" + n + " ") + l.name + (l.gold ? "!" : "")); o.style.left = sx + "px"; o.style.top = sy + "px"; layer.append(o);
+    o.append((l.gold ? "" : "+" + n + " ") + l.name + (l.gold ? (n > 1 ? " ×" + n : "") + "!" : "")); o.style.left = sx + "px"; o.style.top = sy + "px"; layer.append(o);
     o.animate([{ transform: "translate(-50%,-50%) scale(.3)", left: sx + "px", top: sy + "px", opacity: 0 },
       { transform: "translate(-50%,-50%) scale(1.15)", left: (sx + ex) / 2 + "px", top: (ey - 60) + "px", opacity: 1, offset: .3 },
       { transform: "translate(-50%,-50%) scale(1)", left: ex + "px", top: ey + "px", opacity: 1, offset: .45 },
@@ -7834,7 +7835,7 @@ const Flak = {
   // It shows where the plane was (or over the winning tank): their name (in their Twitch color) and what they got
   TIMES: 3,
   loot(by, x, y) { if (!by) return; if (by.login === "test") by = { login: "", name: by.name, color: by.color };          // (the test bar's: shown, not added to anyone)
-    const r = Scrap.roll(); r.n *= this.TIMES; const i = SCRAP_LOOT.indexOf(r.l), color = by.color || TWITCH_DEFAULTS[(by.name || "").length % TWITCH_DEFAULTS.length];
+    const r = Scrap.roll(); if (!r.l.gold) r.n *= this.TIMES;         // (a golden find is always just the one) const i = SCRAP_LOOT.indexOf(r.l), color = by.color || TWITCH_DEFAULTS[(by.name || "").length % TWITCH_DEFAULTS.length];
     if (by.login) Scrap.credit(by.login, by.name, color, r.l, r.n);
     this.show(by.name, color, i, r.n, x, y); Mirror.fwd("flak.loot", [by.name, color, i, r.n, Math.round(x), Math.round(y)]); },
   show(name, color, i, n, x, y) { const l = SCRAP_LOOT[i] || LOOT[0], o = el("div", "loot" + (l.rare ? " rare" : "")); o.style.setProperty("--lc", l.c);
@@ -9520,7 +9521,7 @@ window.KZDirect = function (opt) {
 (() => {
   const qs = new URLSearchParams(location.search), key = qs.get("ctl");
   if (!key || !window.WebSocket) return;
-  const PAGE = "html3", VERSION = "0a680d4", INST = Math.random().toString(36).slice(2, 8);
+  const PAGE = "html3", VERSION = "75c65f9", INST = Math.random().toString(36).slice(2, 8);
   const QUICK = { mir: 1, rtt: 1 };                                 // sent many times a second: only the newest matters
   let said = false, direct = null;
   const seen = new Set(), seenList = [], fresh = id => { if (!id) return true; if (seen.has(id)) return false; seen.add(id); seenList.push(id); if (seenList.length > 800) seen.delete(seenList.shift()); return true; };
