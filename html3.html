@@ -6093,7 +6093,7 @@ const ScrapHaul = {
    His guitar band (the clip he sent, its green screen keyed out: src/oddball.webp, 112 frames, built in) pops up from
    the bottom-left corner and plays while his sound plays (src/sounds/oddball.mp3, built in). Out of the guitar float
    musical notes that sway away to the right and off the screen; then "Prefectus_Prime_Oddball", gigantic, scrolls in
-   from the right along the bottom and each letter, reaching the left side, slams up into its place on one line across
+   from the right just above the band (never over it) and each letter, reaching the left side, slams up into its place on one line across
    the top,
    every letter its own odd ball, until his name is spelled across the top. 3 s later each letter rebuilds itself as
    green riveted steel beams (ob_S_…), the steel name stays up 3 s, then they pop like soap bubbles one after another.
@@ -6167,7 +6167,7 @@ const Oddball = {
       // ---- then his name, gigantic, scrolls in from the right along the bottom of the screen; as each letter reaches the
       //      left side it slams up into its place in the name across the top. 3 s after the last one lands they all turn
       //      into green steel beams (one after another, quickly), the steel name stays up 3 s, then they pop like bubbles
-      const NL = L.length - 1, NSTEP = 120, FLY = 1500, BIG = 340, GB = 330, YB = H - 205, XL = 300, V = 1.5, SLAM = 330, SM = 2300,
+      const NL = L.length - 1, NSTEP = 120, FLY = 1500, BIG = 340, GB = 330, YB = H - this.FH * this.K - BIG / 2 - 30, XL = 300, V = 1.5, SLAM = 330, SM = 2300,
         xb = i => W + 220 + i * GB - (t - SM) * V, allOn = SM + (W + 220 + NL * GB - XL) / V + SLAM, TR = allOn + 3000, TG = 45,
         steelAll = TR + NL * TG + Math.max(...L.map(TRMS)), popAt = steelAll + 3000, PG = 85;
       L.forEach((l, i) => { const st = 800 + i * NSTEP;
@@ -9463,7 +9463,7 @@ window.KZDirect = function (opt) {
 (() => {
   const qs = new URLSearchParams(location.search), key = qs.get("ctl");
   if (!key || !window.WebSocket) return;
-  const PAGE = "html3", VERSION = "cefdea9", INST = Math.random().toString(36).slice(2, 8);
+  const PAGE = "html3", VERSION = "e191e10", INST = Math.random().toString(36).slice(2, 8);
   const QUICK = { mir: 1, rtt: 1 };                                 // sent many times a second: only the newest matters
   let said = false, direct = null;
   const seen = new Set(), seenList = [], fresh = id => { if (!id) return true; if (seen.has(id)) return false; seen.add(id); seenList.push(id); if (seenList.length > 800) seen.delete(seenList.shift()); return true; };
